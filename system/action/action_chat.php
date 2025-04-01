@@ -27,7 +27,10 @@ function deletePrivateHistory()
         return 0;
     }
     $target = escape($_POST["target"]);
-    $check_private = $mysqli->query("SELECT * FROM boom_report WHERE report_user = '" . $data["user_id"] . "' AND report_target = '" . $target . "' || report_user = '" . $target . "' AND report_target = '" . $data["user_id"] . "'");
+    $stmt = $mysqli->prepare("SELECT * FROM boom_report WHERE (report_user = ? AND report_target = ?) OR (report_user = ? AND report_target = ?)");
+    $stmt->bind_param("ssss", $data["user_id"], $target, $target, $data["user_id"]);
+    $stmt->execute();
+    $check_private = $stmt->get_result();
     if (0 < $check_private->num_rows) {
         $priv = $check_private->fetch_assoc();
         if (!selfManageReport($priv["report_target"])) {

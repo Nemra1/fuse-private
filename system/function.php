@@ -1418,20 +1418,54 @@ function boomRoomData($r){
 }
 
 function boomConsole($type, $custom = array()){
-	global $mysqli, $data;
-	$def = array(
-		'hunter'=> $data['user_id'],
-		'target'=> $data['user_id'],
-		'room'=> $data['user_roomid'],
-		'rank'=> 0,
-		'delay'=> 0,
-		'reason'=> '',
-		'custom' => '',
-		'custom2' => '',
-	);
-	$c = array_merge($def, $custom);
-	$mysqli->query("INSERT INTO boom_console (hunter, target, room, ctype, crank, delay, reason, custom, custom2, cdate) VALUES ('{$c['hunter']}', '{$c['target']}', '{$c['room']}', '$type', '{$c['rank']}', '{$c['delay']}', '{$c['reason']}', '{$c['custom']}', '{$c['custom2']}', '" . time() . "')");
+    global $mysqli, $data;
+    // Default values for the parameters
+    $def = array(
+        'hunter' => $data['user_id'],
+        'target' => $data['user_id'],
+        'room' => $data['user_roomid'],
+        'rank' => 0,
+        'delay' => 0,
+        'reason' => '',
+        'custom' => '',
+        'custom2' => '',
+    );
+    // Merge default values with the custom ones
+    $c = array_merge($def, $custom);
+    // Prepare the query with placeholders to prevent SQL injection
+    $query = "
+        INSERT INTO boom_console (hunter, target, room, ctype, crank, delay, reason, custom, custom2, cdate)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ";
+    // Prepare the statement
+    if ($stmt = $mysqli->prepare($query)) {
+        // Bind the parameters
+        $stmt->bind_param(
+            'iiisisisss', // Define types for each value (integer, integer, string, etc.)
+            $c['hunter'], 
+            $c['target'], 
+            $c['room'], 
+            $type, 
+            $c['rank'], 
+            $c['delay'], 
+            $c['reason'], 
+            $c['custom'], 
+            $c['custom2'], 
+            time()
+        );
+        // Execute the statement and check for errors
+        if (!$stmt->execute()) {
+            // Log the error if the query fails
+            error_log("Error executing query: " . $stmt->error);
+        }
+        // Close the statement
+        $stmt->close();
+    } else {
+        // Log the error if the statement preparation fails
+        error_log("Error preparing query: " . $mysqli->error);
+    }
 }
+
 function boomHistory($type, $custom = array()){
 	global $mysqli, $data;
 	$def = array(

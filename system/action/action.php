@@ -3,14 +3,17 @@ require('./../config_session.php');
 
 // Function to handle actions
 function handleAction($action, $target) {
+    global $mysqli; // Ensure access to $mysqli
+    $action = escape($action);
+    $target = escape($target);
     switch ($action) {
         case 'unban':
             return unbanAccount($target);
         case 'unmute':
             return unmuteAccount($target);
-         case 'main_unmute':
+        case 'main_unmute':
             return unmuteAccountMain($target);  
-         case 'private_unmute':
+        case 'private_unmute':
             return unmuteAccountPrivate($target);           
         case 'unghost':
             return unghostAccount($target);     
@@ -37,16 +40,19 @@ function maintenanceStatus(){
 	return 0;
 }
 function kickStatus(){
-	global $mysqli,$data;
-	if(!isKicked($data)){
-		if($data['user_kick'] > 0){
-			$mysqli->query("UPDATE boom_users SET user_kick = 0 WHERE user_id = '{$data['user_id']}'");
+    global $mysqli, $data;
+    if(!isKicked($data)){
+        if($data['user_kick'] > 0){
+            $stmt = $mysqli->prepare("UPDATE boom_users SET user_kick = 0 WHERE user_id = ?");
+            $stmt->bind_param("i", $data['user_id']);
+            $stmt->execute();
 			//redisUpdateUser($data['user_id']);
-		}
-		return 1;
-	}
-	return 0;
+        }
+        return 1;
+    }
+    return 0;
 }
+
 
 // Handle action requests
 if (isset($_POST['take_action'], $_POST['target'])) {

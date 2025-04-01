@@ -47,11 +47,8 @@ if (isset($_POST["delete_room"]) && boomAllow(90)) {
     exit;
 }
 exit;
-
-function setUserTheme()
-{
-    global $mysqli;
-    global $data;
+function setUserTheme(){
+    global $mysqli, $data;
     $theme = escape($_POST["set_user_theme"]);
     if ($theme == "system") {
         $user_theme = "system";
@@ -66,21 +63,26 @@ function setUserTheme()
             }
         }
     }
+
     if ($user_theme == "system") {
         $new_theme = $data["default_theme"];
     } else {
         $new_theme = $user_theme;
     }
-    $mysqli->query("UPDATE boom_users SET user_theme = '" . $user_theme . "' WHERE user_id = '" . $data["user_id"] . "'");
+
+    // Use prepared statement to update the theme
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_theme = ? WHERE user_id = ?");
+    $stmt->bind_param("si", $user_theme, $data["user_id"]);
+    $stmt->execute();
+
     $data["user_theme"] = $new_theme;
     $logo = getLogo();
+
     return boomCode(0, ["theme" => $new_theme, "logo" => $logo]);
 }
 
-function acceptFriend($id)
-{
-    global $mysqli;
-    global $data;
+function acceptFriend($id){
+    global $mysqli, $data;
     $user = boomUserInfo($id);
     if (empty($user)) {
         return 3;
@@ -93,7 +95,10 @@ function acceptFriend($id)
         return 0;
     }
     if ($user["friendship"] == 1) {
-        $mysqli->query("UPDATE boom_friends SET fstatus = 3 WHERE hunter = '" . $data["user_id"] . "' AND target = '" . $id . "' OR hunter = '" . $id . "' AND target = '" . $data["user_id"] . "'");
+        // Use prepared statement for update
+        $stmt = $mysqli->prepare("UPDATE boom_friends SET fstatus = 3 WHERE (hunter = ? AND target = ?) OR (hunter = ? AND target = ?)");
+        $stmt->bind_param("iiii", $data["user_id"], $id, $id, $data["user_id"]);
+        $stmt->execute();
         boomNotify("accept_friend", ["hunter" => $data["user_id"], "target" => $user["user_id"]]);
         updateNotify($data["user_id"]);
         return 1;
@@ -102,16 +107,18 @@ function acceptFriend($id)
         return 1;
     }
     if ($user["friendship"] == 0) {
-        $mysqli->query("INSERT INTO boom_friends (hunter, target, fstatus) VALUES ('" . $data["user_id"] . "', '" . $id . "', '2'), ('" . $id . "', '" . $data["user_id"] . "', '1')");
+        // Use prepared statement for insert
+        $stmt = $mysqli->prepare("INSERT INTO boom_friends (hunter, target, fstatus) VALUES (?, ?, 2), (?, ?, 1)");
+        $stmt->bind_param("iiii", $data["user_id"], $id, $id, $data["user_id"]);
+        $stmt->execute();
         updateNotify($id);
         return 2;
     }
 }
 
-function addFriend($id)
-{
-    global $mysqli;
-    global $data;
+function addFriend($id){
+    global $mysqli, $data;
+	$id = escape($id);
     $user = boomUserInfo($id);
     if (empty($user)) {
         return 3;
@@ -126,13 +133,19 @@ function addFriend($id)
         return 1;
     }
     if ($user["friendship"] == 1) {
-        $mysqli->query("UPDATE boom_friends SET fstatus = 3 WHERE hunter = '" . $data["user_id"] . "' AND target = '" . $user["user_id"] . "' OR hunter = '" . $user["user_id"] . "' AND target = '" . $data["user_id"] . "'");
+        // Use prepared statement for update
+        $stmt = $mysqli->prepare("UPDATE boom_friends SET fstatus = 3 WHERE hunter = ? AND target = ? OR hunter = ? AND target = ?");
+        $stmt->bind_param("iiii", $data["user_id"], $user["user_id"], $user["user_id"], $data["user_id"]);
+        $stmt->execute();
         boomNotify("accept_friend", ["hunter" => $data["user_id"], "target" => $user["user_id"]]);
         updateNotify($data["user_id"]);
         return 1;
     }
     if ($user["friendship"] == 0) {
-        $mysqli->query("INSERT INTO boom_friends (hunter, target, fstatus) VALUES ('" . $data["user_id"] . "', '" . $user["user_id"] . "', '2'), ('" . $user["user_id"] . "', '" . $data["user_id"] . "', '1')");
+        // Use prepared statement for insert
+        $stmt = $mysqli->prepare("INSERT INTO boom_friends (hunter, target, fstatus) VALUES (?, ?, 2), (?, ?, 1)");
+        $stmt->bind_param("iiii", $data["user_id"], $user["user_id"], $user["user_id"], $data["user_id"]);
+        $stmt->execute();
         updateNotify($user["user_id"]);
         return 1;
     }

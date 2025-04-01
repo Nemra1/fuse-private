@@ -1,0 +1,154 @@
+{
+    "2blue": {
+        "wing1": "2blue-wing1.gif",
+        "wing2": "2blue-wing2.gif"
+    },
+    "2dark": {
+        "wing1": "2dark-wing1.gif",
+        "wing2": "2dark-wing2.gif"
+    },
+    "2gold": {
+        "wing1": "2gold-wing1.gif",
+        "wing2": "2gold-wing2.gif"
+    },
+    "angel": {
+        "wing1": "angel-wing1.png",
+        "wing2": "angel-wing2.png"
+    },
+    "blue": {
+        "wing1": "blue-wing1.png",
+        "wing2": "blue-wing2.png"
+    },
+    "bro": {
+        "wing1": "bro-wing1.gif",
+        "wing2": "bro-wing2.gif"
+    },
+    "cold": {
+        "wing1": "cold-wing1.gif",
+        "wing2": "cold-wing2.gif"
+    },
+    "dark": {
+        "wing1": "dark-wing1.gif",
+        "wing2": "dark-wing2.gif"
+    },
+    "darklord": {
+        "wing1": "darklord-wing1.gif",
+        "wing2": "darklord-wing2.gif"
+    },
+    "demon": {
+        "wing1": "demon-wing1.png",
+        "wing2": "demon-wing2.png"
+    },
+    "dev": {
+        "wing1": "dev-wing1.gif",
+        "wing2": "dev-wing2.gif"
+    },
+    "devil": {
+        "wing1": "devil-wing1.gif",
+        "wing2": "devil-wing2.gif"
+    },
+    "eyes": {
+        "wing1": "eyes-wing1.gif",
+        "wing2": "eyes-wing2.gif"
+    },
+    "fairy": {
+        "wing1": "fairy-wing1.gif",
+        "wing2": "fairy-wing2.gif"
+    },
+    "fire": {
+        "wing1": "fire-wing1.gif",
+        "wing2": "fire-wing2.gif"
+    },
+    "firebull": {
+        "wing1": "firebull-wing1.gif",
+        "wing2": "firebull-wing2.gif"
+    },
+    "flying": {
+        "wing1": "flying-wing1.gif",
+        "wing2": "flying-wing2.gif"
+    },
+    "frasha": {
+        "wing1": "frasha-wing1.png",
+        "wing2": "frasha-wing2.png"
+    },
+    "girl-demon": {
+        "wing1": "girl-demon-wing1.png",
+        "wing2": "girl-demon-wing2.png"
+    },
+    "gold": {
+        "wing1": "gold-wing1.png",
+        "wing2": "gold-wing2.png"
+    },
+    "green": {
+        "wing1": "green-wing1.png",
+        "wing2": "green-wing2.png"
+    },
+    "lemon": {
+        "wing1": "lemon-wing1.png",
+        "wing2": "lemon-wing2.png"
+    },
+    "nigma": {
+        "wing1": "nigma-wing1.gif",
+        "wing2": "nigma-wing2.gif"
+    },
+    "oldblue": {
+        "wing1": "oldblue-wing1.png",
+        "wing2": "oldblue-wing2.png"
+    },
+    "oldgreen": {
+        "wing1": "oldgreen-wing1.png",
+        "wing2": "oldgreen-wing2.png"
+    },
+    "phinx": {
+        "wing1": "phinx-wing1.gif",
+        "wing2": "phinx-wing2.gif"
+    },
+    "pink": {
+        "wing1": "pink-wing1.gif",
+        "wing2": "pink-wing2.gif"
+    },
+    "pinkstar": {
+        "wing1": "pinkstar-wing1.gif",
+        "wing2": "pinkstar-wing2.gif"
+    },
+    "pinky": {
+        "wing1": "pinky-wing1.gif",
+        "wing2": "pinky-wing2.gif"
+    },
+    "purple": {
+        "wing1": "purple-wing1.gif",
+        "wing2": "purple-wing2.gif"
+    },
+    "red": {
+        "wing1": "red-wing1.png",
+        "wing2": "red-wing2.png"
+    },
+    "roya": {
+        "wing1": "roya-wing1.png",
+        "wing2": "roya-wing2.png"
+    },
+    "simple": {
+        "wing1": "simple-wing1.png",
+        "wing2": "simple-wing2.png"
+    },
+    "snow": {
+        "wing1": "snow-wing1.gif",
+        "wing2": "snow-wing2.gif"
+    },
+    "thunder": {
+        "wing1": "thunder-wing1.gif",
+        "wing2": "thunder-wing2.gif"
+    },
+    "tynix": {
+        "wing1": "tynix-wing1.gif",
+        "wing2": "tynix-wing2.gif"
+    },
+    "white": {
+        "wing1": "white-wing1.png",
+        "wing2": "white-wing2.png"
+    },
+    "yellows": {
+        "wing1": "yellows-wing1.png",
+        "wing2": "yellows-wing2.png"
+    }
+}

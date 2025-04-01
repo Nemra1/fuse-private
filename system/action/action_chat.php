@@ -18,41 +18,52 @@ if (isset($_POST["del_private"]) && isset($_POST["target"])) {
     echo deleteprivatehistory();
     exit;
 }
-function deletePrivateHistory()
-{
-    global $mysqli;
-    global $data;
-    global $cody;
+function deletePrivateHistory(){
+    global $mysqli,$data,$cody;
     if (!canDeletePrivate()) {
         return 0;
     }
     $target = escape($_POST["target"]);
-    $stmt = $mysqli->prepare("SELECT * FROM boom_report WHERE (report_user = ? AND report_target = ?) OR (report_user = ? AND report_target = ?)");
-    $stmt->bind_param("ssss", $data["user_id"], $target, $target, $data["user_id"]);
-    $stmt->execute();
-    $check_private = $stmt->get_result();
-    if (0 < $check_private->num_rows) {
-        $priv = $check_private->fetch_assoc();
-        if (!selfManageReport($priv["report_target"])) {
-            return 0;
+    $query = "SELECT * FROM boom_report WHERE report_user = ? AND report_target = ? OR report_user = ? AND report_target = ?";
+    if ($stmt = $mysqli->prepare($query)) {
+        $stmt->bind_param("iiii", $data["user_id"], $target, $target, $data["user_id"]);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows > 0) {
+            $priv = $result->fetch_assoc();
+            if (!selfManageReport($priv["report_target"])) {
+                return 0;
+            }
         }
+        $stmt->close();
+    } else {
+        error_log("Error preparing query: " . $mysqli->error);
+        return 0;
     }
-    $mysqli->query("DELETE FROM boom_report WHERE report_user = '" . $data["user_id"] . "' AND report_target = '" . $target . "' OR report_user = '" . $target . "' AND report_target = '" . $data["user_id"] . "'");
+
+    $deleteQuery = "DELETE FROM boom_report WHERE report_user = ? AND report_target = ? OR report_user = ? AND report_target = ?";
+    if ($stmt = $mysqli->prepare($deleteQuery)) {
+        $stmt->bind_param("iiii", $data["user_id"], $target, $target, $data["user_id"]);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        error_log("Error preparing delete query: " . $mysqli->error);
+    }
+
     updateStaffNotify();
     clearPrivate($data["user_id"], $target);
     return 1;
 }
 
-function chatDeletePost()
-{
-    global $mysqli;
-    global $data;
+function chatDeletePost(){
+    global $mysqli,$data;
     $post = escape($_POST["del_post"]);
     $type = escape($_POST["type"]);
     $log = logInfo($post);
     if (empty($log)) {
         return "";
     }
+    
     if (!canDeleteLog() && !canDeleteRoomLog() && !canDeleteSelfLog($log)) {
         return "";
     }
@@ -61,35 +72,72 @@ function chatDeletePost()
     if (empty($room)) {
         return "";
     }
-    $mysqli->query("DELETE FROM boom_chat WHERE post_id = '" . $post . "' AND post_roomid = '" . $data["user_roomid"] . "'");
-    $mysqli->query("DELETE FROM boom_report WHERE report_post = '" . $post . "' AND report_type = '1' AND report_room = '" . $data["user_roomid"] . "'");
-    if (0 < $mysqli->affected_rows) {
+
+    $deletePostQuery = "DELETE FROM boom_chat WHERE post_id = ? AND post_roomid = ?";
+    if ($stmt = $mysqli->prepare($deletePostQuery)) {
+        $stmt->bind_param("ii", $post, $data["user_roomid"]);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        error_log("Error preparing delete post query: " . $mysqli->error);
+        return "";
+    }
+
+    $deleteReportQuery = "DELETE FROM boom_report WHERE report_post = ? AND report_type = '1' AND report_room = ?";
+    if ($stmt = $mysqli->prepare($deleteReportQuery)) {
+        $stmt->bind_param("ii", $post, $data["user_roomid"]);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        error_log("Error preparing delete report query: " . $mysqli->error);
+    }
+
+    if ($mysqli->affected_rows > 0) {
         updateStaffNotify();
     }
-    if (!delExpired($room["rltime"])) {
-        $mysqli->query("UPDATE boom_rooms SET rldelete = CONCAT(rldelete, '," . $post . "'), rltime = '" . time() . "' WHERE room_id = '" . $data["user_roomid"] . "'");
+
+    $updateRoomQuery = "UPDATE boom_rooms SET rldelete = IF(rldelete IS NULL, ?, CONCAT(rldelete, ',', ?)), rltime = ? WHERE room_id = ?";
+    if ($stmt = $mysqli->prepare($updateRoomQuery)) {
+        $stmt->bind_param("isii", $post, $post, time(), $data["user_roomid"]);
+        $stmt->execute();
+        $stmt->close();
     } else {
-        $mysqli->query("UPDATE boom_rooms SET rldelete = '" . $post . "', rltime = '" . time() . "' WHERE room_id = '" . $data["user_roomid"] . "'");
+        error_log("Error preparing update room query: " . $mysqli->error);
     }
+
     boomConsole("delete_log", ["target" => $log["user_id"], "room" => $data["user_roomid"], "reason" => strip_tags($log["post_message"])]);
     removeRelatedFile($post, "chat");
 }
 
-function privateDeletion()
-{
-    global $mysqli;
-    global $data;
+
+function privateDeletion(){
+	global $mysqli,$data;
     $item = escape($_POST["private_delete"]);
-    $mysqli->query("UPDATE `boom_private` SET `status` = 3, `view` = 1  WHERE `hunter` = '" . $item . "' AND `target` = '" . $data["user_id"] . "' AND `status` < 3");
+    $query = "UPDATE boom_private SET status = 3, view = 1 WHERE hunter = ? AND target = ? AND status < 3";
+    if ($stmt = $mysqli->prepare($query)) {
+        $stmt->bind_param("ii", $item, $data["user_id"]);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        error_log("Error preparing private deletion query: " . $mysqli->error);
+    }
+
     return 1;
 }
 
-function privateClearing()
-{
-    global $mysqli;
-    global $data;
-    $mysqli->query("UPDATE `boom_private` SET `status` = 3, `view` = 1  WHERE `target` = '" . $data["user_id"] . "' AND `status` < 3");
+function privateClearing(){
+global $mysqli,$data;
+    $query = "UPDATE boom_private SET status = 3, view = 1 WHERE target = ? AND status < 3";
+    if ($stmt = $mysqli->prepare($query)) {
+        $stmt->bind_param("i", $data["user_id"]);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        error_log("Error preparing private clearing query: " . $mysqli->error);
+    }
+
     return 1;
 }
+
 
 ?>

@@ -112,53 +112,112 @@ function setEmailFilter(){
 }
 
 
-function staffDeleteIp()
-{
-    global $mysqli;
-    global $data;
-    $ip = escape($_POST["delete_ip"]);
+function staffDeleteIp(){
+    global $mysqli, $data;
+    // Ensure the user has the correct permission
     if (!boomAllow(90)) {
         return 0;
     }
-    $mysqli->query("DELETE FROM boom_banned WHERE id = '" . $ip . "'");
-    return 1;
+    // Sanitize and validate the input: Check if the input is a valid IP address
+    if (!isset($_POST["delete_ip"]) || !filter_var($_POST["delete_ip"], FILTER_VALIDATE_IP)) {
+        return 0; // Return 0 if the input is not a valid IP address
+    }
+    $ip = $_POST["delete_ip"]; // Assign the sanitized IP address
+    // Use prepared statements to prevent SQL injection
+    $stmt = $mysqli->prepare("DELETE FROM boom_banned WHERE ip = ?");
+    if ($stmt === false) {
+        return 0; // Return 0 if the prepared statement couldn't be created
+    }
+    // Bind the IP address parameter to the prepared statement
+    $stmt->bind_param("s", $ip);
+    // Execute the query
+    if ($stmt->execute()) {
+        return 1; // Return 1 if the query is successful
+    } else {
+        return 0; // Return 0 if the query failed
+    }
 }
 
-function staffDeleteWord()
-{
-    global $mysqli;
-    global $data;
-    $word = escape($_POST["delete_word"]);
+function staffDeleteWord(){
+    global $mysqli, $data;
+    // Ensure the user has the correct permission
     if (!boomAllow(80)) {
         return 0;
     }
-    $mysqli->query("DELETE FROM boom_filter WHERE id = '" . $word . "'");
-    return 1;
+    // Sanitize and validate the input
+    if (!isset($_POST["delete_word"]) || !is_numeric($_POST["delete_word"])) {
+        return 0; // Return 0 if input is not a valid number
+    }
+    $wordId = (int) $_POST["delete_word"]; // Cast to integer
+    // Use prepared statements to prevent SQL injection
+    $stmt = $mysqli->prepare("DELETE FROM boom_filter WHERE id = ?");
+    if ($stmt === false) {
+        return 0; // Return 0 if the prepared statement couldn't be created
+    }
+    // Bind the integer parameter to the prepared statement
+    $stmt->bind_param("i", $wordId);
+    // Execute the query
+    if ($stmt->execute()) {
+        return 1; // Return 1 if the query is successful
+    } else {
+        return 0; // Return 0 if the query failed
+    }
 }
 
-function staffAddWord()
-{
-    global $mysqli;
-    global $data;
-    $word = escape($_POST["add_word"]);
-    $type = escape($_POST["type"]);
+
+function staffAddWord() {
+    global $mysqli, $data;
+    // Ensure the user has permission
     if (!boomAllow(80)) {
         return "";
     }
-    $check_word = $mysqli->query("SELECT * FROM boom_filter WHERE word = '" . $word . "' AND word_type = '" . $type . "'");
-    if (0 < $check_word->num_rows) {
-        return 0;
+    // Check if necessary POST variables are set
+    if (!isset($_POST["add_word"]) || !isset($_POST["type"])) {
+        return "";
     }
+    // Sanitize and limit word input
+    $word = sanitizeChatInput($_POST["add_word"]);
+    $type = sanitizeChatInput($_POST["type"]);
+    // Validate type to only allow certain values
+    $allowed_types = ["email", "username", "other"]; // Add more valid types if needed
+    if (!in_array($type, $allowed_types, true)) {
+        return "";
+    }
+    // Higher permission needed for certain types
     if (($type == "email" || $type == "username") && !boomAllow(90)) {
         return "";
     }
-    if ($word != "") {
-        $mysqli->query("INSERT INTO boom_filter (word, word_type) VALUE ('" . $word . "', '" . $type . "')");
-        $word_added["id"] = $mysqli->insert_id;
-        $word_added["word"] = $word;
-        return boomTemplate("element/word", $word_added);
+    // Check if word already exists
+    $stmt = $mysqli->prepare("SELECT id FROM boom_filter WHERE word = ? AND word_type = ?");
+    if (!$stmt) {
+        return "";
     }
+    $stmt->bind_param("ss", $word, $type);
+    $stmt->execute();
+    $stmt->store_result();
+    if ($stmt->num_rows > 0) {
+        $stmt->close();
+        return 0;
+    }
+    $stmt->close();
+    // If the word is not empty, insert it into the database
+    if (!empty($word)) {
+        $stmt = $mysqli->prepare("INSERT INTO boom_filter (word, word_type) VALUES (?, ?)");
+        if (!$stmt) {
+            return "";
+        }
+        $stmt->bind_param("ss", $word, $type);
+        if ($stmt->execute()) {
+            $word_added["id"] = $stmt->insert_id;
+            $word_added["word"] = $word;
+            $stmt->close();
+            return boomTemplate("element/word", $word_added);
+        }
+        $stmt->close();
+    }
+
     return 2;
 }
+
 
 ?>

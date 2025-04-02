@@ -9,6 +9,13 @@
 * all the content of Codychat is the propriety of BoomCoding and Cannot be 
 * used for another project.
 */
+
+function fu_json_results($input) {
+    header("Content-type: application/json");
+    echo json_encode($input);
+    exit();
+}
+
 function cl_update_user_data($user_id = null, $res = array()) {
     global $db, $data;
     // Check if user_id is a valid number and $res is a non-empty array
@@ -42,26 +49,6 @@ function getIp(){
     }
     return escape($ip);
 }
-// Function to sanitize output for XSS protection
-function sanitizeOutput($output) {
-	return htmlspecialchars($output ?? '', ENT_QUOTES, 'UTF-8');
-    //return htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
-}
-function cleanString($string) {
-    return $string = preg_replace("/&#?[a-z0-9]+;/i", "", $string);
-}
-function cl_rn_strip($text = ""){
-    // Trim leading and trailing whitespace
-    $text = trim($text);
-    // Replace line breaks with a single space
-    $text = str_ireplace(["\r\n", "\n\r", "\r", "\n"], " ", $text);
-    // Replace encoded ampersands with actual ampersands
-    $text = str_replace('&amp;#', '&#', $text);
-    // Remove parentheses
-    $text = str_replace(['(', ')'], '', $text);
-    return $text;
-}
-
 function boomTemplate($getpage, $boom = '') {
 	global $data, $lang, $mysqli, $cody;
     $page = BOOM_PATH . '/system/' . $getpage . '.php';
@@ -254,10 +241,45 @@ function linkAvatar($a){
 		return true;
 	}
 }
+// Function to sanitize output for XSS protection
+function sanitizeOutput($output) {
+	return htmlspecialchars($output ?? '', ENT_QUOTES, 'UTF-8');
+    //return htmlspecialchars($output, ENT_QUOTES, 'UTF-8');
+}
+function cleanString($string) {
+    return $string = preg_replace("/&#?[a-z0-9]+;/i", "", $string);
+}
+function cl_rn_strip($text = ""){
+    // Trim leading and trailing whitespace
+    $text = trim($text);
+    // Replace line breaks with a single space
+    $text = str_ireplace(["\r\n", "\n\r", "\r", "\n"], " ", $text);
+    // Replace encoded ampersands with actual ampersands
+    $text = str_replace('&amp;#', '&#', $text);
+    // Remove parentheses
+    $text = str_replace(['(', ')'], '', $text);
+    return $text;
+}
 function escape($t){
 	global $mysqli;
+	//$t= sanitizeChatInput($t);
 	return $mysqli->real_escape_string(trim(htmlspecialchars($t, ENT_QUOTES)));
 }
+function sanitizeChatInput($input) {
+    // Strip all HTML/JavaScript tags
+    $clean = strip_tags($input);
+    // Convert special characters to HTML entities
+    $clean = htmlspecialchars($clean, ENT_QUOTES, 'UTF-8');
+    // Remove unwanted characters
+    $clean = preg_replace('/[^\w\s,.!?@#\-]/', '', $clean);
+    // Limit message length
+    return substr($clean, 0, 500);
+}
+// For any user-generated content display:
+function safeDisplay($content) {
+    echo htmlspecialchars($content, ENT_QUOTES, 'UTF-8');
+}
+
 function boomSanitize($t){
 	global $mysqli;
 	$t = str_replace(array('\\', '/', '.', '<', '>', '%', '#'), '', $t);
@@ -391,26 +413,44 @@ function userPostChat($content, $custom = array()){
 	}
 }
 function userPostChatFile($content, $file_name, $type, $custom = array()){
-	global $mysqli, $data;
-	$def = array(
-		'type'=> 'public__message',
-		'file2'=> '',
-	);
-	$c = array_merge($def, $custom);
-	$mysqli->query("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, file) VALUES ('" . time() . "', '{$data['user_id']}', '$content', '{$data['user_roomid']}', '{$c['type']}', '1')");
-	$rel = $mysqli->insert_id;
-	chatAction($data['user_roomid']);
-	if($c['file2'] != ''){
-		$mysqli->query("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES
-		('$file_name', '" . time() . "', '{$data['user_id']}', 'chat', '$type', '$rel'),
-		('{$c['file2']}', '" . time() . "', '{$data['user_id']}', 'chat', '$type', '$rel')
-		");
-	}
-	else {
-		$mysqli->query("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES ('$file_name', '" . time() . "', '{$data['user_id']}', 'chat', '$type', '$rel')");
-	}
-	return true;
+    global $mysqli, $data;
+    // Default custom values
+    $def = array(
+        'type' => 'public__message',
+        'file2' => '',
+    );
+    $c = array_merge($def, $custom);
+    // Sanitize input variables
+    $content = escape($content); // Assuming you have an escape function to sanitize inputs
+    $file_name = escape($file_name);
+    $type = escape($type);
+    // Insert into boom_chat using prepared statement
+    $stmt = $mysqli->prepare("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, file) VALUES (?, ?, ?, ?, ?, ?)");
+    $time_now = time();
+    $file_placeholder = 1; // Assuming 1 means the presence of a file, replace with actual condition if needed
+    $stmt->bind_param("iisssi", $time_now, $data['user_id'], $content, $data['user_roomid'], $c['type'], $file_placeholder);
+    $stmt->execute();
+    $rel = $stmt->insert_id;
+    $stmt->close();
+    // Perform chat action
+    chatAction($data['user_roomid']);
+    // Insert into boom_upload if file2 is provided or not
+    if ($c['file2'] != '') {
+        $stmt_upload = $mysqli->prepare("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)");
+        $stmt_upload->bind_param("siisssi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel, $c['file2'], $time_now, $data['user_id'], $file_zone, $type, $rel);
+        $stmt_upload->execute();
+        $stmt_upload->close();
+    } else {
+        $stmt_upload = $mysqli->prepare("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt_upload->bind_param("siissi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel);
+        $stmt_upload->execute();
+        $stmt_upload->close();
+    }
+    return true;
 }
+
+
+
 function systemPostChat($room, $content, $custom = array()){
 	global $mysqli, $data;
 	$def = array(
@@ -1433,6 +1473,7 @@ function boomConsole($type, $custom = array()){
     // Merge default values with the custom ones
     $c = array_merge($def, $custom);
     // Prepare the query with placeholders to prevent SQL injection
+	$current_time = time();
     $query = "
         INSERT INTO boom_console (hunter, target, room, ctype, crank, delay, reason, custom, custom2, cdate)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1451,7 +1492,7 @@ function boomConsole($type, $custom = array()){
             $c['reason'], 
             $c['custom'], 
             $c['custom2'], 
-            time()
+            $current_time
         );
         // Execute the statement and check for errors
         if (!$stmt->execute()) {
@@ -1803,12 +1844,23 @@ function pendingPush($s, $d){
 	return $s;
 }
 function boomDuplicateIp($val){
-	global $mysqli, $data, $cody;
-	$dupli = $mysqli->query("SELECT * FROM `boom_banned` WHERE `ip` = '$val'");
-	if($dupli->num_rows > 0){
-		return true;
-	}
+    global $mysqli, $data, $cody;
+    // Sanitize the IP input
+    $val = escape($val);
+    // Prepare the query to prevent SQL injection
+    $stmt = $mysqli->prepare("SELECT * FROM `boom_banned` WHERE `ip` = ?");
+    $stmt->bind_param("s", $val);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    // Check if the IP is found in the banned list
+    if($result->num_rows > 0){
+        $stmt->close();
+        return true;
+    }
+    $stmt->close();
+    return false;
 }
+
 function checkToken() {
 	global $cody;
     if (!isset($_POST['token']) || !isset($_SESSION[BOOM_PREFIX . 'token']) || empty($_SESSION[BOOM_PREFIX . 'token'])) {
@@ -3563,21 +3615,29 @@ function useLike(){
 	}
 }
 function getProfileLikes($user, $type = 0){
-	global $mysqli, $data;
-	$get_likes = $mysqli->query("
-		SELECT
-		(SELECT count(id) FROM boom_pro_like WHERE target = '{$user['user_id']}') as total_like,
-		(SELECT count(id) as liked FROM boom_pro_like WHERE target = '{$user['user_id']}' AND hunter = '{$data['user_id']}') as liked
-	");
-	$c = $get_likes->fetch_assoc();
-	$c['liking'] = 0;
-	if(canLikeUser($user)){
-		$c['liking'] = 1;
-		$c['user'] = $user['user_id'];
-	}
-	echo boomTemplate('element/pro_like', $c);
+    global $mysqli, $data;
+    // Ensure user ID is an integer
+    $user_id = (int) $user['user_id'];
+    $hunter_id = (int) $data['user_id'];
+    // Use prepared statements to secure the query
+    $stmt = $mysqli->prepare("
+        SELECT 
+            (SELECT COUNT(id) FROM boom_pro_like WHERE target = ?) AS total_like,
+            (SELECT COUNT(id) FROM boom_pro_like WHERE target = ? AND hunter = ?) AS liked
+    ");
+    $stmt->bind_param("iii", $user_id, $user_id, $hunter_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $c = $result->fetch_assoc();
+    $c['liking'] = 0;
+    if (canLikeUser($user)) {
+        $c['liking'] = 1;
+        $c['user'] = $user_id;
+    }
+    // Close statement
+    $stmt->close();
+    echo boomTemplate('element/pro_like', $c);
 }
-
 
 function canLikeUser($user){
 	global $data;

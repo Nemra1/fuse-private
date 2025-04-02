@@ -35,369 +35,337 @@ if (isset($_POST["remove_news"])) {
     exit;
 }
 function newsReplyCount($id) {
-    global $mysqli, $data;
-    // Sanitize the input to avoid SQL injection
-    $id = escape($id); 
-    // Prepare the SQL query with placeholders
-    $query = "SELECT count(reply_id) as total FROM boom_news_reply WHERE parent_id = ?";
+    global $mysqli;
+    // Ensure ID is a valid integer
+    if (!is_numeric($id) || $id < 1) {
+        return 0; // Invalid input, return 0
+    }
+    // SQL query with a placeholder
+    $query = "SELECT COUNT(reply_id) FROM boom_news_reply WHERE parent_id = ?";
     // Prepare the statement
     if ($stmt = $mysqli->prepare($query)) {
-        // Bind the parameter to the query
+        // Bind the integer parameter
         $stmt->bind_param("i", $id);
         // Execute the query
         $stmt->execute();
         // Get the result
-        $result = $stmt->get_result();
-        // Fetch the result
-        if ($row = $result->fetch_assoc()) {
-            $stmt->close();  // Close the statement after fetching the result
-            return $row["total"];
-        } else {
-            // Handle the case when no result is returned
-            $stmt->close();
-            return 0;  // Return 0 if no replies exist
-        }
-    } else {
-        // Log an error if the statement preparation fails
-        error_log("Error preparing query: " . $mysqli->error);
-        return 0;
+        $stmt->bind_result($total);
+        $stmt->fetch();  // Fetch the count value
+        $stmt->close();  // Ensure the statement is closed
+        return $total ?? 0; // Return count or 0 if null
     }
+    // Log an error if preparation fails
+    error_log("newsReplyCount SQL Error: " . $mysqli->error);
+    return 0;
 }
 
 
-function moreNews() {
+function moreNews(){
     global $mysqli, $data;
-    // Sanitize input to prevent SQL injection
-    $news = escape($_POST["more_news"]);
+    // Validate and sanitize input
+    if (!isset($_POST["more_news"]) || !is_numeric($_POST["more_news"]) || $_POST["more_news"] < 1) {
+        return 0; // Invalid input
+    }
+    $news = (int) $_POST["more_news"]; // Ensure integer type
     $news_content = "";
-    // Prepare the query to fetch the news
+    // Optimized query using JOINs instead of subqueries
     $query = "
         SELECT 
             boom_news.*, 
             boom_users.*, 
-            (SELECT COUNT(id) FROM boom_news) AS news_count,
-            (SELECT COUNT(parent_id) FROM boom_news_reply WHERE parent_id = boom_news.id) AS reply_count,
-            (SELECT like_type FROM boom_news_like WHERE uid = ? AND like_post = boom_news.id) AS liked
-        FROM 
-            boom_news
-        INNER JOIN 
-            boom_users 
-        ON 
-            boom_news.news_poster = boom_users.user_id
-        WHERE 
-            boom_news.id < ?
-        ORDER BY 
-            boom_news.news_date DESC 
+            COUNT(DISTINCT boom_news_reply.id) AS reply_count, 
+            MAX(boom_news_like.like_type) AS liked
+        FROM boom_news
+        INNER JOIN boom_users ON boom_news.news_poster = boom_users.user_id
+        LEFT JOIN boom_news_reply ON boom_news_reply.parent_id = boom_news.id
+        LEFT JOIN boom_news_like ON boom_news_like.uid = ? AND boom_news_like.like_post = boom_news.id
+        WHERE boom_news.id < ?
+        GROUP BY boom_news.id
+        ORDER BY boom_news.news_date DESC
         LIMIT 10
     ";
-
-    // Prepare the statement
+    // Prepare and execute statement
     if ($stmt = $mysqli->prepare($query)) {
-        // Bind parameters to the prepared statement
         $stmt->bind_param("ii", $data["user_id"], $news);
-        // Execute the query
         $stmt->execute();
-        // Get the result
         $result = $stmt->get_result();
-        // Fetch the results
         if ($result->num_rows > 0) {
             while ($news_item = $result->fetch_assoc()) {
                 $news_content .= boomTemplate("element/news", $news_item);
             }
         } else {
-            // No news found
-            $news_content .= 0;
+            $news_content .= 0; // No more news
         }
-        // Close the statement
-        $stmt->close();
+        $stmt->close(); // Always close statement
     } else {
-        // Log an error if the statement preparation fails
-        error_log("Error preparing query: " . $mysqli->error);
-        return 0;
+        error_log("moreNews SQL Error: " . $mysqli->error);
+        return 0; // Query failed
     }
     return $news_content;
 }
 
 
+
 function newsReply() {
     global $mysqli, $data, $cody;
-    // Sanitize the content and reply_to inputs
-    $content = escape($_POST["content"]);
-    $reply_to = escape($_POST["reply_news"]);
-
-    // Check if the user is allowed to reply to news
-    if (!boomAllow($cody["can_reply_news"])) {
-        return "";
+    // Validate input
+    if (!isset($_POST["content"], $_POST["reply_news"])) {
+        return boomCode(0); // Invalid request
     }
-    // Sanitize target and fetch user details
-    $target = escape($_POST['content'] && $_POST['reply_news']);
-    $user = userDetails($target);
-    if (empty($user)) {
-        die();
+    // Get user input
+    $content = trim($_POST["content"]);
+    $reply_to = (int) $_POST["reply_news"];
+    // Check if user can reply
+    if (!boomAllow($cody["can_reply_news"])) {
+        return boomCode(0);
+    }
+    // Prevent empty content
+    if (empty($content)) {
+        return boomCode(0);
     }
     // Prevent flooding
     if (checkFlood()) {
-        echo 100;
-        die();
+        return boomCode(100); // Too many requests
     }
-    // Check if the user is muted
+    // Check if user is muted
     if (muted() || isRoomMuted($data)) {
-        die();
-    }
-    // Apply word filter to the content
-    $content = wordFilter($content);
-
-    // Check if the content length exceeds the limit
-    if (1001 <= strlen($content)) {
         return boomCode(0);
     }
-
-    // Check if the news post exists
-    $check_valid = $mysqli->prepare("SELECT * FROM boom_news WHERE id = ?");
+    // Apply word filtering
+    $filtered_content = wordFilter($content);
+    // Check if the content is too long
+    if (strlen($filtered_content) > 1000) {
+        return boomCode(0);
+    }
+    // Verify that the news post exists
+    $check_valid = $mysqli->prepare("SELECT id, news_poster FROM boom_news WHERE id = ?");
     $check_valid->bind_param("i", $reply_to);
     $check_valid->execute();
     $result = $check_valid->get_result();
-
     if ($result->num_rows < 1) {
         return boomCode(0);
     }
-
     $news = $result->fetch_assoc();
-
-    // Insert the reply into the database
+    $news_poster = $news["news_poster"];
+    // Insert reply into database
     $insert_reply = $mysqli->prepare("
         INSERT INTO boom_news_reply (parent_id, reply_date, reply_user, reply_content, reply_uid) 
         VALUES (?, ?, ?, ?, ?)
     ");
-	// Get the current time and news poster ID
-	$current_time = time();
-	$news_poster = $news["news_poster"];
-	
-	// Bind the parameters after assigning them to variables
-	$insert_reply->bind_param("iiiss", $news["id"], $current_time, $data["user_id"], $content, $news_poster);
-	$insert_reply->execute();
+    $current_time = time();
+    $insert_reply->bind_param("iiisi", $reply_to, $current_time, $data["user_id"], $filtered_content, $news_poster);
+    $insert_reply->execute();
+    if ($insert_reply->affected_rows < 1) {
+        return boomCode(0);
+    }
     $last_id = $mysqli->insert_id;
-
     // Fetch the inserted reply
     $get_back = $mysqli->prepare("
         SELECT boom_news_reply.*, boom_users.* 
         FROM boom_news_reply
         INNER JOIN boom_users ON boom_news_reply.reply_user = boom_users.user_id
-        WHERE boom_news_reply.parent_id = ? AND boom_news_reply.reply_user = ? 
-        ORDER BY boom_news_reply.reply_id DESC LIMIT 1
+        WHERE boom_news_reply.reply_id = ? 
+        LIMIT 1
     ");
-    $get_back->bind_param("ii", $reply_to, $user_id);  // Pass the variable by reference
+    $get_back->bind_param("i", $last_id);
     $get_back->execute();
     $result = $get_back->get_result();
-
     if ($result->num_rows < 1) {
         return boomCode(0);
     }
-
     $reply = $result->fetch_assoc();
     $log = boomTemplate("element/news_reply", $reply);
-
     // Get the total number of replies
     $total = newsReplyCount($reply_to);
-
-    // Return success with the reply data and total
     return boomCode(1, ["data" => $log, "total" => $total]);
 }
-
-
-function loadNewsComment(){
-    global $mysqli,$data,$lang;    
-    // Escape input to prevent SQL injection
-    $id = escape($_POST["id"]);
+function loadNewsComment() {
+    global $mysqli, $data, $lang;
+    // Validate and cast input
+    if (!isset($_POST["id"]) || !is_numeric($_POST["id"])) {
+        return boomCode(0); // Invalid input
+    }
+    $id = (int) $_POST["id"];
     $load_reply = "";
     $reply_count = 0;
-    
-    // Get the total reply count for this news post
-    $get_reply_count = $mysqli->query("
-        SELECT COUNT(reply_id) AS reply_count
-        FROM boom_news_reply
-        WHERE parent_id = '$id'
-    ");
-    if ($get_reply_count->num_rows > 0) {
-        $reply_count_result = $get_reply_count->fetch_assoc();
-        $reply_count = $reply_count_result["reply_count"];
+    // Fetch total reply count & first 10 replies in a single query
+    $query = "
+        SELECT 
+            (SELECT COUNT(reply_id) FROM boom_news_reply WHERE parent_id = ?) AS reply_count,
+            r.*, 
+            u.*
+        FROM boom_news_reply AS r
+        INNER JOIN boom_users AS u ON r.reply_user = u.user_id
+        WHERE r.parent_id = ?
+        ORDER BY r.reply_id DESC
+        LIMIT 10
+    ";
+    if ($stmt = $mysqli->prepare($query)) {
+        $stmt->bind_param("ii", $id, $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($reply = $result->fetch_assoc()) {
+            if (!isset($reply_count)) {
+                $reply_count = $reply["reply_count"]; // Get total count from first row
+            }
+            $load_reply .= boomTemplate("element/news_reply", $reply);
+        }
+        $stmt->close();
+    } else {
+        error_log("Error preparing query: " . $mysqli->error);
+        return boomCode(0);
     }
-
-    // Fetch the latest 10 replies
-    $find_reply = $mysqli->query("
+    // Check if there are more comments to load
+    $more = ($reply_count > 10) ? "<a onclick=\"moreNewsComment(this, $id)\" class=\"theme_color text_small more_comment\">" . $lang["view_more_comment"] . "</a>" : 0;
+    return boomCode(1, ["reply" => $load_reply, "more" => $more]);
+}
+function moreNewsComment() {
+    global $mysqli, $data, $lang;
+    // Validate and cast input to integers
+    if (!isset($_POST["id"]) || !isset($_POST["current"]) || !is_numeric($_POST["id"]) || !is_numeric($_POST["current"])) {
+        return boomCode(0); // Invalid input
+    }
+    $id = (int) $_POST["id"];
+    $offset = (int) $_POST["current"];
+    $reply_comment = "";
+    // Prepare the query
+    $query = "
         SELECT 
             boom_news_reply.*, 
             boom_users.* 
-        FROM 
-            boom_news_reply
-        INNER JOIN 
-            boom_users 
-        ON 
-            boom_news_reply.reply_user = boom_users.user_id
-        WHERE 
-            boom_news_reply.parent_id = '$id'
-        ORDER BY 
-            boom_news_reply.reply_id DESC 
-        LIMIT 10
-    ");
-
-    if ($find_reply->num_rows > 0) {
-        while ($reply = $find_reply->fetch_assoc()) {
-            $load_reply .= boomTemplate("element/news_reply", $reply);
-        }
-    }
-
-    // Check if there are more comments to load
-    if ($reply_count > 10) {
-        $more = "<a onclick=\"moreNewsComment(this, $id)\" class=\"theme_color text_small more_comment\">" . $lang["view_more_comment"] . "</a>";
-    } else {
-        $more = 0;
-    }
-
-    return boomCode(1, ["reply" => $load_reply, "more" => $more]);
-}
-
-
-function moreNewsComment(){
- global $mysqli,$data,$lang;        
-    // Escape the input to prevent SQL injection
-    $id = escape($_POST["id"]);
-    $offset = escape($_POST["current"]);
-    $reply_comment = "";
-
-    // Use proper JOIN syntax and parameterized queries
-    $query = "
-        SELECT boom_news_reply.*, boom_users.* 
         FROM boom_news_reply
-        INNER JOIN boom_users 
-        ON boom_news_reply.reply_user = boom_users.user_id
+        INNER JOIN boom_users ON boom_news_reply.reply_user = boom_users.user_id
         WHERE boom_news_reply.parent_id = ? 
         AND boom_news_reply.reply_id < ?
         ORDER BY boom_news_reply.reply_id DESC
         LIMIT 20
     ";
-
-    // Prepare the query
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param("ii", $id, $offset);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    // Check if we have any replies and format them
-    if ($result->num_rows > 0) {
+    if ($stmt = $mysqli->prepare($query)) {
+        $stmt->bind_param("ii", $id, $offset);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        // Check if we have any replies and format them
         while ($reply = $result->fetch_assoc()) {
             $reply_comment .= boomTemplate("element/news_reply", $reply);
         }
+        $stmt->close();
     } else {
-        $reply_comment = 0; // No more comments to load
+        error_log("Error preparing query: " . $mysqli->error);
+        return boomCode(0);
     }
-
-    return $reply_comment;
+    // If no comments were loaded, return 0
+    return (!empty($reply_comment)) ? $reply_comment : boomCode(0);
 }
 
-
-function deleteNewsReply(){
+function deleteNewsReply() {
     global $mysqli, $data, $lang, $cody;
-    // Escape the input to prevent SQL injection
-    $reply_id = escape($_POST["delete_news_reply"]);
-    // Prepare the query with INNER JOIN and parameters
-    $query = "
-        SELECT boom_news_reply.*, boom_users.* 
-        FROM boom_news_reply
-        INNER JOIN boom_users 
-        ON boom_news_reply.reply_user = boom_users.user_id
-        WHERE boom_news_reply.reply_id = ?
-    ";
-    // Prepare the statement
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param("i", $reply_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($result->num_rows == 1) {
-        $reply = $result->fetch_assoc();
-        // Check if the user has permission to delete the reply
-        if (!canDeleteNewsReply($reply)) {
+    // Validate and sanitize input
+    if (!isset($_POST["delete_news_reply"]) || !is_numeric($_POST["delete_news_reply"])) {
+        return boomCode(0); // Invalid request
+    }
+    $reply_id = (int) $_POST["delete_news_reply"];
+    // Fetch only the parent_id and reply_user (avoid unnecessary user data)
+    $query = "SELECT parent_id, reply_user FROM boom_news_reply WHERE reply_id = ?";
+    if ($stmt = $mysqli->prepare($query)) {
+        $stmt->bind_param("i", $reply_id);
+        $stmt->execute();
+        $stmt->bind_result($parent_id, $reply_user);
+        $stmt->fetch();
+        $stmt->close();
+        // If no result, reply does not exist
+        if (!$parent_id) {
+            return boomCode(0);
+        }
+        // Check if the user has permission to delete
+        if (!canDeleteNewsReply(["reply_user" => $reply_user])) {
             return boomCode(0); // No permission
         }
         // Delete the reply
         $delete_query = "DELETE FROM boom_news_reply WHERE reply_id = ?";
-        $delete_stmt = $mysqli->prepare($delete_query);
-        $delete_stmt->bind_param("i", $reply_id);
-        $delete_stmt->execute();
-        // Get the total number of replies for the parent post
-        $total = newsreplycount($reply["parent_id"]);
-        // Return success with the updated reply count
-        return boomCode(1, ["news" => $reply["parent_id"], "reply" => $reply_id, "total" => $total]);
+        if ($delete_stmt = $mysqli->prepare($delete_query)) {
+            $delete_stmt->bind_param("i", $reply_id);
+            $delete_stmt->execute();
+            $delete_stmt->close();
+        } else {
+            error_log("Error preparing DELETE statement: " . $mysqli->error);
+            return boomCode(0);
+        }
+        // Get the updated reply count
+        $total = newsReplyCount($parent_id);
+
+        // Return success with updated reply count
+        return boomCode(1, ["news" => $parent_id, "reply" => $reply_id, "total" => $total]);
     }
-    // Return failure if the reply does not exist
+    // Log error if statement preparation fails
+    error_log("Error preparing SELECT statement: " . $mysqli->error);
     return boomCode(0);
 }
-
 function postSystemNews() {
     global $mysqli, $data, $lang, $cody;
-    $news = clearBreak($_POST["add_news"]);
-    $news = escape($news);
-    $post_file = escape($_POST["post_file"]);
+    // Sanitize and trim news content
+    $news = trimContent(clearBreak($_POST["add_news"] ?? ""));
+    $post_file = $_POST["post_file"] ?? "";
     $news_file = "";
     $file_ok = 0;
-    // Check if user is muted
-    if (muted()) {
+    $current_time = time();
+    // Check if the user is muted or lacks permission
+    if (muted() || !canPostNews()) {
         return 0;
     }
-    // Check if user has permission to post news
-    if (!canPostNews()) {
-        return 0;
-    }
-    // Trim the content
-    $news = trimContent($news);
-    // Check if there is content to post (either news text or file)
+    // Ensure there is content (either text or file)
     if (empty($news) && empty($post_file)) {
         return 0;
     }
-    // Handle file attachment
-    if ($post_file != "") {
-        // Use prepared statement to prevent SQL injection
+    // Handle file attachment validation
+    if (!empty($post_file)) {
         $get_file_stmt = $mysqli->prepare("
-            SELECT * FROM boom_upload 
-            WHERE file_key = ? 
-            AND file_user = ? 
-            AND file_complete = '0'
+            SELECT file_name FROM boom_upload 
+            WHERE file_key = ? AND file_user = ? AND file_complete = 0
         ");
         $get_file_stmt->bind_param("si", $post_file, $data["user_id"]);
         $get_file_stmt->execute();
-        $get_file_result = $get_file_stmt->get_result();
-        if ($get_file_result->num_rows > 0) {
-            $file = $get_file_result->fetch_assoc();
-            $news_file = "/upload/news/" . $file["file_name"];
+        $get_file_stmt->store_result();
+
+        if ($get_file_stmt->num_rows > 0) {
+            $get_file_stmt->bind_result($file_name);
+            $get_file_stmt->fetch();
+            $news_file = "/upload/news/" . $file_name;
             $file_ok = 1;
-        } else {
-            // If file doesn't exist, check if there's no news content
-            if (empty($news)) {
-                return 0;
-            }
+        } else if (empty($news)) {
+            // If no file found and no text content, return 0
+            $get_file_stmt->close();
+            return 0;
         }
+        $get_file_stmt->close();
     }
     // Update the user's last news post timestamp
     $update_user_stmt = $mysqli->prepare("UPDATE boom_users SET user_news = ? WHERE user_id = ?");
-    $update_user_stmt->bind_param("ii", time(), $data["user_id"]);
-    $update_user_stmt->execute();
+    $update_user_stmt->bind_param("ii", $current_time, $data["user_id"]);
+    if (!$update_user_stmt->execute()) {
+        return 0; // Fail if update fails
+    }
+    $update_user_stmt->close();
     // Insert the news into the database
     $insert_news_stmt = $mysqli->prepare("
         INSERT INTO boom_news (news_poster, news_message, news_file, news_date) 
         VALUES (?, ?, ?, ?)
     ");
-    $insert_news_stmt->bind_param("issi", $data["user_id"], $news, $news_file, time());
-    $insert_news_stmt->execute();
+    $insert_news_stmt->bind_param("issi", $data["user_id"], $news, $news_file, $current_time);
+    if (!$insert_news_stmt->execute()) {
+        return 0; // Fail if insertion fails
+    }
     $news_id = $mysqli->insert_id;
+    $insert_news_stmt->close();
     // Update the file completion status if a file was attached
     if ($file_ok == 1) {
         $update_file_stmt = $mysqli->prepare("
             UPDATE boom_upload 
-            SET file_complete = '1', relative_post = ? 
+            SET file_complete = 1, relative_post = ? 
             WHERE file_key = ? AND file_user = ?
         ");
         $update_file_stmt->bind_param("isi", $news_id, $post_file, $data["user_id"]);
         $update_file_stmt->execute();
+        $update_file_stmt->close();
     }
     // Notify all users
     updateAllNotify();
@@ -406,86 +374,84 @@ function postSystemNews() {
 }
 
 
+
 function deleteNews() {
     global $mysqli, $data, $lang, $cody;
-
-    $news = escape($_POST["remove_news"]);
-    // Use prepared statement for selecting the news to delete
+    $news_id = (int) $_POST["remove_news"];  // Explicitly cast to integer to avoid SQL injection risk
+    // Validate that the news exists and the user has permission to delete it
     $valid_stmt = $mysqli->prepare("
         SELECT boom_news.*, boom_users.* 
         FROM boom_news 
-        INNER JOIN boom_users 
-        ON boom_news.news_poster = boom_users.user_id 
+        INNER JOIN boom_users ON boom_news.news_poster = boom_users.user_id 
         WHERE boom_news.id = ?
     ");
-    $valid_stmt->bind_param("i", $news);
+    $valid_stmt->bind_param("i", $news_id);
     $valid_stmt->execute();
     $valid_result = $valid_stmt->get_result();
-    if ($valid_result->num_rows > 0) {
-        $tnews = $valid_result->fetch_assoc();
-        // Check if the user has permission to delete the news
-        if (!canDeleteNews($tnews)) {
-            return 1;
-        }
-        // Start transaction to delete all associated records
-        $mysqli->begin_transaction();
-        try {
-            // Delete related news
-            $delete_news_stmt = $mysqli->prepare("DELETE FROM boom_news WHERE id = ?");
-            $delete_news_stmt->bind_param("i", $news);
-            $delete_news_stmt->execute();
-
-            // Delete related replies
-            $delete_replies_stmt = $mysqli->prepare("DELETE FROM boom_news_reply WHERE parent_id = ?");
-            $delete_replies_stmt->bind_param("i", $news);
-            $delete_replies_stmt->execute();
-
-            // Delete related likes
-            $delete_likes_stmt = $mysqli->prepare("DELETE FROM boom_news_like WHERE like_post = ?");
-            $delete_likes_stmt->bind_param("i", $news);
-            $delete_likes_stmt->execute();
-
-            // Remove related files
-            removeRelatedFile($news, "news");
-
-            // Commit transaction
-            $mysqli->commit();
-
-            // Notify all users
-            updateAllNotify();
-
-            // Log the deletion if not deleting your own news
-            if (!mySelf($tnews["user_id"])) {
-                boomConsole("news_delete", ["hunter" => $data["user_id"], "target" => $tnews["user_id"]]);
-            }
-
-            // Return confirmation
-            return "boom_news" . $news;
-
-        } catch (Exception $e) {
-            // Rollback transaction if any error occurs
-            $mysqli->rollback();
-            return 1;
-        }
+    if ($valid_result->num_rows === 0) {
+        // News not found
+        return "Error: News not found.";
     }
-
-    // Return 1 if news is not found or not deletable
-    return 1;
+    $tnews = $valid_result->fetch_assoc();
+    // Check if the user has permission to delete the news
+    if (!canDeleteNews($tnews)) {
+        return "Error: You do not have permission to delete this news.";
+    }
+    // Start transaction to delete all related data
+    $mysqli->begin_transaction();
+    try {
+        // Delete related news
+        $delete_news_stmt = $mysqli->prepare("DELETE FROM boom_news WHERE id = ?");
+        $delete_news_stmt->bind_param("i", $news_id);
+        if (!$delete_news_stmt->execute()) {
+            throw new Exception("Failed to delete news.");
+        }
+        // Delete related replies
+        $delete_replies_stmt = $mysqli->prepare("DELETE FROM boom_news_reply WHERE parent_id = ?");
+        $delete_replies_stmt->bind_param("i", $news_id);
+        if (!$delete_replies_stmt->execute()) {
+            throw new Exception("Failed to delete replies.");
+        }
+        // Delete related likes
+        $delete_likes_stmt = $mysqli->prepare("DELETE FROM boom_news_like WHERE like_post = ?");
+        $delete_likes_stmt->bind_param("i", $news_id);
+        if (!$delete_likes_stmt->execute()) {
+            throw new Exception("Failed to delete likes.");
+        }
+        // Remove related files if applicable
+        removeRelatedFile($news_id, "news");
+        // Commit transaction if everything is successful
+        $mysqli->commit();
+        // Notify all users
+        updateAllNotify();
+        // Log the deletion if the user isn't deleting their own news
+        if (!mySelf($tnews["user_id"])) {
+            boomConsole("news_delete", ["hunter" => $data["user_id"], "target" => $tnews["user_id"]]);
+        }
+        // Return a success message with the news ID
+        return "News deleted successfully: boom_news" . $news_id;
+    } catch (Exception $e) {
+        // Rollback the transaction if anything fails
+        $mysqli->rollback();
+        return "Error: " . $e->getMessage();
+    }
 }
+
 
 
 function newsLike() {
     global $mysqli, $data, $lang, $cody;
-
     if (!boomAllow(1)) {
         return "";
     }
-
-    // Escape input parameters
-    $id = escape($_POST["like_news"]);
-    $type = escape($_POST["like_type"]);
-
-    // Use a prepared statement to prevent SQL injection
+    // Sanitize and validate the inputs
+    $id = (int) $_POST["like_news"];  // Ensure it's an integer
+    $type = (int) $_POST["like_type"]; // Ensure it's an integer
+    // Check if the like type is valid (assuming 1 and 2 are the valid types, adjust as needed)
+    if (!in_array($type, [1, 2])) {
+        return boomCode(0);  // Invalid like type
+    }
+    // Use a prepared statement to check the current like status
     $like_stmt = $mysqli->prepare("
         SELECT news_poster, 
                (SELECT like_type 
@@ -497,34 +463,29 @@ function newsLike() {
     $like_stmt->bind_param("iii", $id, $data["user_id"], $id);
     $like_stmt->execute();
     $like_result = $like_stmt->get_result();
-
     if ($like_result->num_rows > 0) {
         $like = $like_result->fetch_assoc();
-
-        // Delete the existing like (if any)
+        // Delete the existing like if any
         $delete_like_stmt = $mysqli->prepare("DELETE FROM boom_news_like WHERE like_post = ? AND uid = ?");
         $delete_like_stmt->bind_param("ii", $id, $data["user_id"]);
         $delete_like_stmt->execute();
-
-        // If the user is trying to like with the same type, do nothing
+        // If the user is trying to like with the same type, cancel the action
         if ($like["type"] == $type) {
             return boomCode(1, ["data" => getLikes($id, 0, "news")]);
         }
-
         // Insert the new like
         $insert_like_stmt = $mysqli->prepare("
             INSERT INTO boom_news_like (uid, liked_uid, like_type, like_post, like_date) 
             VALUES (?, ?, ?, ?, ?)
         ");
-		// Store the result of time() in a variable
-		$current_time = time();
+        $current_time = time();
         $insert_like_stmt->bind_param("iiisi", $data["user_id"], $like["news_poster"], $type, $id, $current_time);
         $insert_like_stmt->execute();
-
         return boomCode(1, ["data" => getLikes($id, $type, "news")]);
     }
-
+    // Return failure if the news doesn't exist or cannot be liked
     return boomCode(0);
 }
+
 
 ?>

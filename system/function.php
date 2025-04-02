@@ -616,51 +616,45 @@ function sendNotificationToAll($message) {
     return $result;
 }
 function getAllSubscribers($appId, $restApiKey) {
-     global $data,$cody;
+    global $data, $cody;
     $url = "https://onesignal.com/api/v1/players";
     $limit = 300; // Number of subscribers per request
     $offset = 0; // Pagination offset
-
     $allSubscribers = [];
     $hasMore = true;
-
     while ($hasMore) {
         $headers = [
             'Content-Type: application/json; charset=utf-8',
             'Authorization: Basic ' . $restApiKey
         ];
-
         $params = [
             'app_id' => $appId,
             'limit' => $limit,
             'offset' => $offset
         ];
-
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url . '?' . http_build_query($params));
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        // Enable SSL verification
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);  // Verify SSL certificate
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);    // Verify host against certificate
         $result = curl_exec($ch);
         curl_close($ch);
-
         if ($result === false) {
             die('Error: "' . curl_error($ch) . '" - Code: ' . curl_errno($ch));
         }
-
         $response = json_decode($result, true);
-
         if (isset($response['players'])) {
             $allSubscribers = array_merge($allSubscribers, $response['players']);
         }
-
         // Check if there are more subscribers to fetch
         $hasMore = isset($response['next_page']) && $response['next_page'];
         $offset += $limit;
     }
-
     return $allSubscribers;
 }
+
 
 function postPrivateContent($from, $to, $content){
 	global $mysqli, $data;

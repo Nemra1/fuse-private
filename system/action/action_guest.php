@@ -1,23 +1,35 @@
 <?php
 
-
 require __DIR__ . "./../config_session.php";
 
 if (isset($_POST["new_guest_name"]) && isset($_POST["new_guest_password"]) && isset($_POST["new_guest_email"])) {
-    echo guestregistration();
+    echo guestRegistration();
     exit;
 }
 echo 99;
 
-function guestRegistration()
-{
-    global $mysqli;
-    global $data;
-    global $cody;
-    $user_name = escape($_POST["new_guest_name"]);
-    $user_password = escape($_POST["new_guest_password"]);
-    $user_email = escape($_POST["new_guest_email"]);
+require __DIR__ . "./../config_session.php";
+
+if (isset($_POST["new_guest_name"]) && isset($_POST["new_guest_password"]) && isset($_POST["new_guest_email"])) {
+    echo guestRegistration();
+    exit;
+}
+echo 99;
+
+function guestRegistration(){
+    global $mysqli, $data, $cody;
+
+    // Check if required fields exist
+    if (!isset($_POST["new_guest_name"], $_POST["new_guest_password"], $_POST["new_guest_email"])) {
+        return 99;
+    }
+
+    // Sanitize and validate inputs
+    $user_name = sanitizeChatInput($_POST["new_guest_name"]);
+    $user_password = $_POST["new_guest_password"]; // Keep password raw for hashing
+    $user_email = filter_var($_POST["new_guest_email"], FILTER_SANITIZE_EMAIL);
     $user_ip = getIp();
+    // Validate user input
     if (!guestCanRegister()) {
         return 0;
     }
@@ -27,10 +39,7 @@ function guestRegistration()
     if (!validEmail($user_email)) {
         return 6;
     }
-    if (!checkEmail($user_email)) {
-        return 10;
-    }
-    if (!checkSmail($user_email)) {
+    if (!checkEmail($user_email) || !checkSmail($user_email)) {
         return 10;
     }
     if (!boomValidPassword($user_password)) {
@@ -42,7 +51,9 @@ function guestRegistration()
     if (!boomUsername($user_name) && !boomSame($user_name, $data["user_name"])) {
         return 5;
     }
-    $user_password = encrypt($user_password);
+    // Securely hash the password with BCRYPT
+    $hashed_password = password_hash($user_password, PASSWORD_BCRYPT);
+    // Assign default values if needed
     $ask = 0;
     if (defaultAvatar($data["user_tumb"])) {
         $data["user_rank"] = 1;
@@ -51,10 +62,23 @@ function guestRegistration()
     if (strictGuest()) {
         $ask = $data["activation"];
     }
+    // Process email storage
     $smail = smailProcess($user_email);
-    $mysqli->query("UPDATE boom_users SET user_name = '" . $user_name . "', user_password = '" . $user_password . "', user_email = '" . $user_email . "', user_smail = '" . $smail . "', user_rank = '1', user_verify = '" . $ask . "' WHERE user_id = '" . $data["user_id"] . "'");
-    setBoomCookie($data["user_id"], $user_password);
-    return 1;
+    // Use prepared statements to prevent SQL injection
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_name = ?, user_password = ?, user_email = ?, user_smail = ?, user_rank = ?, user_verify = ? WHERE user_id = ?");
+    if (!$stmt) {
+        return 99;
+    }
+    $rank = 1;  // Default user rank for guests
+    $stmt->bind_param("ssssiii", $user_name, $hashed_password, $user_email, $smail, $rank, $ask, $data["user_id"]);
+    if ($stmt->execute()) {
+        setBoomCookie($data["user_id"], $hashed_password);
+        $stmt->close();
+        return 1;
+    }   
+    $stmt->close();
+    return 99;
 }
+
 
 ?>

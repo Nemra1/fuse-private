@@ -701,23 +701,39 @@ function sendDataToSocket() {
        // return 'Error: ' . $response;
     }
 }
-function boomPageContent($content, $target)
-{
+function boomPageContent($content, $target){
     global $mysqli;
+    // Check user permission
     if (!boomAllow(90)) {
         return "";
     }
+    // Ensure content is not empty
     if (empty($content)) {
         $content = "";
     }
-    $target = escape($_POST["page_target"]);
-    $check_page = $mysqli->query("SELECT * FROM boom_page WHERE page_name = '" . $target . "'");
-    if (0 < $check_page->num_rows) {
-        $mysqli->query("UPDATE boom_page SET page_content = '" . $content . "' WHERE page_name = '" . $target . "'");
+    // Sanitize the target
+    $target = escape($_POST["page_target"]); // Assuming you have escape function to sanitize input
+    // Prepare and execute the SELECT query securely using a prepared statement
+    $stmt = $mysqli->prepare("SELECT * FROM boom_page WHERE page_name = ?");
+    $stmt->bind_param("s", $target); // Bind parameter as a string
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        // Page exists, update the content
+        $stmt_update = $mysqli->prepare("UPDATE boom_page SET page_content = ? WHERE page_name = ?");
+        $stmt_update->bind_param("ss", $content, $target); // Bind both parameters as strings
+        $stmt_update->execute();
+        $stmt_update->close();
     } else {
-        $mysqli->query("INSERT INTO boom_page (page_name, page_content) VALUES ('" . $target . "', '" . $content . "')");
+        // Page doesn't exist, insert new page
+        $stmt_insert = $mysqli->prepare("INSERT INTO boom_page (page_name, page_content) VALUES (?, ?)");
+        $stmt_insert->bind_param("ss", $target, $content); // Bind both parameters as strings
+        $stmt_insert->execute();
+        $stmt_insert->close();
     }
+    $stmt->close(); // Close the select statement
     return 1;
 }
+
 
 ?>

@@ -1,0 +1,7 @@
+{
+    "require": {
+        "paypal/rest-api-sdk-php": "^1.14",
+        "thingengineer/mysqli-database-class": "dev-master",
+        "phpmailer/phpmailer": "^6.9"
+    }
+}

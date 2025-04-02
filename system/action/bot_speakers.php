@@ -5,18 +5,19 @@ $time = ceil(time());
 $res = array(); 
 if ($f == "bot_speakers") {
     $res = array();
-    if($s=="del_bot"){
-        $bot_id = cleanString(escape($_POST['bot_id']));
-        $res['status'] =100; 
-        $db->where('id', $bot_id);
-        $del_query = $db->delete('bot_data');
-       if($del_query===true){
-          $res['status'] = 200; 
-       }
-       header("Content-type: application/json");
+	if ($s == "del_bot") {
+		$bot_id = cleanString(escape($_POST['bot_id']));
+		$res['status'] = 100;
+		$db->where('id', $bot_id);
+		$del_query = $db->delete('bot_data');
+		if ($del_query === true) {
+			$res['status'] = 200;
+		}
+		header("Content-type: application/json");
 		echo json_encode($res);
-		exit();        
-    }
+		exit();
+	}
+
     if($s == "admin_bot_byroom"){
     $post_data = cleanString($_POST);
     $group_id = cleanString($post_data['checkbot_room']);
@@ -105,12 +106,21 @@ if ($f == "bot_speakers") {
 		echo json_encode($res);
 		exit();
 	}
-	if($s=="update_bot_set"){
-	    $post_data = cleanString($_POST);
-	    $bot_delay = $post_data['bot_delay'];
-	    $allow_bot =  $post_data['allow_bot'];
-	    $mysqli->query("UPDATE boom_setting SET bot_delay = '" . $bot_delay . "'  WHERE id = '1'");
-         return 1;
+	if($s == "update_bot_set"){
+		// Ensure input data is sanitized
+		$post_data = cleanString($_POST);
+		$bot_delay = intval($post_data['bot_delay']); // Ensure it's an integer
+		$allow_bot = intval($post_data['allow_bot']); // Ensure it's an integer
+		// Prepare and execute the update query securely using a prepared statement
+		$stmt = $mysqli->prepare("UPDATE boom_setting SET bot_delay = ?, allow_bot = ? WHERE id = 1");
+		$stmt->bind_param("ii", $bot_delay, $allow_bot); // Bind parameters as integers
+		$stmt->execute();
+		// Check if the update was successful
+		if($stmt->affected_rows > 0){
+			return 1; // Successfully updated
+		} else {
+			return 0; // No changes made
+		}
 	}
 	if($s=="allow_bot"){
 	    $post_data = cleanString($_POST);
@@ -134,19 +144,15 @@ if ($s == "speak" && $data['allow_bot'] == 1) {
         if ($time > $bot_time) {
             // Fetch bot data for the given group
             $ckbdata = $mysqli->query("SELECT * FROM `boom_bot_data` WHERE group_id = '$group_id' AND `id` > 0");
-
             if ($ckbdata && $ckbdata->num_rows > 0) {
                 $bot_row = $ckbdata->fetch_array(MYSQLI_ASSOC);
-
                 if ($bot_row['fuse_bot_type'] == 1) {
                     // Fetch the next bot data
                     $findbotdata = $mysqli->query("SELECT * FROM `boom_bot_data` WHERE `view` != 1 AND group_id = '$group_id' ORDER BY `id` ASC LIMIT 1");
-
                     if ($findbotdata && $findbotdata->num_rows > 0) {
                         $prepare = $findbotdata->fetch_array(MYSQLI_BOTH);
                         $this_ads_bot = $prepare['id'];
                         $bot_info2 = fuse_user_data($prepare['user_id']);
-
                         // Update the bot data to mark it as viewed
                         $mysqli->query("UPDATE boom_bot_data SET view = 1 WHERE id = '$this_ads_bot' AND group_id = '$group_id'");
 
@@ -167,7 +173,6 @@ if ($s == "speak" && $data['allow_bot'] == 1) {
                 } else {
                     // Random bot response logic
                     $randomResponseQuery = $mysqli->query("SELECT reply, user_id FROM boom_bot_data WHERE group_id = '$group_id' AND `id` > 0 ORDER BY RAND() LIMIT 1");
-
                     if ($randomResponseQuery && $randomResponseQuery->num_rows > 0) {
                         $prepare_result = $randomResponseQuery->fetch_array(MYSQLI_BOTH);
                         $botsay = addslashes($prepare_result['reply']);
@@ -175,10 +180,8 @@ if ($s == "speak" && $data['allow_bot'] == 1) {
                         $botsay = escape($botsay);
                         $botsay = wordFilter($botsay, 1);
                         $botsay = textFilter($botsay);
-
                         $bot_info3 = fuse_user_data($prepare_result['user_id']);
                         $content = '<div class="' . $bot_info3['bccolor'] . ' ' . $bot_info3['bcbold'] . ' ' . $bot_info3['bcfont'] . '">' . $botsay . '</div>';
-
                         // Insert the bot's message into chat
                         botPostChat($prepare_result['user_id'], $prepare_result['group_id'], $content);
                     } else {

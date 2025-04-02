@@ -14,7 +14,7 @@ require "firewall.php";  // Load firewall on every request
 require "database.php";
 require "variable.php";
 require "function.php";
-if (!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk'])) {
+if (!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk']) || !validateAuth()) {
     echo json_encode(["check" => 99]);
     exit();
 }

@@ -14,24 +14,28 @@ require_once("./../config_session.php");
 if(mainBlocked()){
     die(json_encode(['error' => 'System unavailable']));
 }
-
-// 1. Strict Input Validation
+// 1. Verify CSRF Token First
+if (!isset($_POST['csrf_token']) || !verifyCsrfToken($_POST['csrf_token'])) {
+    error_log("CSRF token mismatch from IP: " . $_SERVER['REMOTE_ADDR']);
+    die(json_encode(['error' => 'security_error']));
+}
+// 2. Strict Input Validation
 if (!isset($_POST['content'], $_POST['snum'], $_POST['csrf_token']) || 
     !verifyCsrfToken($_POST['csrf_token'])) {
     die(json_encode(['error' => 'Invalid request']));
 }
 
-// 2. Rate Limiting
+// 3. Rate Limiting
 if (checkFlood()) {
     die(json_encode(['error' => 'flood'])); // Consistent with your 100 code
 }
 
-// 3. User Status Checks
+// 4. User Status Checks
 if (muted() || isRoomMuted($data)) {
     die(json_encode(['error' => 'muted']));
 }
 
-// 4. Content Processing Pipeline
+// 5. Content Processing Pipeline
 $content = $_POST['content'];
 
 // Length Validation
@@ -39,16 +43,16 @@ if (isTooLong($content, $data['max_main']) || empty(trim($content))) {
     die(json_encode(['error' => 'invalid_length']));
 }
 
-// 5. Secure Filter Chain
+// 6. Secure Filter Chain
 $content = secureFilterPipeline($content);
 
-// 6. Final Validation
+// 7. Final Validation
 if (!validateFinalContent($content)) {
     isSecureContent('invalid_content', $content);
     //die(json_encode(['error' => 'invalid_content']));
 }
 
-// 7. Database Insertion
+// 8. Database Insertion
 echo userPostChat($content, ['snum' => escape($_POST['snum'])]);
 
 // Security Functions

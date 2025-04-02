@@ -103,7 +103,7 @@ $cody['use_gold'] = 1;
 $cody['can_sgold'] = 100;
 $cody['allow_private'] = 0;       //started rank allowed to private chat from low to high (0 to 100)
 $cody['allow_main'] = 0;          //started rank allowed to Main chat from low to high (0 to 100)  
-
+$_SESSION['csrf_token'] =         generateCsrfToken();
 // cookie and session settings
 
 define('BOOM_PREFIX', 'bc_');
@@ -118,14 +118,18 @@ define('BOOM_DNAME', $DB_NAME);
 define('BOOM_DUSER', $DB_USER);
 define('BOOM_DPASS', $DB_PASS);
 define('BOOM_CRYPT', $encryption);
+define('CSRF_TOKEN', $_SESSION['csrf_token']);
 
-function setBoomCookie($i, $p){
+/* function setBoomCookie($i, $p){
 	setcookie(BOOM_PREFIX . "userid","$i",time()+ 31556926, '/');
 	setcookie(BOOM_PREFIX . "utk","$p",time()+ 31556926, '/');
-}
+} */
 function unsetBoomCookie(){
 	setcookie(BOOM_PREFIX . "userid","",time() - 1000, '/');
-	setcookie(BOOM_PREFIX . "utk","",time() - 1000, '/');
+	setcookie(BOOM_PREFIX . "utk","",time() - 1000, '/');    
+    // Destroy session
+    $_SESSION = [];
+    session_destroy();
 }
 function setBoomLang($val){
 	setcookie(BOOM_PREFIX . "lang","$val",time()+ 31556926, '/');
@@ -133,4 +137,88 @@ function setBoomLang($val){
 function setBoomCookieLaw(){
 	setcookie(BOOM_PREFIX . "claw","1",time()+ 31556926, '/');
 }
+/**
+ * Generate and store CSRF token
+ * Call this once per session or when generating forms
+ */
+function generateCsrfToken() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+// Verify submitted token
+function verifyCsrfToken($token) {
+    return isset($_SESSION['csrf_token']) && 
+           hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/* function setBoomCookie($user_id, $password_hash) {
+    $prefix = defined('BOOM_PREFIX') ? BOOM_PREFIX : 'bc_';
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443;
+
+    // 1. Set User ID Cookie (same expiration time but secure flags)
+    setcookie($prefix . "userid", $user_id, [
+        'expires' => time() + 31556926, // 1 year expiration
+        'path' => '/',                  // Accessible across the entire domain
+        'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
+        'httponly' => true,             // Prevents JavaScript access (prevents XSS)
+        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
+    ]);
+
+    // 2. Set Auth Token Cookie (same expiration time but secure flags)
+    setcookie($prefix . "utk", $password_hash, [
+        'expires' => time() + 31556926, // 1 year expiration
+        'path' => '/',                  // Accessible across the entire domain
+        'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
+        'httponly' => true,             // Prevents JavaScript access (prevents XSS)
+        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
+    ]);
+
+    // Optional: You might want to use 'Strict' for samesite cookies depending on your app's requirements
+} */
+
+
+function setBoomCookie($user_id, $password_hash) {
+    $prefix = defined('BOOM_PREFIX') ? BOOM_PREFIX : 'bc_';
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443;
+
+    // Set User ID Cookie
+    setcookie($prefix . "userid", $user_id, [
+        'expires' => time() + 31556926, // 1 year expiration
+        'path' => '/',                  // Accessible across the entire domain
+        'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
+        'httponly' => true,             // Prevents JavaScript access (prevents XSS)
+        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
+    ]);
+
+    // Set Auth Token Cookie (could store a session token or something less sensitive than the actual password)
+    setcookie($prefix . "utk", $password_hash, [
+        'expires' => time() + 31556926, // 1 year expiration
+        'path' => '/',                  // Accessible across the entire domain
+        'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
+        'httponly' => true,             // Prevents JavaScript access (prevents XSS)
+        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
+    ]);
+}
+
+function validateAuth() {
+    // First check session
+    if (!empty($_SESSION['user_id'])) {
+        return true;
+    }
+    // Fallback to cookie validation
+    $prefix = defined('BOOM_PREFIX') ? BOOM_PREFIX : 'bc_';
+    if (empty($_COOKIE[$prefix.'userid']) || empty($_COOKIE[$prefix.'utk'])) {
+        return false;
+    }
+    $user = userDetails($_COOKIE[$prefix.'userid']);
+    if (!$user || $user['user_password'] !== $_COOKIE[$prefix.'utk']) {
+        return false;
+    }
+    // Re-establish session
+    $_SESSION['user_id'] = $user['user_id'];
+    return true;
+}
+
 ?>

@@ -10,25 +10,7 @@ if ($f == 'action_room') {
         }
         $target = escape($room);
         $password = $_POST['pass'] ?? null;
-        $userId = $data['user_id'];
-        /*
-        $query = "
-            SELECT 
-                r.*, 
-                (SELECT action_muted FROM boom_room_action WHERE action_room = '$target' AND action_user = '$userId' AND action_muted > 0 LIMIT 1) AS is_muted,
-                (SELECT COUNT(id) FROM boom_room_action WHERE action_room = '$target' AND action_user = '$userId' AND action_blocked > 0) AS is_blocked,
-                (SELECT room_rank FROM boom_room_staff WHERE room_staff = '$userId' AND room_id = '$target') AS room_status
-            FROM boom_rooms r 
-            WHERE r.room_id = '$target'
-        ";
-    
-        $check_room = $mysqli->query($query);
-    
-        if ($check_room->num_rows === 0) {
-            echo boomCode(1);
-            exit;
-        }*/
-    
+        $userId = $data['user_id'];    
         $room = myRoomDetails($target);
         if ($room ===false) {
             echo boomCode(1);
@@ -41,7 +23,10 @@ if ($f == 'action_room') {
         $muted = $room['room_muted'] ?? 0;
         $role = $room['room_status'] ?? 0;
         if ($muted > 0) {
-            $mysqli->query("UPDATE boom_users SET room_mute = '$muted' WHERE user_id = '$userId'");
+			$stmt = $mysqli->prepare("UPDATE boom_users SET room_mute = ? WHERE user_id = ?");
+			$stmt->bind_param("ii", $muted, $userId); // Assuming both are integers
+			$stmt->execute();
+			$stmt->close();
         }
         $data['user_role'] = $role;
     
@@ -49,23 +34,30 @@ if ($f == 'action_room') {
             echo boomCode(2);
             exit;
         }
-    
         if (!empty($room['password'])) {
                 if ($password === null || ($password !== $room['password'] && !canRoomPassword())) {
                     echo $password === null ? boomCode(4) : boomCode(5);
                     exit;
             }
         }
-        $mysqli->query("
-            UPDATE boom_users 
-            SET join_msg = 0, user_roomid = '$target', last_action = '" . time() . "', user_role = '$role', room_mute = '$muted' 
-            WHERE user_id = '$userId'
-        ");
-        $mysqli->query("
-            UPDATE boom_rooms 
-            SET room_action = '" . time() . "' 
-            WHERE room_id = '$target'
-        ");
+		$stmt = $mysqli->prepare("
+			UPDATE boom_users 
+			SET join_msg = 0, user_roomid = ?, last_action = ?, user_role = ?, room_mute = ? 
+			WHERE user_id = ?
+		");
+		$time_now = time();
+		$stmt->bind_param("siiii", $target, $time_now, $role, $muted, $userId);
+		$stmt->execute();
+		$stmt->close();
+		$stmt = $mysqli->prepare("
+			UPDATE boom_rooms 
+			SET room_action = ? 
+			WHERE room_id = ?
+		");
+		$stmt->bind_param("is", $time_now, $target);
+		$stmt->execute();
+		$stmt->close();
+
         leaveRoom();
         echo boomCode(10, ['name' => $room['room_name'], 'id' => $room['room_id']]);
         exit;

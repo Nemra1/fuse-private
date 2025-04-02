@@ -2314,28 +2314,32 @@ function getRoomStaff($r, $rank){
 	return $staff_list;
 }
 function sendEmail($type, $to, $item = ''){
-	global $data;
-	require BOOM_PATH . '/system/mailer/autoload.php';
-	$mail = new PHPMailer\PHPMailer\PHPMailer;
-	if(empty($type) || empty($to)){ 
-		return 0;
-	}
-	if(!isEmail($to['user_email'])){
-		return 0;
-	}
-	require BOOM_PATH . '/system/language/' . $to['user_language'] . '/mail.php';
-	$email['signature'] = nl2br(str_replace('%site%', $data['title'], $bmail['signature']));
-	$email['content'] = nl2br(str_replace(array('%user%', '%data%', '%link%'), array($to['user_name'], $item, '<a target="_BLANK" href="' . $item . '">' . $item . '</a>'), $bmail[$type . '_content']));
-	$template = boomTemplate('element/mail_template', $email);
-
-	if($data['mail_type'] == 'smtp'){
-		$mail->isSMTP();
-		$mail->Host = $data['smtp_host'];
-		$mail->SMTPAuth = true;
-		$mail->Username = $data['smtp_username'];
-		$mail->Password = $data['smtp_password'];
-		$mail->SMTPSecure = $data['smtp_type'];
-		$mail->Port = $data['smtp_port'];
+    global $data;
+    // Include Composer autoloader
+    require_once __DIR__ . '/../vendor/autoload.php';  // Adjust path if needed
+    $mail = new \PHPMailer\PHPMailer\PHPMailer(); // Instantiate PHPMailer
+    if(empty($type) || empty($to)) { 
+        return 0;
+    }
+    if(!isEmail($to['user_email'])) {
+        return 0;
+    }
+    // Load email language template
+    require BOOM_PATH . '/system/language/' . $to['user_language'] . '/mail.php';
+    $email['signature'] = nl2br(str_replace('%site%', $data['title'], $bmail['signature']));
+    $email['content'] = nl2br(str_replace(array('%user%', '%data%', '%link%'), array($to['user_name'], $item, '<a target="_BLANK" href="' . $item . '">' . $item . '</a>'), $bmail[$type . '_content']));
+    $template = boomTemplate('element/mail_template', $email);
+    // Use SMTP if configured
+    if($data['mail_type'] == 'smtp'){
+        $mail->isSMTP();
+        $mail->Host = $data['smtp_host'];
+        $mail->SMTPAuth = true;
+        $mail->Username = $data['smtp_username'];
+        $mail->Password = $data['smtp_password'];
+        $mail->SMTPSecure = $data['smtp_type'];
+        $mail->Port = $data['smtp_port'];
+        
+        // SSL Options for SMTP
         $mail->SMTPOptions = array(
             'ssl' => array(
                 'verify_peer' => false,
@@ -2343,23 +2347,27 @@ function sendEmail($type, $to, $item = ''){
                 'allow_self_signed' => true
             )
         );
-	}
-	else {
-		$mail->IsMail();
-	}
-	$mail->setFrom($data['site_email'], $data['email_from']);
-	$mail->addAddress($to['user_email']);
-	$mail->isHTML(true);
-	$mail->CharSet = 'utf-8';
-	$mail->Subject = $bmail[$type . '_title'];
-	$mail->MsgHTML($template);
-	if(!$mail->send()) {
-	   return 0;
-	} 
-	else {
-		return 1;
-	}
+    }
+    else {
+        // Default mail function
+        $mail->IsMail();
+    }
+    // Set email sender and recipient
+    $mail->setFrom($data['site_email'], $data['email_from']);
+    $mail->addAddress($to['user_email']);
+    // Email format settings
+    $mail->isHTML(true);
+    $mail->CharSet = 'utf-8';
+    $mail->Subject = $bmail[$type . '_title'];
+    $mail->MsgHTML($template);
+    // Send the email and return result
+    if(!$mail->send()) {
+        return 0;
+    } else {
+        return 1;
+    }
 }
+
 function resetUserPass($user){
 	global $mysqli;
 	$temp_pass = tempPass();

@@ -36,7 +36,7 @@ function boomGeo(){
         $tzone = $data["user_timezone"];
         // Fetch geolocation data
         $loc = doCurl("http://www.geoplugin.net/php.gp?ip=" . urlencode($ip));
-        $res = @unserialize($loc);
+        $res = json_decode($loc, true);
         // Validate response from geolocation API
         if ($res !== false && isset($res["geoplugin_countryCode"]) && array_key_exists($res["geoplugin_countryCode"], $country_list)) {
             $country = escape($res["geoplugin_countryCode"]);

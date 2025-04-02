@@ -507,44 +507,54 @@ function updateLastActive($user_id){
     $mysqli->query("UPDATE boom_users SET last_active = '$current_time' WHERE user_id = '$user_id'");
 }
 function postPrivate($from, $to, $content, $snum = ''){
-	global $mysqli, $data;
+    global $mysqli, $data;
     $from = intval($from);
     $to = intval($to);
-	$mysqli->query("INSERT INTO `boom_private` (time, target, hunter, message) VALUES ('" . time() . "', '$to', '$from', '$content')");
-	$last_id = $mysqli->insert_id;
-    // Update recipient's message count and send notification if necessary
-    if ($to != $from) {
-        $mysqli->query("UPDATE boom_users SET pcount = pcount + 1 WHERE user_id = '$to'");
-        
+    $content = trim($content); 
+    $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8'); // Prevent XSS
+    $time = time();
+    // Use prepared statement to insert private message
+    $stmt = $mysqli->prepare("INSERT INTO boom_private (time, target, hunter, message) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("iiis", $time, $to, $from, $content);
+    $stmt->execute();
+    $last_id = $stmt->insert_id;
+    $stmt->close();
+    // Update recipient's message count securely
+    if ($to !== $from) {
+        $stmt = $mysqli->prepare("UPDATE boom_users SET pcount = pcount + 1 WHERE user_id = ?");
+        $stmt->bind_param("i", $to);
+        $stmt->execute();
+        $stmt->close();
+        // Handle OneSignal notification
         if ($data['allow_onesignal'] == '1') {
             $rec_data = userDetails($to);
-            $from_data = userDetails($from); 
-		    // Check if the user is inactive
-		    $last_active = $rec_data['last_active'];
-		    $current_time = time();
-		    $inactive_time = 60; // 1 minute
-            
-		    if(($current_time - $last_active) > $inactive_time){
-		        // User is inactive, send a notification
-		        $notification_msg = 'You have a message from 🧐 ' . $from_data['user_name'];
-		        sendNotification($rec_data['push_id'], $notification_msg);
-		    }
+            $from_data = userDetails($from);
+            $last_active = intval($rec_data['last_active']);
+            $current_time = time();
+            $inactive_time = 60; // 1 minute threshold
+            if (($current_time - $last_active) > $inactive_time) {
+                $notification_msg = 'You have a message from 🧐 ' . htmlspecialchars($from_data['user_name'], ENT_QUOTES, 'UTF-8');
+                sendNotification($rec_data['push_id'], $notification_msg);
+            }
+        }
+    }
+    // Handle private log
+    if (!empty($snum)) {
+        $user_post = array(
+            'id' => $last_id,
+            'time' => $time,
+            'message' => $content,
+            'hunter' => $from,
+        );
+        $post = array_merge($data, $user_post);
+        if (!empty($post)) {
+            return privateLog($post, $post['user_id']);
         }
     }
 
-	if($snum != ''){
-		$user_post = array(
-			'id'=> $last_id,
-			'time'=> time(),
-			'message'=> $content,
-			'hunter'=> $from,
-		);
-		$post = array_merge($data, $user_post);
-		if(!empty($post)){
-			return privateLog($post, $post['user_id']);
-		}
-	}
+    return true;
 }
+
 function sendNotification($userId, $message) {
     global $data,$cody;
     $content = array(

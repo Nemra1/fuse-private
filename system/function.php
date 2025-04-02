@@ -452,29 +452,55 @@ function userPostChatFile($content, $file_name, $type, $custom = array()){
 
 
 function systemPostChat($room, $content, $custom = array()){
-	global $mysqli, $data;
-	$def = array(
-		'type'=> 'system',
-		'color'=> 'chat_system',
-		'rank'=> 999,
-	);
-	$post = array_merge($def, $custom);
-	$mysqli->query("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, log_rank, tcolor) VALUES ('" . time() . "', '{$data['system_id']}', '$content', '$room', '{$post['type']}', '{$post['rank']}', '{$post['color']}')");
-	chatAction($room);
-	return true;
+    global $mysqli, $data;
+    $def = array(
+        'type' => 'system',
+        'color' => 'chat_system',
+        'rank' => 999,
+    );
+    $post = array_merge($def, $custom);
+    // Ensure values are sanitized and safe
+    $room = (int) $room;
+    $content = trim($content);
+    $type = htmlspecialchars($post['type'], ENT_QUOTES, 'UTF-8');
+    $color = htmlspecialchars($post['color'], ENT_QUOTES, 'UTF-8');
+    $rank = (int) $post['rank'];
+    $system_id = (int) $data['system_id'];
+    $post_date = time();
+    // Use a prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("INSERT INTO boom_chat (post_date, user_id, post_message, post_roomid, type, log_rank, tcolor) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("iisssis", $post_date, $system_id, $content, $room, $type, $rank, $color);
+    $stmt->execute();
+    $stmt->close();
+    chatAction($room);
+    return true;
 }
+
 function botPostChat($id, $room, $content, $custom = array()){
-	global $mysqli, $data;
-	$def = array(
-		'type'=> 'public__message',
-		'color'=> '',
-		'rank'=> 999,
-	);
-	$post = array_merge($def, $custom);
-	$mysqli->query("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, log_rank, tcolor) VALUES ('" . time() . "', '$id', '$content', '$room', '{$post['type']}', '{$post['rank']}', '{$post['color']}')");
-	chatAction($room);	
-	return true;
+    global $mysqli, $data;
+    $def = array(
+        'type' => 'public__message',
+        'color' => '',
+        'rank' => 999,
+    );
+    $post = array_merge($def, $custom);
+    // Ensure values are sanitized and safe
+    $id = (int) $id;
+    $room = (int) $room;
+    $content = trim($content);
+    $type = htmlspecialchars($post['type'], ENT_QUOTES, 'UTF-8');
+    $color = htmlspecialchars($post['color'], ENT_QUOTES, 'UTF-8');
+    $rank = (int) $post['rank'];
+    $post_date = time();
+    // Use a prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("INSERT INTO boom_chat (post_date, user_id, post_message, post_roomid, type, log_rank, tcolor) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("iisssis", $post_date, $id, $content, $room, $type, $rank, $color);
+    $stmt->execute();
+    $stmt->close();
+    chatAction($room);
+    return true;
 }
+
 function updateLastActive($user_id){
     global $mysqli;
     $current_time = time();

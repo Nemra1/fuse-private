@@ -183,11 +183,13 @@ function myAvatar($a){
 function imgLoader(){
 	return 'default_images/misc/holder.png';
 }
-function defaultAvatar($a){
-	if(stripos($a, 'default') !== false){
-		return true;
-	}
+function defaultAvatar($a) {
+    if (!is_string($a) || trim($a) === '') {
+        return false; // Return false if $a is null, empty, or not a string
+    }
+    return stripos($a, 'default') !== false;
 }
+
 function myCover($a){
 	global $data;
 	return $data['domain'] . '/cover/' . $a;
@@ -342,14 +344,20 @@ function userDetails($user_id) {
     return $user_data;    
 }
 function userNameDetails($name){
-	global $mysqli;
-	$user = [];
-	$getuser = $mysqli->query("SELECT * FROM boom_users WHERE user_name = '$name'");
-	if($getuser->num_rows > 0){
-		$user = $getuser->fetch_assoc();
-	}
-	return $user;
+    global $mysqli;
+    $user = [];
+    // Use prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("SELECT user_id, user_name, user_email, user_avatar FROM boom_users WHERE user_name = ?");
+    $stmt->bind_param('s', $name); // Bind the parameter to avoid SQL injection
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if($result->num_rows > 0){
+        $user = $result->fetch_assoc();
+    }
+    $stmt->close(); // Always close the prepared statement
+    return $user;
 }
+
 function ownAvatar($i){
 	global $data;
 	if($i == $data['user_id']){
@@ -367,87 +375,142 @@ function delExpired($d){
 	}
 }
 function chatAction($room){
-	global $mysqli, $data;
-	$mysqli->query("UPDATE boom_rooms SET rcaction = rcaction + 1, room_action = '" . time() . "' WHERE room_id = '$room'");
+    global $mysqli, $data;
+    // Validate room to ensure it is a valid numeric value
+    if(!is_numeric($room) || $room <= 0){
+        return false; // Invalid room ID
+    }
+    // Prepare the SQL query to prevent SQL injection
+    $stmt = $mysqli->prepare("UPDATE boom_rooms SET rcaction = rcaction + 1, room_action = ? WHERE room_id = ?");
+    if ($stmt === false) {
+        return false; // Error in preparing statement
+    }
+    $time = time(); // Get the current timestamp
+    // Bind parameters and execute the statement
+    $stmt->bind_param('si', $time, $room);
+    $stmt->execute();
+    // Check for errors in execution
+    if ($stmt->affected_rows > 0) {
+        $stmt->close(); // Close the statement
+        return true; // Successful update
+    } else {
+        $stmt->close(); // Close the statement
+        return false; // No rows affected or error occurred
+    }
 }
+
 function chatLevel($v){
 	global $data;
 }
 function userPostChat($content, $custom = array()){
-	global $mysqli, $data;
-	$ghosted = 0;
-	$def = array(
-		'hunter'=> $data['user_id'],
-		'room'=> $data['user_roomid'],
-		'color'=> escape(myTextColor($data)),
-		'type'=> 'public__message',
-		'rank'=> 999,
-		'snum'=> '',
-	);
-	$c = array_merge($def, $data, $custom);
-	if(isGhosted($data)){
-		$ghosted = 1;
-	}
-	//runtime user exp
-	if(useLevel()){
-	    $mysqli->query("UPDATE boom_users SET user_exp = user_exp + 1 WHERE user_id = '{$data['user_id']}'");
-	    userExpLevel("exp_chat");
-	    getMyGift($content);
-	}
-	$mysqli->query("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, log_rank, snum, tcolor, pghost) VALUES ('" . time() . "', '{$c['hunter']}', '$content', '{$c['room']}', '{$c['type']}', '{$c['rank']}', '{$c['snum']}', '{$c['color']}', '$ghosted')");
-	$last_id = $mysqli->insert_id;
-	chatAction($data['user_roomid']);
-	if(!empty($c['snum'])){
-		$user_post = array(
-			'post_id'=> $last_id,
-			'type'=> $c['type'],
-			'post_date'=> time(),
-			'tcolor'=> $c['color'],
-			'log_rank'=> $c['rank'],
-			'post_message'=> $content,
-		);
-		$post = array_merge($c, $user_post);
-		if(!empty($post)){
-			return createLog($data, $post);
-		}
-	}
+    global $mysqli, $data;
+    $ghosted = 0;
+    // Default values
+    $def = array(
+        'hunter'=> $data['user_id'],
+        'room'=> $data['user_roomid'],
+        'color'=> escape(myTextColor($data)),
+        'type'=> 'public__message',
+        'rank'=> 999,
+        'snum'=> '',
+    );
+    // Merge custom data with defaults
+    $c = array_merge($def, $data, $custom);
+    // Check if the user is ghosted
+    if(isGhosted($data)){
+        $ghosted = 1;
+    }
+    // Handle runtime user experience points
+    if(useLevel()){
+        $mysqli->query("UPDATE boom_users SET user_exp = user_exp + 1 WHERE user_id = '{$data['user_id']}'");
+        userExpLevel("exp_chat");
+        getMyGift($content);
+    }
+    // Prepare the SQL query using prepared statements
+    $stmt = $mysqli->prepare("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, log_rank, snum, tcolor, pghost) 
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if ($stmt === false) {
+        return false; // Error preparing the query
+    }
+    $post_date = time();
+    $stmt->bind_param('iisissssi', $post_date, $c['hunter'], $content, $c['room'], $c['type'], $c['rank'], $c['snum'], $c['color'], $ghosted);
+    // Execute the query
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return false; // Error executing the query
+    }
+    // Get the last inserted ID
+    $last_id = $mysqli->insert_id;
+    // Update room action (chatAction)
+    chatAction($data['user_roomid']);
+    // Check if snum is not empty and create a log
+    if (!empty($c['snum'])){
+        $user_post = array(
+            'post_id'=> $last_id,
+            'type'=> $c['type'],
+            'post_date'=> $post_date,
+            'tcolor'=> $c['color'],
+            'log_rank'=> $c['rank'],
+            'post_message'=> $content,
+        );
+        // Merge custom data with user_post data
+        $post = array_merge($c, $user_post);        
+        // Create log if post data exists
+        if(!empty($post)){
+            return createLog($data, $post);
+        }
+    }
+    $stmt->close();
+    return true; // Successful execution
 }
+
 function userPostChatFile($content, $file_name, $type, $custom = array()){
     global $mysqli, $data;
     // Default custom values
     $def = array(
         'type' => 'public__message',
-        'file2' => '',
+        'file2' => '', // Assuming this is an optional additional file
     );
     $c = array_merge($def, $custom);
     // Sanitize input variables
-    $content = escape($content); // Assuming you have an escape function to sanitize inputs
+    $content = escape($content); 
     $file_name = escape($file_name);
     $type = escape($type);
-    // Insert into boom_chat using prepared statement
+    // Prepare chat message insert
     $stmt = $mysqli->prepare("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, file) VALUES (?, ?, ?, ?, ?, ?)");
+    if ($stmt === false) {
+        return false; // Error preparing the query
+    }
     $time_now = time();
-    $file_placeholder = 1; // Assuming 1 means the presence of a file, replace with actual condition if needed
+    $file_placeholder = 1; // Assuming file exists, this can be set dynamically
     $stmt->bind_param("iisssi", $time_now, $data['user_id'], $content, $data['user_roomid'], $c['type'], $file_placeholder);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return false; // Error executing the query
+    }
     $rel = $stmt->insert_id;
     $stmt->close();
-    // Perform chat action
+    // Perform chat action (notify about new message)
     chatAction($data['user_roomid']);
-    // Insert into boom_upload if file2 is provided or not
-    if ($c['file2'] != '') {
-        $stmt_upload = $mysqli->prepare("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)");
-        $stmt_upload->bind_param("siisssi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel, $c['file2'], $time_now, $data['user_id'], $file_zone, $type, $rel);
-        $stmt_upload->execute();
-        $stmt_upload->close();
-    } else {
-        $stmt_upload = $mysqli->prepare("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt_upload->bind_param("siissi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel);
-        $stmt_upload->execute();
-        $stmt_upload->close();
+    // Handle file upload insert
+    $stmt_upload = $mysqli->prepare("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES (?, ?, ?, ?, ?, ?)");
+    if ($stmt_upload === false) {
+        return false; // Error preparing the file insert query
     }
-    return true;
+    // Insert file info into boom_upload table
+    if ($c['file2'] != '') {
+        $stmt_upload->bind_param("siisssi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel, $c['file2']);
+    } else {
+        $stmt_upload->bind_param("siissi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel);
+    }
+    if (!$stmt_upload->execute()) {
+        $stmt_upload->close();
+        return false; // Error executing the query
+    }
+    $stmt_upload->close();
+    return true; // Success
 }
+
 
 
 

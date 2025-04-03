@@ -9,167 +9,237 @@ function handleError($code, $message) {
 }
 
 if ($f == 'gifts') {
-   if ($s == 'gifts_access') {
-         if(isset($_POST['set_gifts_access']) && boomAllow($cody['can_manage_addons'])){
-        	$gifts_access = escape($_POST['set_gifts_access']);
-        	$update = $mysqli->query("UPDATE boom_addons SET addons_access = '$gifts_access' WHERE addons = 'gifts'");
-        	if($update){
-            echo 5;
-        	die();
-   	    
-        	}
-        }       
-            
-        if(isset($_POST['set_use_gift']) && boomAllow($cody['can_manage_addons'])){
-            $use_gift = escape($_POST['set_use_gift']);
-           $update =  $mysqli->query("UPDATE boom_setting SET use_gift = '" . $use_gift . "' WHERE id = '1'");
-            if($update){
-                echo 5;
-        	    die();
-        	}           
-        }
-   } 
-   if ($s == 'search_box') {
-        if (isset($_POST['search_box'], $_POST['q'])){
-            $text = escape($_POST['q']);
-           $search_query = runGiftSearch($text);
-            header("Content-type: application/json");
-            echo json_encode($search_query);
-            exit(); 
-        }        
-    }
-if ($s === 'send_gift') {
-    // Check for conditions that prevent sending a gift
-    if (checkFlood()) {
-        echo json_encode(['status' => 100, 'msg' => 'Flood detected']);
-        exit();
-    }
-    
-    if (muted() || isRoomMuted($data)) {
-        exit(); // User is muted or room is muted
-    }
-
-    if (!canGift()) {
-        exit(); // User doesn't have permission to send gifts
-    }
-
-    // Validate required POST parameters
-    if (isset($_POST['type'], $_POST['target'], $_POST['gift_id'])) {
-        // Sanitize inputs
-        $gift_array = [
-            'type' => escape($_POST['type']),
-            'target_id' => escape($_POST['target']),
-            'gift_id' => escape($_POST['gift_id']),
-        ];
-
-        // Fetch target user details
-        $gift_array['target'] = userDetails($gift_array['target_id']);
-        if (empty($gift_array['target'])) {
-            exit(); // Target user not found
-        }
-
-        // Prevent sending gifts to self
-        if (mySelf($gift_array['target']['user_id'])) {
-            exit(); // Cannot send a gift to oneself
-        }
-
-        // Get sender and target user details
-        $my_points = $data['user_gold'];
-        $my_userId = $data['user_id'];
-        $receiver_id = $gift_array['target']['user_id'];
-        $gift_array['my_name'] = $data['user_name'];
-
-        // Fetch gift details
-        $compare_credit = gift_list_byId($gift_array['gift_id']);
-        $gift_thumb = $compare_credit['gift_url'];
-        $gift_price = $compare_credit['gift_cost'];
-
-        // Check if the gift is valid and affordable
-        if ($compare_credit > 0) {
-            if ($gift_price <= $my_points) {
-                // Update points for sender and receiver
-                $sum_points = $my_points - $gift_price;
-                $divide_price = ($gift_price / 2) + $gift_array['target']['user_gold'];
-
-                $update_sender = $mysqli->query("UPDATE `boom_users` SET `user_gold` = '$sum_points' WHERE `user_id` = '$my_userId'");
-                $update_receiver = $mysqli->query("UPDATE `boom_users` SET `user_gold` = '$divide_price' WHERE `user_id` = '$receiver_id'");
-
-                // Record the gift transaction
-                $insert_gift_record = [
-                    "target_id" => $receiver_id,
-                    "gift_id" => $gift_array['gift_id'],
-                    "room_id" => $data['user_roomid'],
-                    "hunter_id" => $my_userId,
-                ];
-                $update_record = record_gift($insert_gift_record);
-
-                // Notify chat of the gift
-                $content = giftContentSendedOk($compare_credit, $data['user_name'], $gift_array['target']['user_name']);
-                systemPostChat($data['user_roomid'], $content);
-                boomNotify("gift", array("hunter" => $my_userId, "target" => $receiver_id, "source" => 'gift' ,"custom" => $compare_credit['gift_title'],"icon" => 'gift'));
-  		    // Check if the user is inactive
-    		    $last_active = $gift_array['target']['last_active'];
-    		    $current_time = time();
-    		    $inactive_time = 60; // 1 minute
-                if(($current_time - $last_active) > $inactive_time){
-    		        // User is inactive, send a notification
-    		        $notification_msg = $data['user_name'].' Sent you Gift 💖';
-    		        sendNotification($gift_array['target']['push_id'], $notification_msg);
-    		    }      	
-               
-                $data_array['status'] = 200;
-                $data_array['gift_data'] = $compare_credit;
-                $data_array['msg'] = 'The gift has been sent successfully';
-                $data_array['cl'] = 'success';
-                
-            } else {
-                $data_array['status'] = 300;
-                $data_array['msg'] = 'You do not have enough credit.';
-                $data_array['cl'] = 'warning';
-            }
-        }
-
-        // Send response as JSON
-        header("Content-type: application/json");
-        echo json_encode($data_array);
-        exit();
-    }
-}
-
-     if ($s == 'public_box') {
-        $res['content']= boomTemplate('gifts/public_gift_panel', $data);
-         header("Content-type: application/json");
-        echo json_encode($res);
-        exit();
-     }
-      if ($s == 'my_gift') {
-        $res['content']= boomTemplate('gifts/my_gift', $data);
-         header("Content-type: application/json");
-        echo json_encode($res);
-        exit();
-          
-      }
-      if ($s == 'getUserGift') {
-        $user_id =  escape($_POST['user_id']);
-        if (!empty($user_id)) {
-            $res['content']= boomTemplate('gifts/my_gift', $user_id);
-        } else {
-            // Handle the case where user_id is empty or null
-             $res['status'] = 0;
-            return;
-        }          
-         header("Content-type: application/json");
-        echo json_encode($res);
-        exit();
-          
-      }      
-      if ($s == 'gift_panel') {
-        $res['content']= boomTemplate('gifts/gift_panel', $data);
-         header("Content-type: application/json");
-        echo json_encode($res);
-        exit();
-          
-      } 
+	if ($s == 'gifts_access') {
+		if (isset($_POST['set_gifts_access']) && boomAllow($cody['can_manage_addons'])) {
+			// Sanitize and validate the gift access value
+			$gifts_access = (int) $_POST['set_gifts_access']; // Assuming it's an integer
+			$stmt = $mysqli->prepare("UPDATE boom_addons SET addons_access = ? WHERE addons = 'gifts'");
+			$stmt->bind_param("i", $gifts_access); // Bind as integer
+			$update = $stmt->execute();
+			if ($update) {
+				echo 5;
+				die();
+			} else {
+				// Optional: handle failure scenario here
+				echo "Error updating gifts access.";
+				die();
+			}
+		}
+		if (isset($_POST['set_use_gift']) && boomAllow($cody['can_manage_addons'])) {
+			// Sanitize and validate the use gift value
+			$use_gift = (int) $_POST['set_use_gift']; // Assuming it's an integer
+			$stmt = $mysqli->prepare("UPDATE boom_setting SET use_gift = ? WHERE id = 1");
+			$stmt->bind_param("i", $use_gift); // Bind as integer
+			$update = $stmt->execute();
+			if ($update) {
+				echo 5;
+				die();
+			} else {
+				// Optional: handle failure scenario here
+				echo "Error updating use gift setting.";
+				die();
+			}
+		}
+	}
+	if($s == 'search_box') {
+		if (isset($_POST['search_box'], $_POST['q'])) {
+			// Set the response type to JSON and return the result
+			header("Content-type: application/json");			
+			// Sanitize the search input
+			$text = trim($_POST['q']); // Trim to avoid leading/trailing spaces
+			$text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8'); // Convert special characters to HTML entities
+			// Validate the input (e.g., checking if it's non-empty and not too long)
+			if (!empty($text) && strlen($text) <= 255) {
+				// Assuming runGiftSearch() takes sanitized input and returns a result
+				$search_query = runGiftSearch($text);
+				echo json_encode($search_query);
+				exit(); 
+			} else {
+				// Optional: return an error message if validation fails
+				echo json_encode(['error' => 'Invalid search query']);
+				exit();
+			}
+		}
+	}
+	if($s === 'send_gift') {
+		header("Content-type: application/json");
+		// Check for conditions that prevent sending a gift
+		if (checkFlood()) {
+			echo json_encode(['status' => 100, 'msg' => 'Flood detected']);
+			exit();
+		}
+		if (muted() || isRoomMuted($data)) {
+			echo json_encode(['status' => 100, 'msg' => 'User is muted or room is muted']);
+			exit(); // User is muted or room is muted
+		}
+		if (!canGift()) {
+			echo json_encode(['status' => 100, 'msg' => 'User does not have permission to send gifts']);
+			exit(); // User doesn't have permission to send gifts
+		}
+		// Validate required POST parameters
+		if (isset($_POST['type'], $_POST['target'], $_POST['gift_id'])) {
+			// Sanitize inputs
+			$gift_array = [
+				'type' => escape($_POST['type']),
+				'target_id' => (int)$_POST['target'],  // Cast target_id as integer to avoid type issues
+				'gift_id' => (int)$_POST['gift_id'],  // Cast gift_id as integer
+			];
+			// Fetch target user details safely
+			$gift_array['target'] = userDetails($gift_array['target_id']);
+			if (empty($gift_array['target'])) {
+				echo json_encode(['status' => 400, 'msg' => 'Target user not found']);
+				exit(); // Target user not found
+			}
+			// Prevent sending gifts to self
+			if (mySelf($gift_array['target']['user_id'])) {
+				echo json_encode(['status' => 400, 'msg' => 'Cannot send a gift to yourself']);
+				exit(); // Cannot send a gift to oneself
+			}
+			// Get sender details
+			$my_points = (int)$data['user_gold'];  // Ensure it's treated as an integer
+			$my_userId = (int)$data['user_id'];   // Ensure it's treated as an integer
+			$receiver_id = (int)$gift_array['target']['user_id'];  // Ensure it's treated as an integer
+			// Fetch gift details safely
+			$compare_credit = gift_list_byId($gift_array['gift_id']);
+			if ($compare_credit === null) {
+				echo json_encode(['status' => 400, 'msg' => 'Invalid gift']);
+				exit(); // Gift not found or invalid
+			}
+			$gift_thumb = $compare_credit['gift_url'];
+			$gift_price = (int)$compare_credit['gift_cost'];  // Ensure gift price is treated as integer
+			// Check if the user has exceeded the gift limit in the last minute
+			$current_time = time();
+			$time_limit = 60; // 1 minute
+			$gift_limit = 1; // Max 3 gifts per minute
+			// Initialize gift history if not already set in the session
+			if (!isset($_SESSION['gift_history'])) {
+				$_SESSION['gift_history'] = [];
+			}
+			// Remove old gifts (older than 1 minute)
+			$_SESSION['gift_history'] = array_filter($_SESSION['gift_history'], function($timestamp) use ($current_time, $time_limit) {
+				return ($current_time - $timestamp) < $time_limit;
+			});
+			// Check how many gifts were sent in the last minute
+			if (count($_SESSION['gift_history']) >= $gift_limit) {
+				echo json_encode(['status' => 400, 'msg' => 'You have reached the gift limit for this minute.']);
+				exit(); // Limit reached
+			}
+			// Add the current gift timestamp to the session history
+			$_SESSION['gift_history'][] = $current_time;
+			// Check if the gift is valid and affordable
+			if ($gift_price <= $my_points) {
+				// Update points for sender and receiver
+				$sum_points = $my_points - $gift_price;
+				$divide_price = ($gift_price / 2) + (int)$gift_array['target']['user_gold'];  // Ensure target gold is treated as integer
+				// Use prepared statements to update sender and receiver points securely
+				$update_sender = $mysqli->prepare("UPDATE `boom_users` SET `user_gold` = ? WHERE `user_id` = ?");
+				$update_sender->bind_param('ii', $sum_points, $my_userId);
+				$update_sender->execute();
+				$update_receiver = $mysqli->prepare("UPDATE `boom_users` SET `user_gold` = ? WHERE `user_id` = ?");
+				$update_receiver->bind_param('ii', $divide_price, $receiver_id);
+				$update_receiver->execute();
+				// Record the gift transaction
+				$insert_gift_record = [
+					"target_id" => $receiver_id,
+					"gift_id" => $gift_array['gift_id'],
+					"room_id" => (int)$data['user_roomid'], // Ensure room_id is treated as integer
+					"hunter_id" => $my_userId,
+				];
+				$update_record = record_gift($insert_gift_record);
+				// Notify chat of the gift
+				$content = giftContentSendedOk($compare_credit, $data['user_name'], $gift_array['target']['user_name']);
+				systemPostChat($data['user_roomid'], $content);
+				// Send notification about the gift
+				boomNotify("gift", [
+					"hunter" => $my_userId,
+					"target" => $receiver_id,
+					"source" => 'gift',
+					"custom" => $compare_credit['gift_title'],
+					"icon" => 'gift'
+				]);
+				// Prepare response data
+				$data_array['status'] = 200;
+				$data_array['gift_data'] = $compare_credit;
+				$data_array['msg'] = 'The gift has been sent successfully';
+				$data_array['cl'] = 'success';
+			} else {
+				echo json_encode(['status' => 300, 'msg' => 'You do not have enough credit.']);
+				exit(); // Not enough credit
+			}
+			// Send response as JSON
+			echo json_encode($data_array);
+			exit();
+		}
+	}
+	if ($s == 'public_box') {
+		// Sanitize the input if needed
+		// Ensure that $data contains valid information before using it
+		if (isset($data) && !empty($data)) {
+			// Fetch the content using the template
+			$res['content'] = boomTemplate('gifts/public_gift_panel', $data);
+			$res['status'] = 1;  // Success status
+		} else {
+			// Handle the case where $data is invalid or missing
+			$res['status'] = 0;
+			$res['msg'] = 'Invalid data provided for public gift panel.';
+		}
+		// Set response type and return the JSON response
+		header("Content-type: application/json");
+		echo json_encode($res);
+		exit();
+	}
+	if($s == 'my_gift') {
+		// Sanitize the input if needed
+		// Ensure that $data contains valid information before using it
+		if (isset($data) && !empty($data)) {
+			// Fetch the content using the template
+			$res['content'] = boomTemplate('gifts/my_gift', $data);
+			$res['status'] = 1;  // Success status
+		} else {
+			// Handle the case where $data is invalid or missing
+			$res['status'] = 0;
+			$res['msg'] = 'Invalid data provided for my gift.';
+		}
+		// Set response type and return the JSON response
+		header("Content-type: application/json");
+		echo json_encode($res);
+		exit();
+	}
+	if($s == 'getUserGift') {
+		// Sanitize the input
+		$user_id = isset($_POST['user_id']) ? escape($_POST['user_id']) : '';
+		// Validate the user_id
+		if (!empty($user_id)) {
+			// Assuming boomTemplate() is a function to fetch user gift data
+			$res['content'] = boomTemplate('gifts/my_gift', $user_id);
+			$res['status'] = 1; // Success
+		} else {
+			// Handle the case where user_id is empty or null
+			$res['status'] = 0;
+			$res['msg'] = 'User ID is missing or invalid.';
+		}
+		// Set response type and return the JSON response
+		header("Content-type: application/json");
+		echo json_encode($res);
+		exit();
+	}
+	if ($s == 'gift_panel') {
+		// Sanitize or validate the $data if needed
+		if (isset($data) && !empty($data)) {
+			// Generate the content using the template
+			$res['content'] = boomTemplate('gifts/gift_panel', $data);
+			$res['status'] = 1;  // Success status
+		} else {
+			// Handle the case where $data is invalid or missing
+			$res['status'] = 0;
+			$res['msg'] = 'Invalid data provided for gift panel.';
+		}
+		// Set response type and return the JSON response
+		header("Content-type: application/json");
+		echo json_encode($res);
+		exit();
+	}
+ 
     if ($s == 'admin_save_gift') {
     if (isset($_POST['save_gift'], $_POST['gift_title'])) {
         // Sanitize inputs
@@ -177,49 +247,39 @@ if ($s === 'send_gift') {
         $gift_title = escape($_POST['gift_title']);  // Gift title
         $gift_rank = escape($_POST['gift_rank']);    // Gift rank
         $gift_gold = escape($_POST['gift_gold']);    // Gift cost (gold)
-
         // Initialize file variables
         $thumb_file_path = '';
         $gif_file_path = '';
         $uploadDir = 'system/gifts/files/media/gift_box/'; // Directory for thumbnail files
         $gifUploadDir = 'system/gifts/files/media/gift_box/gif/'; // Directory for GIF files
-
         // Fetch the current file paths from the database
         $db->where('id', $gift_id);
         $existingGift = $db->getOne('gift', ['gift_image', 'gif_file']);
-
         // Ensure the GIF directory exists
         if (!file_exists($gifUploadDir)) {
             mkdir($gifUploadDir, 0755, true);
         }
-
         // Handle thumb_file upload if submitted
         if (isset($_FILES['thumb_file']) && $_FILES['thumb_file']['error'] === UPLOAD_ERR_OK) {
             // File properties for thumb_file
             $fileTmpPath = $_FILES['thumb_file']['tmp_name'];
             $fileType = $_FILES['thumb_file']['type'];
             $fileSize = $_FILES['thumb_file']['size'];
-
             // Define allowed file types and size limits
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
             $maxFileSize = 5 * 1024 * 1024; // 5 MB
-
             // Validate file type
             if (!in_array($fileType, $allowedTypes)) {
                 handleError(1, 'Invalid thumbnail file type.');
             }
-
             // Validate file size
             if ($fileSize > $maxFileSize) {
                 handleError(2, 'Thumbnail file size exceeds the limit.');
             }
-
             // Generate a unique file name
             $fileName = 'thumb_' . uniqid() . '.' . pathinfo($_FILES['thumb_file']['name'], PATHINFO_EXTENSION);
-
             // Define the full path for the uploaded file
             $thumb_file_path = $uploadDir . $fileName;
-
             // Move the uploaded file to the designated directory
             if (move_uploaded_file($fileTmpPath, $thumb_file_path)) {
                 // Delete the old thumbnail if it exists
@@ -232,38 +292,30 @@ if ($s === 'send_gift') {
             } else {
                 handleError(3, 'Failed to move the thumbnail file.');
             }
-
             // Prepare the file path for database storage
             $thumb_file_path = 'gift_box/' . $fileName;
         }
-
         // Handle gif_file upload if submitted
         if (isset($_FILES['gif_file']) && $_FILES['gif_file']['error'] === UPLOAD_ERR_OK) {
             // File properties for gif_file
             $fileTmpPath = $_FILES['gif_file']['tmp_name'];
             $fileType = $_FILES['gif_file']['type'];
             $fileSize = $_FILES['gif_file']['size'];
-
             // Define allowed file types and size limits for GIFs
             $allowedGifTypes = ['image/gif'];
             $maxFileSize = 10 * 1024 * 1024; // 10 MB (as GIFs might be larger)
-
             // Validate file type
             if (!in_array($fileType, $allowedGifTypes)) {
                 handleError(1, 'Invalid GIF file type.');
             }
-
             // Validate file size
             if ($fileSize > $maxFileSize) {
                 handleError(2, 'GIF file size exceeds the limit.');
             }
-
             // Generate a unique file name
             $gifFileName = 'gif_' . uniqid() . '.' . pathinfo($_FILES['gif_file']['name'], PATHINFO_EXTENSION);
-
             // Define the full path for the uploaded GIF file
             $gif_file_path = $gifUploadDir . $gifFileName;
-
             // Move the uploaded file to the designated directory
             if (move_uploaded_file($fileTmpPath, $gif_file_path)) {
                 // Delete the old GIF if it exists
@@ -276,11 +328,9 @@ if ($s === 'send_gift') {
             } else {
                 handleError(3, 'Failed to move the GIF file.');
             }
-
             // Prepare the GIF file path for database storage
             $gif_file_path = 'gift_box/gif/' . $gifFileName;
         }
-
         // Prepare data for updating the gift
         $updata = Array (
             'gift_title' => $gift_title,
@@ -288,7 +338,6 @@ if ($s === 'send_gift') {
             'gift_rank' => $gift_rank,
             'time' => time(),
         );
-
         // Add file paths if new files were uploaded
         if (!empty($thumb_file_path)) {
             $updata['gift_image'] = $thumb_file_path;
@@ -296,11 +345,9 @@ if ($s === 'send_gift') {
         if (!empty($gif_file_path)) {
             $updata['gif_file'] = $gif_file_path;
         }
-
         // Update the gift in the database
         $db->where('id', $gift_id);
         $update = $db->update('gift', $updata);
-
         // Check if the update was successful
         if ($update === true) {
             $gift_array['code'] = 200;
@@ -308,7 +355,6 @@ if ($s === 'send_gift') {
             $gift_array['message'] = 'Gift Updated successfully';
             $gift_array['data'] = boomTemplate('element/admin_gift', giftDetails($gift_id));
         }
-
         // Return JSON response
         header("Content-type: application/json");
         echo json_encode($gift_array);

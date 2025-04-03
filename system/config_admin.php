@@ -1,44 +1,64 @@
 <?php
 /**
-* Codychat
+* FuseChat
 *
-* @package Codychat
-* @author www.boomcoding.com
+* @package FuseChat
+* @author www.nemra-1.com
 * @copyright 2020
-* @terms any use of this script without a legal license is prohibited
-* all the content of Codychat is the propriety of BoomCoding and Cannot be 
+* @terms Any use of this script without a legal license is prohibited.
+* All the content of FuseChat is the property of BoomCoding and cannot be 
 * used for another project.
 */
+
 session_start();
+
+// **Improve Session Security**
+ini_set('session.cookie_httponly', 1); // Prevents JavaScript from accessing the session
+ini_set('session.cookie_secure', 1);   // Ensures cookies are sent only over HTTPS (if available)
+ini_set('session.use_strict_mode', 1); // Prevents session fixation
 $boom_access = 0;
-require(dirname(dirname(__FILE__))."/vendor/autoload.php");
-/*firewall*/
-require "firewall.php";  // Load firewall on every request
-/*firewall*/
-
-require("database.php");
-require("variable.php");
-require("function.php");
-require("function_all.php");
-require("function_admin.php");
-if(!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk'])){
-	die();
+require dirname(dirname(__FILE__)) . "/vendor/autoload.php";
+require "database.php";
+require "variable.php";
+require "function.php";
+require "function_all.php";
+require "function_admin.php";
+// **Validate Cookies & Token**
+if (!checkToken() || empty($_COOKIE[BOOM_PREFIX . 'userid']) || empty($_COOKIE[BOOM_PREFIX . 'utk'])) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid session.']);
+    exit();
 }
-$mysqli = @new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
-
-if (mysqli_connect_errno()){
-	die();
+// **Secure Database Connection**
+$mysqli = new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
+if ($mysqli->connect_error) {
+    echo json_encode(['status' => 'error', 'message' => 'Database connection failed.']);
+    exit();
 }
-$pass = escape($_COOKIE[BOOM_PREFIX . 'utk']);
-$ident = escape($_COOKIE[BOOM_PREFIX . 'userid']);
-$get_data = $mysqli->query("SELECT boom_setting.*, boom_users.* FROM boom_users, boom_setting WHERE boom_users.user_id = '$ident' AND boom_users.user_password = '$pass' AND boom_setting.id = '1'");
-if($get_data->num_rows > 0){
-	$data = $get_data->fetch_assoc();
-	$boom_access = 1;
+// **Securely Fetch User Credentials**
+$ident = $_COOKIE[BOOM_PREFIX . 'userid'];
+$pass = $_COOKIE[BOOM_PREFIX . 'utk'];
+$stmt = $mysqli->prepare("
+    SELECT boom_setting.*, boom_users.* 
+    FROM boom_users 
+    JOIN boom_setting ON boom_setting.id = 1
+    WHERE boom_users.user_id = ? AND boom_users.user_password = ?
+");
+$stmt->bind_param("is", $ident, $pass);
+$stmt->execute();
+$result = $stmt->get_result();
+if ($result->num_rows > 0) {
+    $data = $result->fetch_assoc();
+    $boom_access = 1;
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'Authentication failed.']);
+    exit();
 }
-else {
-	die();
+// **Load Language File**
+require "language/{$data['user_language']}/language.php";
+// **Set Timezone Securely**
+if (!empty($data['user_timezone'])) {
+    date_default_timezone_set($data['user_timezone']);
+} else {
+    date_default_timezone_set("UTC"); // Default fallback
 }
-require("language/{$data['user_language']}/language.php");
-date_default_timezone_set($data['user_timezone']);
 ?>

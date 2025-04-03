@@ -9,21 +9,34 @@
  * All content of FuseChat is the property of BoomCoding and cannot be used in another project.
  */
 
+// Set session cookie settings securely before session start
+ini_set('session.cookie_secure', 1); // Ensures cookies are sent over HTTPS
+ini_set('session.cookie_httponly', 1); // Prevents JavaScript from accessing session cookies
+ini_set('session.use_only_cookies', 1); // Forces session to use cookies for session ID
+ini_set('session.cookie_samesite', 'Strict'); // Prevent CSRF with SameSite cookie
+
+// Now start the session
 session_start();
+
 require dirname(__DIR__) . "/vendor/autoload.php";
 require "database.php";
 require "variable.php";
 require "function.php";
+
+// Validate the request token and cookies
 if (!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk']) || !validateAuth()) {
     echo json_encode(["check" => 99]);
     exit();
 }
+
 $mysqli = new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
 $mysqli->query("SET NAMES 'utf8mb4'");
 if ($mysqli->connect_errno) {
+    // Handle connection errors securely
     echo json_encode(["check" => 199]);
     exit();
 }
+
 $time = time();
 $pass = escape($_COOKIE[BOOM_PREFIX . 'utk']);
 $ident = escape($_COOKIE[BOOM_PREFIX . 'userid']);
@@ -58,8 +71,8 @@ $stmt->execute();
 // Get the result
 $get_data = $stmt->get_result();
 if (!$get_data) {
-    // Log or display the error
-    echo "SQL Error: " . $mysqli->error;
+    // Log errors instead of showing them directly
+    error_log("SQL Error: " . $mysqli->error);
     echo json_encode(["check" => 99]);
     exit();
 }
@@ -75,5 +88,4 @@ if ($get_data->num_rows > 0) {
     echo json_encode(["check" => 99]);
     exit();
 }
-
 ?>

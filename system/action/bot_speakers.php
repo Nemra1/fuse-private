@@ -215,7 +215,7 @@ if($f == "bot_speakers") {
 		$stmt->close();
 		exit();
 	}
-	if ($s === "allow_bot") {
+	if ($s === "allow_bot" && boomLogged()) {
 		// Ensure Content-Type header for consistency
 		header("Content-Type: application/json");
 		// Validate input data

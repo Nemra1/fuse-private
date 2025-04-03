@@ -9,7 +9,7 @@ function handleError($code, $message) {
 }
 
 if ($f == 'gifts') {
-	if ($s == 'gifts_access') {
+	if($s == 'gifts_access') {
 		if (isset($_POST['set_gifts_access']) && boomAllow($cody['can_manage_addons'])) {
 			// Sanitize and validate the gift access value
 			$gifts_access = (int) $_POST['set_gifts_access']; // Assuming it's an integer
@@ -371,8 +371,6 @@ if ($s == 'admin_add_gift') {
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
-
-
     // Check if a file is uploaded
     if (isset($_FILES['thumb_file']) && $_FILES['thumb_file']['error'] === UPLOAD_ERR_OK) {
         $fileTmpPath = $_FILES['thumb_file']['tmp_name'];
@@ -383,15 +381,12 @@ if ($s == 'admin_add_gift') {
         // Define allowed file types and size limits
         $allowedTypes = ['image/jpeg', 'image/png'];
         $maxFileSize = 5 * 1024 * 1024; // 5 MB
-
         if (!in_array($fileType, $allowedTypes)) {
             handleError(1, 'Invalid file type jpeg or png only in thumb file');
         }
-
         if ($fileSize > $maxFileSize) {
             handleError(2, 'File size exceeds the limit.');
         }
-
         // Move the file to the desired directory
         $destPath = $uploadDir . $fileName;
         if (move_uploaded_file($fileTmpPath, $destPath)) {
@@ -406,10 +401,8 @@ if ($s == 'admin_add_gift') {
                 "gif_file" => '',
                 "time" => time(),
             ];
-
             // Insert the gift data into the database
             $add_gift_query = $db->insert('gift', $add_gift_array);
-
             if ($add_gift_query) {
                 // Retrieve the last inserted ID
                 $lastInsertId = $add_gift_query;
@@ -429,58 +422,61 @@ if ($s == 'admin_add_gift') {
         handleError(4, 'No file uploaded or there was an upload error.');
     }
 }
-
-
 if ($s == 'admin_delete_gift') {
-    // Ensure that the gift ID is provided
+    // Ensure that the gift ID is provided and validate it
     if (isset($_POST['gift_id']) && !empty($_POST['gift_id'])) {
+        // Sanitize the gift_id and ensure it is an integer
         $giftId = intval($_POST['gift_id']);
-        
-        // Fetch the gift data to get the file paths for both gift_image and gif_file
-        $gift = $db->where('id', $giftId)->getOne('gift', ['gift_image', 'gif_file']);
-        
-        if($gift) {
-            // Define the directories for uploaded files
-            $uploadDir = 'system/gifts/files/media/gift_box/';
-            $gifUploadDir = 'system/gifts/files/media/gift_box/gif/';
-            
-            // Prepare file paths for both thumbnail and gif
-            $thumbFilePath = $uploadDir . $gift['gift_image'];
-            $gifFilePath = $gifUploadDir . $gift['gif_file'];
-
-            // Check if the thumbnail file exists and delete it
-            if (!empty($gift['gift_image']) && file_exists($thumbFilePath)) {
-                unlink($thumbFilePath);
-            }
-
-            // Check if the gif file exists and delete it
-            if (!empty($gift['gif_file']) && file_exists($gifFilePath)) {
-                unlink($gifFilePath);
-            }
-
-            // Delete the record from the database
-            $deleteGiftResult = $db->where('id', $giftId)->delete('gift');
-            $deleteUserGiftResult = $db->where('gift', $giftId)->delete('users_gift');
-            if ($deleteGiftResult || $deleteUserGiftResult) {
-                header("Content-type: application/json");
-                echo json_encode([
-                    'code' => 5,
-                    'message' => 'Gift has been deleted successfully.',
-                    'thumbFilePath' => $thumbFilePath,
-                    'gifFilePath' => $gifFilePath
-                ]);
+        // Check if giftId is valid (greater than 0)
+        if ($giftId > 0) {
+            // Fetch the gift data to get the file paths for both gift_image and gif_file
+            $gift = $db->where('id', $giftId)->getOne('gift', ['gift_image', 'gif_file']);
+            if ($gift) {
+                // Define the directories for uploaded files
+                $uploadDir = 'system/gifts/files/media/gift_box/';
+                $gifUploadDir = 'system/gifts/files/media/gift_box/gif/';
+                // Prepare file paths for both thumbnail and gif
+                $thumbFilePath = $uploadDir . $gift['gift_image'];
+                $gifFilePath = $gifUploadDir . $gift['gif_file'];
+                // Delete the thumbnail file if it exists
+                if (!empty($gift['gift_image']) && file_exists($thumbFilePath)) {
+                    if (!unlink($thumbFilePath)) {
+                        handleError(8, 'Failed to delete thumbnail image.');
+                        exit;
+                    }
+                }
+                // Delete the gif file if it exists
+                if (!empty($gift['gif_file']) && file_exists($gifFilePath)) {
+                    if (!unlink($gifFilePath)) {
+                        handleError(9, 'Failed to delete gif file.');
+                        exit;
+                    }
+                }
+                // Delete the gift record from the database
+                $deleteGiftResult = $db->where('id', $giftId)->delete('gift');
+                $deleteUserGiftResult = $db->where('gift', $giftId)->delete('users_gift');
+                // If deletion from database was successful, return success response
+                if ($deleteGiftResult || $deleteUserGiftResult) {
+                    header("Content-type: application/json");
+                    echo json_encode([
+                        'code' => 5,
+                        'message' => 'Gift has been deleted successfully.',
+                        'thumbFilePath' => $thumbFilePath,
+                        'gifFilePath' => $gifFilePath
+                    ]);
+                } else {
+                    handleError(10, 'Failed to delete the gift from the database.');
+                }
             } else {
-                handleError(5, 'Failed to delete the gift from the database.');
+                handleError(6, 'Gift not found.');
             }
         } else {
-            handleError(6, 'Gift not found.');
+            handleError(7, 'Invalid gift ID.');
         }
     } else {
         handleError(7, 'No gift ID provided.');
     }
 }
 
-
-   
 }
 ?>

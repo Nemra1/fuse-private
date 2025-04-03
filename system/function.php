@@ -4175,46 +4175,61 @@ function useLookup(){
 	}
 }
 function checkVpn($ip){
-	global $mysqli, $data;
-	if(useVpn()){
-		$check_vpn = $mysqli->query("SELECT vtype FROM boom_vpn WHERE vip = '$ip'");
-		if($check_vpn->num_rows > 0){
-			$result = $check_vpn->fetch_assoc();
-			if($result['vtype'] == 2){
-				return true;
-			}
-		}
-		else {
-			$type = 1;
-			$check = doCurl('http://proxycheck.io/v2/' . $ip . '?key=' . $data['vpn_key'] . '&vpn=1&asn=1&inf=0&risk=1&days=7&tag=msg');
-			$result = json_decode($check);
-			if($result->status == 'ok'){
-				if($result->$ip->proxy && $result->$ip->proxy == "yes"){
-					$type = 2;
-				}
-				$mysqli->query("INSERT INTO boom_vpn (vip, vtype, vdate) VALUES ('$ip', '$type', '" . time() . "')");
-				if($type == 2){
-					return true;
-				}
-			}
-		}
-	}
+    global $mysqli, $data;
+    if(useVpn()){
+        // Prepare the query to check if the IP is in the VPN table
+        $stmt = $mysqli->prepare("SELECT vtype FROM boom_vpn WHERE vip = ?");
+        $stmt->bind_param('s', $ip); // Bind the IP parameter as a string
+        $stmt->execute();
+        $stmt->store_result();
+        // Check if the IP exists in the VPN table
+        if($stmt->num_rows > 0){
+            $stmt->bind_result($vtype);
+            $stmt->fetch();
+            if($vtype == 2){
+                return true;
+            }
+        } else {
+            // Default type if VPN is not found in the table
+            $type = 1;
+            // Perform the external API check
+            $check = doCurl('http://proxycheck.io/v2/' . $ip . '?key=' . $data['vpn_key'] . '&vpn=1&asn=1&inf=0&risk=1&days=7&tag=msg');
+            $result = json_decode($check);
+            if($result->status == 'ok'){
+                if(isset($result->$ip->proxy) && $result->$ip->proxy == "yes"){
+                    $type = 2;
+                }
+                // Prepare the query to insert the IP and type into the VPN table
+                $stmt_insert = $mysqli->prepare("INSERT INTO boom_vpn (vip, vtype, vdate) VALUES (?, ?, ?)");
+                $current_time = time();
+                $stmt_insert->bind_param('sii', $ip, $type, $current_time);
+                $stmt_insert->execute();
+                if($type == 2){
+                    return true;
+                }
+            }
+        }
+    }
 }
+
 function recheckVpn(){
-	global $data,$mysqli;
-	if(useVpn() && canVpn()){
-		$ip = getIp();
-		if(!isset($_SESSION[BOOM_PREFIX . '_cip']) || $ip != $_SESSION[BOOM_PREFIX . '_cip']){
-			if(checkVpn($ip)){
-				systemVpnKick($data);
-				return true;
-			}
-			else {
-				$_SESSION[BOOM_PREFIX . '_cip'] = $ip;
-			}
-		}
-	}
+    global $data, $mysqli;
+    if(useVpn() && canVpn()){
+        $ip = getIp();
+        // Check if the IP is different from the session-stored IP
+        if(!isset($_SESSION[BOOM_PREFIX . '_cip']) || $ip != $_SESSION[BOOM_PREFIX . '_cip']){
+            // Check if the IP is flagged as a VPN
+            if(checkVpn($ip)){
+                systemVpnKick($data); // Kick the user due to VPN usage
+                return true;
+            } else {
+                // Update session with the new IP
+                $_SESSION[BOOM_PREFIX . '_cip'] = $ip;
+            }
+        }
+    }
 }
+
 /* icons function */
 function levelIcon(){
 	return 'default_images/icons/level.svg';

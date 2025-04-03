@@ -939,50 +939,94 @@ function boomNotify($type, $custom = array()) {
     updateNotify($c['target']); 
     return true;
 }
-
 function updateNotify($id){
 	global $mysqli;
-	$mysqli->query("UPDATE boom_users SET naction = naction + 1 WHERE user_id = '$id'");
+	$stmt = $mysqli->prepare("UPDATE boom_users SET naction = naction + 1 WHERE user_id = ?");
+	$stmt->bind_param("i", $id);
+	$stmt->execute();
+	$stmt->close();
 }
+
 function updateListNotify($list){
-	global $mysqli;
-	if(empty($list)){
-		return false;
-	}
-	$list = implode(", ", $list);
-	$mysqli->query("UPDATE boom_users SET naction = naction + 1 WHERE user_id IN ($list)");
+    global $mysqli;
+    if(empty($list)){
+        return false;
+    }
+    // Sanitize the list: ensure all items are integers.
+    $sanitized_list = array_map('intval', $list);
+    // Prepare the query
+    $placeholders = implode(',', array_fill(0, count($sanitized_list), '?'));
+    $stmt = $mysqli->prepare("UPDATE boom_users SET naction = naction + 1 WHERE user_id IN ($placeholders)");
+    // Dynamically bind parameters to the query.
+    $stmt->bind_param(str_repeat('i', count($sanitized_list)), ...$sanitized_list);
+    // Execute the query.
+    $stmt->execute();
+    $stmt->close();
 }
+
 function updateStaffNotify(){
-	global $mysqli;
-	$mysqli->query("UPDATE boom_users SET naction = naction + 1 WHERE user_rank > 7");
+    global $mysqli;
+    // Using prepared statement for safety, even though there are no dynamic inputs
+    $stmt = $mysqli->prepare("UPDATE boom_users SET naction = naction + 1 WHERE user_rank > ?");
+    $rank_threshold = 7; // User rank threshold for staff
+    // Bind the threshold as a parameter and execute the statement
+    $stmt->bind_param('i', $rank_threshold);
+    $stmt->execute();
+    $stmt->close();
 }
 function updateAllNotify(){
-	global $mysqli;
-	$delay = calMinutes(2);
-	$mysqli->query("UPDATE boom_users SET naction = naction + 1 WHERE last_action > '$delay'");
+    global $mysqli;
+    // Calculate the delay (number of minutes ago) securely
+    $delay = calMinutes(2);
+    // Use prepared statements for better security
+    $stmt = $mysqli->prepare("UPDATE boom_users SET naction = naction + 1 WHERE last_action > ?");
+    // Bind the parameter and execute the query
+    $stmt->bind_param('i', $delay); // Assuming 'i' for integer (Unix timestamp or equivalent)
+    $stmt->execute();
+    $stmt->close();
 }
+
 function loadIgnore($id){
-	global $mysqli, $data;
-	$list = [];
-	//if(is_array($cache = redisGetObject('ignore:' . $id))){
-	//	return $cache;
-//	}
-	$get_ignore = $mysqli->query("SELECT ignored FROM boom_ignore WHERE ignorer = '{$data['user_id']}'");
-	while($ignore = $get_ignore->fetch_assoc()){
-		$list[] = (int) $ignore['ignored'];
-	}
-	//redisSetObject('ignore:' . $id, $list);
-	return $list;
+    global $mysqli, $data;
+    $list = [];
+    // Check if the list is cached in Redis (uncomment if Redis caching is enabled)
+    // if(is_array($cache = redisGetObject('ignore:' . $id))){
+    //     return $cache;
+    // }
+    // Use a prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("SELECT ignored FROM boom_ignore WHERE ignorer = ?");
+    $stmt->bind_param("i", $data['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    // Fetch the ignored user IDs
+    while ($ignore = $result->fetch_assoc()) {
+        $list[] = (int) $ignore['ignored'];
+    }
+    $stmt->close();
+    // Cache the result in Redis (uncomment if Redis caching is enabled)
+    // redisSetObject('ignore:' . $id, $list);
+    return $list;
 }
+
 function createIgnore(){
-	global $mysqli, $data, $cody;
-	$ignore_list = '';
-	$get_ignore = $mysqli->query("SELECT ignored FROM boom_ignore WHERE ignorer = '{$data['user_id']}'");
-	while($ignore = $get_ignore->fetch_assoc()){
-		$ignore_list .= $ignore['ignored'] . '|';
-	}
-	$_SESSION[BOOM_PREFIX . 'ignore'] = '|' . $ignore_list;
+    global $mysqli, $data;
+    // Initialize an array to hold the ignored user IDs
+    $ignore_list = [];
+    // Use a prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("SELECT ignored FROM boom_ignore WHERE ignorer = ?");
+    $stmt->bind_param("i", $data['user_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    // Fetch ignored user IDs and store them in an array
+    while($ignore = $result->fetch_assoc()){
+        $ignore_list[] = $ignore['ignored'];
+    }
+    // Close the prepared statement
+    $stmt->close();
+    // Store the ignore list in the session variable, using '|' as separator
+    $_SESSION[BOOM_PREFIX . 'ignore'] = '|' . implode('|', $ignore_list) . '|';
 }
+
 function isIgnored($ignore, $id){
 	global $cody;
 	if(strpos($ignore, '|' . $id . '|') !== false){

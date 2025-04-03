@@ -3484,63 +3484,73 @@ function setUserRoom(){
      //redisInitUser($data);
 }
 function myRoomDetails($r){
-	global $mysqli, $data;
-	$room = roomDetails($r);
-	if(!empty($room)){
-		$getroom = $mysqli->query("
-			SELECT
-			IFNULL((SELECT action_muted FROM boom_room_action WHERE action_user = '{$data['user_id']}' AND action_room = '$r'), 0) as room_muted,
-			IFNULL((SELECT action_blocked FROM boom_room_action WHERE action_user = '{$data['user_id']}' AND action_room = '$r'), 0) as room_blocked,
-			IFNULL((SELECT room_rank FROM boom_room_staff WHERE room_staff = '{$data['user_id']}' AND room_id = '$r'), 0) as room_ranking
-		");
-		if($getroom->num_rows > 0){
-			return array_merge($room, $getroom->fetch_assoc());
-		}
-	}
-	return [];
+    global $mysqli, $data;
+    // Fetch room details
+    $room = roomDetails($r);
+    if(!empty($room)){
+        // Define the queries in an array
+        $queries = [
+            [
+                'query' => "SELECT IFNULL(action_muted, 0) FROM boom_room_action WHERE action_user = ? AND action_room = ?",
+                'params' => [$data['user_id'], $r],
+                'resultKey' => 'room_muted'
+            ],
+            [
+                'query' => "SELECT IFNULL(action_blocked, 0) FROM boom_room_action WHERE action_user = ? AND action_room = ?",
+                'params' => [$data['user_id'], $r],
+                'resultKey' => 'room_blocked'
+            ],
+            [
+                'query' => "SELECT IFNULL(room_rank, 0) FROM boom_room_staff WHERE room_staff = ? AND room_id = ?",
+                'params' => [$data['user_id'], $r],
+                'resultKey' => 'room_ranking'
+            ]
+        ];
+        // Prepare and execute each query
+        $roomData = [];
+        foreach ($queries as $query) {
+            $stmt = $mysqli->prepare($query['query']);
+            // Bind the parameters
+            $stmt->bind_param(str_repeat('i', count($query['params'])), ...$query['params']);
+            // Execute the query
+            $stmt->execute();
+            // Get the result and store it in the result key
+            $result = $stmt->get_result();
+            if ($result->num_rows > 0) {
+                $roomData[$query['resultKey']] = $result->fetch_row()[0];
+            } else {
+                $roomData[$query['resultKey']] = 0;
+            }
+            $stmt->close();
+        }
+        // Merge the room details and the additional data
+        return array_merge($room, $roomData);
+    }
+    return [];  // Return an empty array if no room found or no data
 }
-function roomDetails($id){
-	global $mysqli;
-	$room = [];
-	/*if(($cache = redisGetObject('room:' . $id))){
-		return $cache;
-	}*/
-	$get_room = $mysqli->query("SELECT * FROM boom_rooms WHERE room_id = '$id'");
-	if($get_room->num_rows > 0){
-		$room = $get_room->fetch_assoc();
-		//redisSetObject('room:' . $id, $room);
-	}
-	return $room;
-}	
 
-/*
-function roomDetails($type = 0){
-	global $data, $mysqli;
-	$muted = 0;
-	$status = 0;
-	$get_room = $mysqli->query("SELECT *,
-	(SELECT count(id) FROM boom_room_action WHERE action_room = '{$data['user_roomid']}' AND action_user = '{$data['user_id']}' AND action_muted > 0) as is_muted,
-	(SELECT room_rank FROM boom_room_staff WHERE room_staff = '{$data['user_id']}' AND room_id = '${data['user_roomid']}') as room_status
-	FROM boom_rooms
-	WHERE room_id = '{$data['user_roomid']}'");
-	if($get_room->num_rows > 0){
-		$room = $get_room->fetch_assoc();
-		if($type == 1){
-			if($room['is_muted'] > 0){
-				 $muted = $room['is_muted'];
-			}
-			if(!is_null($room['room_status'])){
-				$status = $room['room_status'];
-			}
-			//$mysqli->query("UPDATE boom_users SET room_mute = '$muted', user_role = '$status' WHERE user_id = '{$data['user_id']}'");			
-		}
-	}
-	else {
-		$room = array();
-	}
-	return $room;
+function roomDetails($id){
+    global $mysqli;
+    $room = [];
+    // Prepare the SQL query
+    $stmt = $mysqli->prepare("SELECT * FROM boom_rooms WHERE room_id = ?");
+    // Bind the parameter
+    $stmt->bind_param('i', $id);
+    // Execute the query
+    $stmt->execute();
+    // Get the result
+    $result = $stmt->get_result();
+    // Check if any rows were returned
+    if($result->num_rows > 0){
+        // Fetch the result as an associative array
+        $room = $result->fetch_assoc();
+    }
+    // Close the prepared statement
+    $stmt->close();
+    
+    return $room;
 }
-*/
+
 /* wallet and gold functions */
 function useWallet(){
 	global $data;

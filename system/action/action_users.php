@@ -34,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['target'], $_POST['set
     $stmt->close();
     exit;
 }
-
 // Handle other requests
 if (isset($_POST["change_rank"]) && isset($_POST["target"])) {
     echo boomchangeuserrank();
@@ -500,15 +499,6 @@ function staffChangeMood() {
     }
     return 0; // Return 0 if any error occurs
 }
-/**
- * Password strength checker
- */
-function isStrongPassword($password) {
-    return strlen($password) >= 8 &&           // Minimum 8 characters
-           //preg_match('/[A-Z]/', $password) && // At least one uppercase
-           preg_match('/[a-z]/', $password) && // At least one lowercase
-           preg_match('/[0-9]/', $password);   // At least one number
-}
 function boomDeleteAccount(){
     global $mysqli, $data, $cody;
     // 1. Input Validation
@@ -536,8 +526,6 @@ function boomDeleteAccount(){
     ]);
     return 1; // Success
 }
-
-
 function staffCreateUser(){
     global $mysqli, $data, $cody;
     $name = escape($_POST["create_name"]);

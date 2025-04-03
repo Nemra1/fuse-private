@@ -1,51 +1,68 @@
 <?php
 /**
-* Codychat
-*
-* @package Codychat
-* @author www.boomcoding.com
-* @copyright 2020
-* @terms any use of this script without a legal license is prohibited
-* all the content of Codychat is the propriety of BoomCoding and Cannot be 
-* used for another project.
-*/
-session_start();
-$boom_access = 0;
-require(dirname(dirname(__FILE__))."/vendor/autoload.php");
-/*firewall*/
-require "firewall.php";  // Load firewall on every request
-/*firewall*/
+ * FuseChat
+ *
+ * @package FuseChat
+ * @author www.nemra-1.com
+ * @copyright 2020
+ * @terms Unauthorized use of this script without a valid license is prohibited.
+ * All content of FuseChat is the property of BoomCoding and cannot be used in another project.
+ */
 
+session_start();
+
+$boom_access = 0;
+require(dirname(dirname(__FILE__)) . "/vendor/autoload.php");
 require("database.php");
 require("variable.php");
 require("function.php");
 require("function_all.php");
+
+// Prevent caching in development mode
 if ($cody['dev_mode'] === 1) {
-    // Disable caching in development mode
-    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
-    header("Pragma: no-cache"); // HTTP 1.0.
-    header("Expires: 0"); // Proxies.
-}
-if(!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk'])){
-	die();
+    header("Cache-Control: no-cache, no-store, must-revalidate");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+	// Security headers
+	header("X-Content-Type-Options: nosniff");
+	header("X-Frame-Options: DENY");
+	header("X-XSS-Protection: 1; mode=block");
+	header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'");
 }
 
-$mysqli = @new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
-$mysqli->query("SET NAMES 'utf8mb4'");
-if (mysqli_connect_errno()){
-	die();
+// Validate authentication and CSRF token
+if (!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk']) || !validateAuth()) {
+    die(json_encode(['status' => 'error', 'message' => 'Unauthorized access.']));
 }
-$pass = escape($_COOKIE[BOOM_PREFIX . 'utk']);
-$ident = escape($_COOKIE[BOOM_PREFIX . 'userid']);
-$get_data = $mysqli->query("SELECT boom_setting.*, boom_users.* FROM boom_users, boom_setting WHERE boom_users.user_id = '$ident' AND boom_users.user_password = '$pass' AND boom_setting.id = '1'");
-if($get_data->num_rows > 0){
-	$data = $get_data->fetch_assoc();
-	$boom_access = 1;
+// Secure database connection
+$mysqli = new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
+$mysqli->set_charset("utf8mb4");
+if ($mysqli->connect_error) {
+    die(json_encode(['status' => 'error', 'message' => 'Database connection failed.']));
 }
-else {
-	die();
+// Securely retrieve user authentication credentials
+$pass = $_COOKIE[BOOM_PREFIX . 'utk'] ?? '';
+$ident = $_COOKIE[BOOM_PREFIX . 'userid'] ?? '';
+// Use a prepared statement to prevent SQL injection
+$stmt = $mysqli->prepare("
+    SELECT boom_setting.*, boom_users.* 
+    FROM boom_users 
+    JOIN boom_setting ON boom_setting.id = 1
+    WHERE boom_users.user_id = ? 
+    AND boom_users.user_password = ?
+");
+$stmt->bind_param("ss", $ident, $pass);
+$stmt->execute();
+$get_data = $stmt->get_result();
+
+if ($get_data->num_rows > 0) {
+    $data = $get_data->fetch_assoc();
+    $boom_access = 1;
+} else {
+    die(json_encode(['status' => 'error', 'message' => 'Invalid credentials.']));
 }
-require("language/{$data['user_language']}/language.php");
+// Sanitize and load language settings
+require("language/" . htmlspecialchars($data['user_language']) . "/language.php");
 date_default_timezone_set($data['user_timezone']);
 
 ?>

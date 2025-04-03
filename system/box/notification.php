@@ -12,15 +12,16 @@ ORDER BY boom_notification.notify_date DESC LIMIT 40
 ");
 function renderNotification($notify){
 	global $data, $nlang, $lang;
-	$ntext = $nlang[$notify['notify_type']];
-	$ntext = str_replace('%custom%', $notify['notify_custom'], $ntext);
-	$ntext = str_replace('%rank%', rankTitle($notify['notify_rank']), $ntext);
-	$ntext = str_replace('%roomrank%', roomRankTitle($notify['notify_rank']), $ntext);
-	$ntext = str_replace('%delay%', boomRenderMinutes($notify['notify_delay']), $ntext);
-	$ntext = str_replace('%data%', $notify['notify_custom'], $ntext);
-	$ntext = str_replace('%data2%', $notify['notify_custom2'], $ntext);
+	$ntext = isset($nlang[$notify['notify_type']]) ? $nlang[$notify['notify_type']] : '';
+	$ntext = str_replace('%custom%', $notify['notify_custom'] ?? '', $ntext);
+	$ntext = str_replace('%rank%', rankTitle($notify['notify_rank'] ?? 0), $ntext);
+	$ntext = str_replace('%roomrank%', roomRankTitle($notify['notify_rank'] ?? 0), $ntext);
+	$ntext = str_replace('%delay%', boomRenderMinutes($notify['notify_delay'] ?? 0), $ntext);
+	$ntext = str_replace('%data%', $notify['notify_custom'] ?? '', $ntext);
+	$ntext = str_replace('%data2%', $notify['notify_custom2'] ?? '', $ntext);
 	return $ntext;
 }
+
 function notifyLikeBase($type){
 	switch($type){
 		case 1: 	return 'like.svg';

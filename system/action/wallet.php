@@ -38,7 +38,7 @@ if ($f == 'wallet') {
                 ->setTransactions(array(array(
                     'amount' => array('total' => $amount, 'currency' => $data['currency']),
                     'name' => 'Wallet Replenishment',
-                    'description' => 'Pay For Drop200',
+                    'description' => 'Pay For Fuse Chat',
                 )));
         
             try {
@@ -65,40 +65,52 @@ if ($f == 'wallet') {
                 $execution = new \PayPal\Api\PaymentExecution();
                 $execution->setPayerId($payerId);
         
-                try {
-                    $result = $payment->execute($execution, $apiContext);
-        
-                    // Record payment details in the database
-                    $transactionId = $result->getId();
-                    $amount = $result->getTransactions()[0]->getAmount()->getTotal();
-                    $currency = $result->getTransactions()[0]->getAmount()->getCurrency();
-                    $status = $result->getState();
-                    $payerEmail = $result->getPayer()->getPayerInfo()->getEmail(); // Get payer email
-                    $payerName = $result->getPayer()->getPayerInfo()->getFirstName() . ' ' . $result->getPayer()->getPayerInfo()->getLastName(); // Get payer name
-                    $stmt = $pdo->prepare("INSERT INTO boom_payments (transaction_id, amount, currency, status, payer_email, payer_name,hunter,type,notes) VALUES (:transaction_id, :amount, :currency, :status, :payer_email, :payer_name,:hunter,:type, :notes)");
-                    $stmt->execute([
-                        ':transaction_id' => $transactionId,
-                        ':amount' => $amount,
-                        ':currency' => $currency,
-                        ':status' => $status,
-                        ':payer_email' => $payerEmail,
-                        ':payer_name' => $payerName,
-                        ':hunter' => $data['user_id'],
-                        ':type' => 'deposit',
-                        ':notes' => 'Deposit successful! Transaction ID: ' . $transactionId,
-                    ]);
-                    $update_wallet = $data['wallet'] + $amount;
-                    $mysqli->query("UPDATE boom_users SET  wallet = wallet+{$update_wallet} WHERE user_id = {$data['user_id']}");
-                    $content = $data['user_name']. '<font color="red" class="withdraw_msg"> Deposit '.$amount.' '.$data['currency'].' successful </font>';
-                    systemPostChat($data['user_roomid'], $content, array('type'=> 'system__action'));
-                    boomNotify('withdraw', array('target'=> $data['user_id'], 'custom'=> $content));
-                    header("Location: {$data['domain']}");
-                    //header("Content-type: application/json");
-                    //echo json_encode($data);
-                exit();
-                } catch (Exception $ex) {
-                    echo "Error executing payment: " . $ex->getMessage();
-                }
+               try {
+					// Execute the payment
+					$result = $payment->execute($execution, $apiContext);
+					// Record payment details in the database
+					$transactionId = $result->getId();
+					$amount = $result->getTransactions()[0]->getAmount()->getTotal();
+					$currency = $result->getTransactions()[0]->getAmount()->getCurrency();
+					$status = $result->getState();
+					$payerEmail = $result->getPayer()->getPayerInfo()->getEmail();
+					$payerName = $result->getPayer()->getPayerInfo()->getFirstName() . ' ' . $result->getPayer()->getPayerInfo()->getLastName();
+					// Use prepared statement for the insert query
+					$stmt = $pdo->prepare("INSERT INTO boom_payments (transaction_id, amount, currency, status, payer_email, payer_name, hunter, type, notes) 
+										   VALUES (:transaction_id, :amount, :currency, :status, :payer_email, :payer_name, :hunter, :type, :notes)");
+					$stmt->execute([
+						':transaction_id' => $transactionId,
+						':amount' => $amount,
+						':currency' => $currency,
+						':status' => $status,
+						':payer_email' => $payerEmail,
+						':payer_name' => $payerName,
+						':hunter' => $data['user_id'],
+						':type' => 'deposit',
+						':notes' => 'Deposit successful! Transaction ID: ' . $transactionId,
+					]);
+					// Update wallet securely using prepared statement
+					$update_wallet = $data['wallet'] + $amount;
+					$stmt_update = $mysqli->prepare("UPDATE boom_users SET wallet = wallet + ? WHERE user_id = ?");
+					$stmt_update->bind_param('di', $update_wallet, $data['user_id']);
+					$stmt_update->execute();
+					// Prepare content for notification
+					$content = $data['user_name'] . '<font color="red" class="withdraw_msg"> Deposit ' . $amount . ' ' . $data['currency'] . ' successful </font>';
+					// Send system message and notification
+					systemPostChat($data['user_roomid'], $content, ['type' => 'system__action']);
+					boomNotify('withdraw', ['target' => $data['user_id'], 'custom' => $content]);
+					// Redirect to the user's domain securely
+					header("Location: {$data['domain']}");
+					exit();
+				} catch (Exception $ex) {
+					// Log error for debugging (do not expose to the user)
+					error_log("Error executing payment: " . $ex->getMessage());
+					
+					// Optionally, you could return a custom error message to the user
+					echo "An error occurred during the transaction. Please try again later.";
+					exit();
+				}
+
             } else {
                 echo "Payment failed. No payment ID or Payer ID found.";
             }
@@ -119,60 +131,68 @@ if ($f == 'wallet') {
         }
      }
 if ($s == 'send' && boomLogged() === true) {
-    $user_id  = (!empty($_POST['user_id']) && is_numeric($_POST['user_id'])) ? $_POST['user_id'] : 0;
-    $amount   = (!empty($_POST['amount_to_user']) && is_numeric($_POST['amount_to_user'])) ? $_POST['amount_to_user'] : 0;
+    // Sanitize and validate the input
+    $user_id = (!empty($_POST['user_id']) && is_numeric($_POST['user_id'])) ? (int)$_POST['user_id'] : 0;
+    $amount = (!empty($_POST['amount_to_user']) && is_numeric($_POST['amount_to_user'])) ? (float)$_POST['amount_to_user'] : 0;
+    // Fetch user data
     $userdata = fuse_user_data($user_id);
     $my_wallet = floatval($data['wallet']);
-    
+    // Validation checks
     if (empty($user_id) || empty($amount) || empty($userdata) || $amount <= 0) {
         $array_data['message'] = [
             "amount" => $amount,
             "alert" => 'Amount OR Receiver cannot be 0 or Empty',
-        ];              
-        $array_data['status']  = 150;
+        ];
+        $array_data['status'] = 150;
     } else if ($my_wallet < $amount) {
         $array_data['message'] = [
             "amount" => $amount,
-            "alert" => 'You dont have enough money to send',
-        ];              
-        $array_data['status']  = 100;
+            "alert" => 'You do not have enough money to send',
+        ];
+        $array_data['status'] = 100;
     } else {
         $me = $data['user_id'];
         $him = $user_id;
-        
+        // Check if the sender is trying to send money to themselves
         if ($me == $him) {
             $array_data['message'] = [
                 "amount" => $amount,
-                "alert" => 'You cant send money to yourself.',
-            ];              
-            $array_data['status']  = 300;
+                "alert" => 'You cannot send money to yourself.',
+            ];
+            $array_data['status'] = 300;
         } else {
-            // Prepared statements to prevent SQL injection
+            // Prepare SQL statements securely
             $update_receiver = $mysqli->prepare("UPDATE `boom_users` SET `wallet` = wallet + ? WHERE `user_id` = ?");
-            $update_sender   = $mysqli->prepare("UPDATE `boom_users` SET `wallet` = wallet - ? WHERE `user_id` = ?");
+            $update_sender = $mysqli->prepare("UPDATE `boom_users` SET `wallet` = wallet - ? WHERE `user_id` = ?");           
+            // Bind parameters securely
             $update_receiver->bind_param('di', $amount, $user_id);
-            $update_sender->bind_param('di', $amount, $me);
+            $update_sender->bind_param('di', $amount, $me);            
             if ($update_receiver->execute() && $update_sender->execute()) {
                 $recipient_name = $userdata['user_name'];
                 $local_transactionId = generateRandomString(6);
-                $donation_msg = $data['user_name'] . ' Sent ' . $amount . ' -' . $data['currency'] . ' To ' . $recipient_name;
+                $donation_msg = $data['user_name'] . ' Sent ' . $amount . ' ' . $data['currency'] . ' To ' . $recipient_name;                
+                // Insert transaction details securely
                 $insert_trans = $mysqli->prepare("INSERT INTO `boom_payments` 
                     (transaction_id, amount, currency, status, payer_email, payer_name, hunter, type, notes, target) 
                     VALUES (?, ?, ?, 'approved', ?, ?, ?, 'donation', ?, ?)");
                 $insert_trans->bind_param('sdsssiss', $local_transactionId, $amount, $data['currency'], $data['user_email'], $data['user_name'], $data['user_id'], $donation_msg, $userdata['user_id']);
+                
+                // Check if the transaction insertion was successful
                 if ($insert_trans->execute()) {
                     $array_data['message'] = [
                         "amount" => $amount,
                         "alert" => 'Your money was successfully sent to ' . $userdata['user_name'],
-                    ];     
+                    ];
                     $array_data['status'] = 200;
                 } else {
+                    // Transaction insertion failed
                     $array_data['message'] = [
                         "alert" => 'Transaction failed. Please try again later.',
                     ];
                     $array_data['status'] = 500;
                 }
             } else {
+                // Wallet update failed
                 $array_data['message'] = [
                     "alert" => 'Failed to update wallet balance.',
                 ];
@@ -181,10 +201,12 @@ if ($s == 'send' && boomLogged() === true) {
         }
     }
 
+    // Send JSON response
     header("Content-type: application/json");
     echo json_encode($array_data);
-    exit(); 
+    exit();
 }
+
      if ($s == 'transaction' && boomLogged() === true) {
          $trans_content= get_translations();
          if (!empty($trans_content)) {

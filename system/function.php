@@ -653,10 +653,8 @@ function postPrivate($from, $to, $content, $snum = ''){
 
     return true;
 }
-
-
 function sendNotification($userId, $message) {
-    global $data,$cody;
+    global $data, $cody;
     $content = array(
         "en" => $message
     );
@@ -665,7 +663,7 @@ function sendNotification($userId, $message) {
         'include_player_ids' => array($userId), // OneSignal user ID
         'isChrome' => false,
         'android_led_color' => 'FF0000FF',
-         'priority' => 10,
+        'priority' => 10,
         'contents' => $content
     );
     $headers = array(
@@ -677,12 +675,16 @@ function sendNotification($userId, $message) {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    // Enable SSL certificate verification
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    // Optionally specify the CA certificates file path if needed:
+    // curl_setopt($ch, CURLOPT_CAINFO, '/path/to/cacert.pem');
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
     $result = curl_exec($ch);
     curl_close($ch);
     return $result;
 }
+
 function sendNotificationToAll($message) {
     global $data,$cody;
     $appId = $data['onesignal_web_push_id']; // OneSignal App ID

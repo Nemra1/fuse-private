@@ -3799,19 +3799,32 @@ function extra_users_list($list,$list_type =0){
  }
 //will deleted
 function runGiftSearch($q){
-   global $mysqli,$data,$lang;
- $search_string = escape($q);
- $list = "";
-    $result_array = $mysqli->query("SELECT * FROM boom_users WHERE user_name LIKE '%$search_string%' LIMIT 5");
-    if (0 < $result_array->num_rows) {
+    global $mysqli, $data, $lang;
+    // Escape the search string
+    $search_string = escape($q);
+    // Prepare the query with a wildcard search for the user_name
+    $stmt = $mysqli->prepare("SELECT * FROM boom_users WHERE user_name LIKE ? LIMIT 5");
+    // Bind the parameter for the search string
+    $search_pattern = "%$search_string%";
+    $stmt->bind_param('s', $search_pattern);
+    // Execute the query
+    $stmt->execute();
+    // Get the result
+    $result_array = $stmt->get_result();
+    // Check if there are any results
+    if ($result_array->num_rows > 0) {
+        $list = "";
+        // Loop through the results and build the list
         foreach ($result_array as $result) {
             $list .= extra_users_list($result);
         }
         return $list;
     } else {
+        // Return a message if nothing is found
         return emptyZone($lang["nothing_found"]);
     }
 }
+
 //will deleted
 
 function gif_list(){

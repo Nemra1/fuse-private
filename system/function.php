@@ -756,35 +756,80 @@ function getAllSubscribers($appId, $restApiKey) {
 }
 
 
-function postPrivateContent($from, $to, $content){
-	global $mysqli, $data;
-	$mysqli->query("INSERT INTO `boom_private` (time, target, hunter, message, file) VALUES ('" . time() . "', '$to', '$from', '$content', 1)");
-	$rel = $mysqli->insert_id;
-	$mysqli->query("UPDATE boom_users SET pcount = pcount + 1 WHERE user_id = '$from' OR user_id = '$to'");
-	return true;
+function postPrivateContent($from, $to, $content) {
+    global $mysqli, $data;
+    // Ensure user IDs are integers
+    $from = intval($from);
+    $to = intval($to);
+    // Sanitize content to prevent XSS
+    $content = htmlspecialchars(trim($content), ENT_QUOTES, 'UTF-8');
+    // Get current timestamp
+    $time = time();
+    // Use prepared statement for inserting message
+    $stmt = $mysqli->prepare("INSERT INTO boom_private (time, target, hunter, message, file) VALUES (?, ?, ?, ?, ?)");
+    $file_flag = 1; // Assuming 1 represents a file presence, modify as needed
+    $stmt->bind_param("iiisi", $time, $to, $from, $content, $file_flag);
+    $stmt->execute();
+    $rel = $stmt->insert_id;
+    $stmt->close();
+    // Update message count for both users using a prepared statement
+    $stmt = $mysqli->prepare("UPDATE boom_users SET pcount = pcount + 1 WHERE user_id IN (?, ?)");
+    $stmt->bind_param("ii", $from, $to);
+    $stmt->execute();
+    $stmt->close();  
+    return true;
 }
-function userPostPrivateFile($content, $target, $file_name, $type){
-	global $mysqli, $data;
-	$mysqli->query("INSERT INTO `boom_private` (time, target, hunter, message, file) VALUES ('" . time() . "', '$target', '{$data['user_id']}', '$content', 1)");
-	$rel = $mysqli->insert_id;
-	$mysqli->query("UPDATE boom_users SET pcount = pcount + 1 WHERE user_id = '{$data['user_id']}' OR user_id = '$target'");
-	$mysqli->query("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES ('$file_name', '" . time() . "', '{$data['user_id']}', 'private', '$type', '$rel')");
-	return true;
+
+function userPostPrivateFile($content, $target, $file_name, $type) {
+    global $mysqli, $data;
+    // Ensure target user ID is an integer
+    $target = intval($target);
+    $user_id = intval($data['user_id']);
+    // Sanitize input to prevent XSS
+    $content = htmlspecialchars(trim($content), ENT_QUOTES, 'UTF-8');
+    $file_name = htmlspecialchars(trim($file_name), ENT_QUOTES, 'UTF-8');
+    $type = htmlspecialchars(trim($type), ENT_QUOTES, 'UTF-8');
+    // Get current timestamp
+    $time = time();
+    $file_flag = 1; // Assuming 1 represents a file presence, modify as needed
+    // Insert private message using prepared statement
+    $stmt = $mysqli->prepare("INSERT INTO boom_private (time, target, hunter, message, file) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("iiisi", $time, $target, $user_id, $content, $file_flag);
+    $stmt->execute();
+    $rel = $stmt->insert_id;
+    $stmt->close();
+    // Update pcount for both users
+    $stmt = $mysqli->prepare("UPDATE boom_users SET pcount = pcount + 1 WHERE user_id IN (?, ?)");
+    $stmt->bind_param("ii", $user_id, $target);
+    $stmt->execute();
+    $stmt->close();
+    // Insert file upload record using prepared statement
+    $stmt = $mysqli->prepare("INSERT INTO boom_upload (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES (?, ?, ?, 'private', ?, ?)");
+    $stmt->bind_param("siisi", $file_name, $time, $user_id, $type, $rel);
+    $stmt->execute();
+    $stmt->close();
+    return true;
 }
-function getFriendList($id, $type = 0){
-	global $mysqli;
-	$friend_list = array();
-	$find_friend = $mysqli->query("SELECT target FROM boom_friends WHERE hunter = '$id' AND fstatus = '3'");
-	if($find_friend->num_rows > 0){
-		while($find = $find_friend->fetch_assoc()){
-			array_push($friend_list, $find['target']);
-		}
-		if($type == 1){
-			array_push($friend_list, $id);
-		}
-	}
-	return $friend_list;
+
+function getFriendList($id, $type = 0) {
+    global $mysqli;
+    $id = intval($id); // Ensure ID is an integer
+    $friend_list = [];
+    // Use prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("SELECT target FROM boom_friends WHERE hunter = ? AND fstatus = 3");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($find = $result->fetch_assoc()) {
+        $friend_list[] = $find['target'];
+    }
+    $stmt->close();
+    if ($type == 1) {
+        $friend_list[] = $id;
+    }
+    return $friend_list;
 }
+
 function getRankList($rank){
 	global $mysqli;
 	$list = array();

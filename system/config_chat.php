@@ -9,11 +9,6 @@
  * All content of FuseChat is the property of BoomCoding and cannot be used in another project.
  */
 
-// Set session cookie settings securely before session start
-ini_set('session.cookie_secure', 1); // Ensures cookies are sent over HTTPS
-ini_set('session.cookie_httponly', 1); // Prevents JavaScript from accessing session cookies
-ini_set('session.use_only_cookies', 1); // Forces session to use cookies for session ID
-ini_set('session.cookie_samesite', 'Strict'); // Prevent CSRF with SameSite cookie
 
 // Now start the session
 session_start();
@@ -22,7 +17,22 @@ require dirname(__DIR__) . "/vendor/autoload.php";
 require "database.php";
 require "variable.php";
 require "function.php";
-
+// Enable caching in production mode
+if ($cody['dev_mode'] === 1) {
+	header("Cache-Control: no-cache, no-store, must-revalidate");
+	header("Pragma: no-cache");
+	header("Expires: 0");
+} else {
+	header("Cache-Control: public, max-age=31536000, immutable"); // Cache for production
+}
+if($cody['secure_header'] === 1) {
+	// Security headers
+	//header("X-Content-Type-Options: nosniff");
+	////header("X-Frame-Options: DENY"); // Or use SAMEORIGIN if you need some frames
+	//header("X-XSS-Protection: 1; mode=block");
+	// Improved Content-Security-Policy
+	//header("Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline';");
+}
 // Validate the request token and cookies
 if (!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk']) || !validateAuth()) {
     echo json_encode(["check" => 99]);

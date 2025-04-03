@@ -72,7 +72,7 @@ $cody['can_ghost'] = 100; 			// rank required to make user ghost room ability
 $cody['can_vghost'] = 100;           // rank required to view ghost
 $cody['use_like'] = 1;              // system profile likes // add in admin panel (done)
 $cody['dev_mode'] = 1;              // in case you would to enable development mode and file changes
-$cody['secure_header'] = 0;         // enable hard secure mode for site header
+$cody['secure_header'] = 1;         // enable hard secure mode for site header
 $cody['can_raction'] = 100;
 /* system log messages */
 
@@ -152,56 +152,26 @@ function verifyCsrfToken($token) {
     return isset($_SESSION['csrf_token']) && 
            hash_equals($_SESSION['csrf_token'], $token);
 }
-
-/* function setBoomCookie($user_id, $password_hash) {
-    $prefix = defined('BOOM_PREFIX') ? BOOM_PREFIX : 'bc_';
-    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443;
-
-    // 1. Set User ID Cookie (same expiration time but secure flags)
-    setcookie($prefix . "userid", $user_id, [
-        'expires' => time() + 31556926, // 1 year expiration
-        'path' => '/',                  // Accessible across the entire domain
-        'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
-        'httponly' => true,             // Prevents JavaScript access (prevents XSS)
-        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
-    ]);
-
-    // 2. Set Auth Token Cookie (same expiration time but secure flags)
-    setcookie($prefix . "utk", $password_hash, [
-        'expires' => time() + 31556926, // 1 year expiration
-        'path' => '/',                  // Accessible across the entire domain
-        'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
-        'httponly' => true,             // Prevents JavaScript access (prevents XSS)
-        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
-    ]);
-
-    // Optional: You might want to use 'Strict' for samesite cookies depending on your app's requirements
-} */
-
-
 function setBoomCookie($user_id, $password_hash) {
     $prefix = defined('BOOM_PREFIX') ? BOOM_PREFIX : 'bc_';
     $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERVER['SERVER_PORT'] == 443;
-
     // Set User ID Cookie
     setcookie($prefix . "userid", $user_id, [
         'expires' => time() + 31556926, // 1 year expiration
         'path' => '/',                  // Accessible across the entire domain
         'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
         'httponly' => true,             // Prevents JavaScript access (prevents XSS)
-        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
+        'samesite' => 'Strict'             // Prevents CSRF by restricting cross-site requests
     ]);
-
     // Set Auth Token Cookie (could store a session token or something less sensitive than the actual password)
     setcookie($prefix . "utk", $password_hash, [
         'expires' => time() + 31556926, // 1 year expiration
         'path' => '/',                  // Accessible across the entire domain
         'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
         'httponly' => true,             // Prevents JavaScript access (prevents XSS)
-        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
+        'samesite' => 'Strict'             // Prevents CSRF by restricting cross-site requests
     ]);
 }
-
 function validateAuth() {
     // First check session
     if (!empty($_SESSION['user_id'])) {

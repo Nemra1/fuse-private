@@ -13,9 +13,6 @@
 session_start();
 
 // **Improve Session Security**
-ini_set('session.cookie_httponly', 1); // Prevents JavaScript from accessing the session
-ini_set('session.cookie_secure', 1);   // Ensures cookies are sent only over HTTPS (if available)
-ini_set('session.use_strict_mode', 1); // Prevents session fixation
 $boom_access = 0;
 require dirname(dirname(__FILE__)) . "/vendor/autoload.php";
 require "database.php";

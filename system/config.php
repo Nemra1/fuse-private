@@ -19,10 +19,6 @@ require("variable.php");
 require("function.php");
 require("function_all.php");
 
-if ($cody['secure_header'] === 1) {
-    require("secure_header.php");
-}
-
 if ($check_install != 1) {
     $chat_install = 2;
 } else {

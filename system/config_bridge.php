@@ -11,10 +11,6 @@
 */
 $boom_access = 0;
 require(dirname(dirname(__FILE__))."/vendor/autoload.php");
-/*firewall*/
-require "firewall.php";  // Load firewall on every request
-/*firewall*/
-
 require("database.php");
 require("variable.php");
 require("function_bridge.php");

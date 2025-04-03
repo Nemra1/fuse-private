@@ -42,17 +42,30 @@ function boomActivateAddons($this_addons){
     if (!isset($ad["name"])) {
         return boomCode(0, ["error" => "Addon configuration is missing"]);
     }
-    // Default values for addon configuration
-    $def = [
-        "access" => 0, "max" => 100, "bot_name" => "", "bot_id" => 0,
-        "custom1" => "", "custom2" => "", "custom3" => "", "custom4" => "",
-        "custom5" => "", "custom6" => "", "custom7" => "", "custom8" => "",
-        "custom9" => "", "custom10" => ""
-    ];
-    $a = array_merge($def, $ad);
+	// Default values for addon configuration
+	$def = [
+		"name" => "", "access" => 0, "max" => 100, "bot_id" => 0,
+		"custom1" => "", "custom2" => "", "custom3" => "", "custom4" => "",
+		"custom5" => "", "custom6" => "", "custom7" => "", "custom8" => "",
+		"custom9" => "", "custom10" => ""
+	];
+
+	$a = array_merge($def, $ad);
     // Insert the addon into the database using prepared statements
-    $stmt = $mysqli->prepare("INSERT INTO boom_addons (addons, addons_access, addons_max, bot_id, custom1, custom2, custom3, custom4, custom5, custom6, custom7, custom8, custom9, custom10) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("siiiiiiiiiiiiii", $a["name"], $a["access"], $a["max"], $a["bot_id"], $a["custom1"], $a["custom2"], $a["custom3"], $a["custom4"], $a["custom5"], $a["custom6"], $a["custom7"], $a["custom8"], $a["custom9"], $a["custom10"]);
+	// Prepare SQL query with correct number of placeholders
+	$stmt = $mysqli->prepare("
+		INSERT INTO boom_addons 
+		(addons, addons_access, addons_max, bot_id, custom1, custom2, custom3, custom4, custom5, custom6, custom7, custom8, custom9, custom10) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	");
+	// Bind parameters correctly
+	$stmt->bind_param(
+		"siiissssssssss",
+		$a["name"], $a["access"], $a["max"], $a["bot_id"],
+		$a["custom1"], $a["custom2"], $a["custom3"], $a["custom4"],
+		$a["custom5"], $a["custom6"], $a["custom7"], $a["custom8"],
+		$a["custom9"], $a["custom10"]
+	);	
     $stmt->execute();
     $last_addons = $stmt->insert_id;
     // Securely generate the addon key
@@ -61,19 +74,35 @@ function boomActivateAddons($this_addons){
     $stmt->bind_param("ss", $addons_key, $a["name"]);
     $stmt->execute();
     // Add bot if necessary
-    if (isset($a["bot_name"]) && isset($a["bot_type"])) {
-        usleep(500000);
-        $stmt = $mysqli->prepare("INSERT INTO boom_users (user_name, user_rank, user_password, user_email, user_join, user_ip, verified, user_bot, user_tumb) VALUES (?, 1, ?, '', ?, '0.0.0.0', 1, ?, 'default_bot.png')");
-        $password = randomPass(); // Assuming randomPass() is a secure function
-        $stmt->bind_param("sssi", $a["bot_name"], $password, time(), $a["bot_type"]);
-        $stmt->execute();
-        $last_id = $stmt->insert_id;
-
-        // Update bot info in the addon
-        $stmt = $mysqli->prepare("UPDATE boom_addons SET bot_name = ?, bot_id = ? WHERE addons = ?");
-        $stmt->bind_param("sis", $a["bot_name"], $last_id, $a["name"]);
-        $stmt->execute();
-    }
+	if (isset($a["bot_name"]) && isset($a["bot_type"])) {
+		usleep(500000);
+		$c_time = time();
+		// Create bot user
+		$stmt = $mysqli->prepare("
+			INSERT INTO boom_users (user_name, user_rank, user_password, user_email, user_join, user_ip, verified, user_bot, user_tumb) 
+			VALUES (?, 1, ?, '', ?, '0.0.0.0', 1, ?, 'default_bot.png')
+		");
+		$password = randomPass(); // Ensure this function generates a secure password
+		if (!$stmt) {
+			die(json_encode(["status" => "error", "message" => "Database error: " . $mysqli->error]));
+		}
+		$stmt->bind_param("ssis", $a["bot_name"], $password, $c_time, $a["bot_type"]);
+		if (!$stmt->execute()) {
+			die(json_encode(["status" => "error", "message" => "Insert failed: " . $stmt->error]));
+		}
+		$last_id = $stmt->insert_id;
+		$stmt->close();
+		// Update bot info in the addon
+		$stmt = $mysqli->prepare("UPDATE boom_addons SET bot_name = ?, bot_id = ? WHERE addons = ?");
+		if (!$stmt) {
+			die(json_encode(["status" => "error", "message" => "Database error: " . $mysqli->error]));
+		}
+		$stmt->bind_param("sis", $a["bot_name"], $last_id, $a["name"]);
+		if (!$stmt->execute()) {
+			die(json_encode(["status" => "error", "message" => "Update failed: " . $stmt->error]));
+		}
+		$stmt->close();
+	}
     boomConsole("addons_install", ["custom" => $this_addons]);
     return boomCode(1);
 }

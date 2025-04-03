@@ -3593,13 +3593,27 @@ function goldBalance($gold){
 	}
 }
 function addGold($user, $gold){
-	global $mysqli;
-	$mysqli->query("UPDATE boom_users SET user_gold = user_gold + '$gold' WHERE user_id = '{$user['user_id']}'");
+    global $mysqli;
+    // Prepare the SQL query
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_gold = user_gold + ? WHERE user_id = ?");
+    // Bind the parameters
+    $stmt->bind_param('ii', $gold, $user['user_id']);
+    // Execute the query
+    $stmt->execute();
+    // Close the prepared statement
+    $stmt->close();
 	//redisUpdateUser($user['user_id']);
 }
 function removeGold($user, $gold){
-	global $mysqli;
-	$mysqli->query("UPDATE boom_users SET user_gold = user_gold - '$gold' WHERE user_id = '{$user['user_id']}'");
+    global $mysqli;
+    // Prepare the SQL query
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_gold = user_gold - ? WHERE user_id = ?");
+    // Bind the parameters
+    $stmt->bind_param('ii', $gold, $user['user_id']);
+    // Execute the query
+    $stmt->execute();
+    // Close the prepared statement
+    $stmt->close();
 	//redisUpdateUser($user['user_id']);
 }
 function maxGoldShare(){
@@ -3637,48 +3651,82 @@ function canSendGift($user){
 	return true;
 }
 function giftDetails($id){
-	global $mysqli;
-	$gift = [];
-	$get_gift = $mysqli->query("SELECT * FROM boom_gift WHERE id = '$id'");
-	if($get_gift->num_rows > 0){
-		$gift = $get_gift->fetch_assoc();
-	}
-	return $gift;
-}
-function giftRecord($user, $gift){
-	global $mysqli;
-	$check_gift = $mysqli->query("SELECT id FROM boom_users_gift WHERE target = '{$user['user_id']}' AND gift = '{$gift['id']}'");
-	if($check_gift->num_rows > 0){
-		$mysqli->query("UPDATE boom_users_gift SET gift_count = gift_count + 1, gift_date = '" . time() . "' WHERE target = '{$user['user_id']}' AND gift = '{$gift['id']}'");
-	}
-	else {
-		$mysqli->query("INSERT INTO `boom_users_gift` (target, gift, gift_date) VALUES ('{$user['user_id']}','{$gift['id']}',".time().")");
-	}
+    global $mysqli;
+    $gift = [];
+    // Prepare the SQL query
+    $stmt = $mysqli->prepare("SELECT * FROM boom_gift WHERE id = ?");
+    // Bind the parameter
+    $stmt->bind_param('i', $id);
+    // Execute the query
+    $stmt->execute();
+    // Get the result
+    $result = $stmt->get_result();
+    // Fetch the data if available
+    if($result->num_rows > 0){
+        $gift = $result->fetch_assoc();
+    }
+    // Close the prepared statement
+    $stmt->close();
+    return $gift;
 }
 
-function gift_list_byId($gift_id){
-   global $mysqli, $data, $lang;
-  	$gift_id = escape($gift_id);
-	$gift_id = cleanString($gift_id);
-     $query  = mysqli_query($mysqli, "SELECT * FROM `boom_gift` WHERE id ='$gift_id' ORDER  BY `boom_gift`.`time` DESC LIMIT 1");
-	   if (mysqli_num_rows($query)) { 
-	       while ($row = mysqli_fetch_assoc($query)) {
-	        $fu_gifts['gift_id'] = 			$row['id'];
-			$fu_gifts['gift_title']        	= cl_rn_strip($row['gift_title']);  
-			$fu_gifts['gift_title']        	= stripcslashes($fu_gifts['gift_title']);  
-			$fu_gifts['gift_title']        	= htmlspecialchars_decode($fu_gifts['gift_title'], ENT_QUOTES);   
-			$fu_gifts['gift_cost']				= $row['gift_cost'];
-			$fu_gifts['gift_thumb']			= $row['gift_image'];
-			$fu_gifts['gift_url'] =     	cleanString($data['domain'].'/system/gifts/files/media/'.$row['gift_image']);
-			$fu_gifts['gif_file'] = 		cleanString($data['domain'].'/system/gifts/files/media/'.$row['gif_file']);
-			$fu_gifts['gift_rank'] = 			$row['gift_rank'];
-			
-			return $fu_gifts;  
-	       }    
-	   }   
-				
-	
+function giftRecord($user, $gift){
+    global $mysqli;
+    // Get the current timestamp
+    $currentTime = time();	
+    // Check if the user has already received this gift
+    $stmt = $mysqli->prepare("SELECT id FROM boom_users_gift WHERE target = ? AND gift = ?");
+    $stmt->bind_param('ii', $user['user_id'], $gift['id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if($result->num_rows > 0){
+        // Update the record if the gift already exists
+        $stmt_update = $mysqli->prepare("UPDATE boom_users_gift SET gift_count = gift_count + 1, gift_date = ? WHERE target = ? AND gift = ?");
+        $stmt_update->bind_param('iii', $currentTime, $user['user_id'], $gift['id']);
+        $stmt_update->execute();
+    } else {
+        // Insert a new record if the gift doesn't exist
+        $stmt_insert = $mysqli->prepare("INSERT INTO boom_users_gift (target, gift, gift_date) VALUES (?, ?, ?)");
+        $stmt_insert->bind_param('iii', $user['user_id'], $gift['id'], $currentTime);
+        $stmt_insert->execute();
+    }
+    // Close the prepared statements
+    $stmt->close();
+    if (isset($stmt_update)) $stmt_update->close();
+    if (isset($stmt_insert)) $stmt_insert->close();
 }
+function gift_list_byId($gift_id){
+    global $mysqli, $data, $lang;
+    // Escape and clean the gift_id
+    $gift_id = escape($gift_id);
+    $gift_id = cleanString($gift_id);
+    // Prepare the query
+    $stmt = $mysqli->prepare("SELECT * FROM `boom_gift` WHERE id = ? ORDER BY `time` DESC LIMIT 1");
+    // Bind parameters and execute the query
+    $stmt->bind_param('i', $gift_id);
+    $stmt->execute();
+    // Get the result
+    $result = $stmt->get_result();
+    // Check if the result contains any rows
+    if ($result->num_rows > 0) {
+        // Fetch the row and prepare the data
+        $row = $result->fetch_assoc();
+        $fu_gifts = [
+            'gift_id'    => $row['id'],
+            'gift_title' => htmlspecialchars_decode(stripcslashes(cl_rn_strip($row['gift_title'])), ENT_QUOTES),
+            'gift_cost'  => $row['gift_cost'],
+            'gift_thumb' => $row['gift_image'],
+            'gift_url'   => cleanString($data['domain'].'/system/gifts/files/media/'.$row['gift_image']),
+            'gif_file'   => cleanString($data['domain'].'/system/gifts/files/media/'.$row['gif_file']),
+            'gift_rank'  => $row['gift_rank']
+        ];
+        // Return the gift data
+        return $fu_gifts;
+    }
+    // If no result is found, return an empty array
+    return [];
+}
+
 function gift_notification(){
     global $db,$data,$mysqli;
     $fu_gifts = array();

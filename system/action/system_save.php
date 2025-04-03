@@ -31,106 +31,130 @@ if (isset($_POST["save_page"]) && isset($_POST["page_content"]) && isset($_POST[
     exit;
 }
 function saveAdminPanel($section){
-
-    global $mysqli;
-    global $data;
-    global $cody;
-    global $lang;
+global $mysqli,$data,$lang,$cody;
     if (!boomAllow(90)) {
         return 99;
     }
 
 
-    if ($section == "main_settings" && boomAllow(90)) {
-        if (isset($_POST["set_index_path"]) && isset($_POST["set_title"]) && isset($_POST["set_timezone"]) && isset($_POST["set_default_language"]) && isset($_POST["set_site_description"]) && isset($_POST["set_site_keyword"])) {
-            $index = escape($_POST["set_index_path"]);
-            $title = escape($_POST["set_title"]);
-            $timezone = escape($_POST["set_timezone"]);
-            $language = escape($_POST["set_default_language"]);
-            $description = escape($_POST["set_site_description"]);
-            $keyword = escape($_POST["set_site_keyword"]);
-            $google_analytics = escape($_POST["set_google_analytics"]);
-            if ($language != $data["language"]) {
-                $mysqli->query("UPDATE boom_users SET user_language = '" . $language . "' WHERE user_id > 0");
-            }
-           $data_query = array(
-    			"domain" => $index,
-    			"title" => $title,
-    			"site_description" => $description,
-    			"site_keyword" 		=> $keyword,
-    			"timezone" => $timezone,
-    			"language" => $language,
-    			"google_analytics" => $google_analytics,
-			);
-			$update = fu_update_dashboard($data_query);
-			
-            if ($language != $data["language"]) {
-                return 2;
-            }
-           if($update ===true){
-				return 1;
-			}
+if($section == "main_settings" && boomAllow(90)) {
+    // Ensure all necessary inputs are set
+    if (isset($_POST["set_index_path"], $_POST["set_title"], $_POST["set_timezone"], $_POST["set_default_language"], $_POST["set_site_description"], $_POST["set_site_keyword"])) {
+        // Sanitize and escape inputs
+        $index = trim(escape($_POST["set_index_path"]));
+        $title = trim(escape($_POST["set_title"]));
+        $timezone = trim(escape($_POST["set_timezone"]));
+        $language = trim(escape($_POST["set_default_language"]));
+        $description = trim(escape($_POST["set_site_description"]));
+        $keyword = trim(escape($_POST["set_site_keyword"]));
+        $google_analytics = trim(escape($_POST["set_google_analytics"]));
+        // Ensure the language is different from the current one before updating
+        if ($language !== $data["language"]) {
+            // Use a prepared statement to prevent SQL injection
+            $stmt = $mysqli->prepare("UPDATE boom_users SET user_language = ? WHERE user_id > 0");
+            $stmt->bind_param("s", $language);
+            $stmt->execute();
+            $stmt->close();
         }
-        return 99;
-    }
-    if ($section == "maintenance" && boomAllow(100)) {
-        if (isset($_POST["set_maint_mode"])) {
-            $maint_mode = escape($_POST["set_maint_mode"]);
-            if ($maint_mode == 1 && $maint_mode != $data["maint_mode"]) {
-                $mysqli->query("UPDATE boom_users SET user_action = user_action + 1 WHERE user_rank < 70");
-            }
-            $mysqli->query("UPDATE boom_setting SET maint_mode = '" . $maint_mode . "' WHERE id = '1'");
-            return 1;
+        // Prepare data for updating the dashboard settings
+        $data_query = array(
+            "domain" => $index,
+            "title" => $title,
+            "site_description" => $description,
+            "site_keyword" => $keyword,
+            "timezone" => $timezone,
+            "language" => $language,
+            "google_analytics" => $google_analytics,
+        );
+        // Update the dashboard settings
+        $update = fu_update_dashboard($data_query);
+        // Check if the language was changed
+        if ($language !== $data["language"]) {
+            return 2; // Language has been changed
         }
-        return 99;
+        // Check if the update was successful
+        if ($update === true) {
+            return 1; // Settings updated successfully
+        }
     }
-    if ($section == "display" && boomAllow(100)) {
-        if (isset($_POST["set_login_page"]) && isset($_POST["set_main_theme"])) {
-            $login_page = escape($_POST["set_login_page"]);
-            $theme = escape($_POST["set_main_theme"]);
-    
-            // Check if the login page file exists
-            if (file_exists(BOOM_PATH . "/control/login/" . $login_page . "/login.php")) {
-                // Prepare data for update
-                $data_query = array(
-                    "login_page" => $login_page,
-                    "default_theme" => $theme,
-                );
-    
-                // Update settings using the update function
-                $update = fu_update_dashboard($data_query);
-    
-                // Check the result of the update
-                if ($update === true) {
-                    // Return 2 if the theme has changed
-                    if ($theme != $data["default_theme"]) {
-                        return 1;
-                    }
-                    return 1; // Successful update
+    return 99; // Missing or invalid parameters
+}
+
+if ($section == "maintenance" && boomAllow(100)) {
+    if (isset($_POST["set_maint_mode"])) {
+        // Sanitize and validate input
+        $maint_mode = trim(escape($_POST["set_maint_mode"]));
+        // Ensure the input is either 0 or 1 (for maintenance mode)
+        if ($maint_mode != 0 && $maint_mode != 1) {
+            return 99; // Invalid maintenance mode value
+        }
+        // Update user action only if maintenance mode is enabled and is different from the current state
+        if ($maint_mode == 1 && $maint_mode != $data["maint_mode"]) {
+            // Use prepared statement to prevent SQL injection
+            $stmt = $mysqli->prepare("UPDATE boom_users SET user_action = user_action + 1 WHERE user_rank < 70");
+            $stmt->execute();
+            $stmt->close();
+        }
+        // Use prepared statement to update the maintenance mode in the settings table
+        $stmt = $mysqli->prepare("UPDATE boom_setting SET maint_mode = ? WHERE id = 1");
+        $stmt->bind_param("i", $maint_mode); // "i" denotes integer type
+        $stmt->execute();
+        $stmt->close();
+        return 1; // Success
+    }
+    return 99; // Missing parameter or invalid request
+}
+
+if ($section == "display" && boomAllow(100)) {
+    if (isset($_POST["set_login_page"]) && isset($_POST["set_main_theme"])) {
+        // Sanitize and escape user inputs
+        $login_page = trim(escape($_POST["set_login_page"]));
+        $theme = trim(escape($_POST["set_main_theme"]));
+        // Validate login page filename
+        $login_page_path = BOOM_PATH . "/control/login/" . $login_page . "/login.php";
+        // Check if the login page file exists and is within the expected directory
+        if (file_exists($login_page_path) && strpos(realpath($login_page_path), BOOM_PATH . "/control/login/") === 0) {
+            // Prepare data for update
+            $data_query = array(
+                "login_page" => $login_page,
+                "default_theme" => $theme,
+            );
+            // Update settings using the update function
+            $update = fu_update_dashboard($data_query);
+            // Check the result of the update
+            if ($update === true) {
+                // Return 2 if the theme has changed
+                if ($theme != $data["default_theme"]) {
+                    return 2;
                 }
-                return 99; // Update failure
+                return 1; // Successful update
             }
-            return 99; // File does not exist
+            return 99; // Update failure
         }
-        return 99; // Missing parameters
+        return 99; // File does not exist or is not valid
     }
+    return 99; // Missing parameters
+}
 
-    if ($section == "data_setting" && boomAllow(90)) {
+if($section == "data_setting" && boomAllow(90)) {
+    // Check if all required POST parameters are set
     if (isset($_POST["set_max_avatar"]) && isset($_POST["set_max_cover"]) && isset($_POST["set_max_file"])) {
-        $max_avatar = escape($_POST["set_max_avatar"]);
-        $max_cover = escape($_POST["set_max_cover"]);
-        $max_file = escape($_POST["set_max_file"]);
-
+        // Sanitize and validate the input values
+        $max_avatar = trim(escape($_POST["set_max_avatar"]));
+        $max_cover = trim(escape($_POST["set_max_cover"]));
+        $max_file = trim(escape($_POST["set_max_file"]));
+        // Ensure the values are numeric and positive
+        if (!is_numeric($max_avatar) || $max_avatar <= 0 || !is_numeric($max_cover) || $max_cover <= 0 || !is_numeric($max_file) || $max_file <= 0) {
+            return 99; // Invalid input values (must be positive numbers)
+        }
         // Prepare data for update
         $data_query = array(
             "max_avatar" => $max_avatar,
             "max_cover" => $max_cover,
             "file_weight" => $max_file,
         );
-
         // Update settings using the update function
         $update = fu_update_dashboard($data_query);
-
         // Check the result of the update
         if ($update === true) {
             return 1; // Successful update
@@ -139,389 +163,497 @@ function saveAdminPanel($section){
     return 99; // Missing parameter or update failure
 }
 
-    if ($section == "player" && boomAllow(90)) {
-        if (isset($_POST["set_default_player"])) {
-            $default_player = escape($_POST["set_default_player"]);
-            
-            // Prepare data for update
-            $data_query = array(
-                "player_id" => $default_player,
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            // Check the result of the update and compare values
-            if ($update === true) {
-                if ($default_player == 0 || $default_player != $data["player_id"]) {
-                    return 2; // Specific condition for player ID mismatch
-                }
-                return 1; // Successful update
-            }
+if ($section == "player" && boomAllow(90)) {
+    if (isset($_POST["set_default_player"])) {
+        $default_player = escape($_POST["set_default_player"]);
+        // Ensure the default player ID is numeric and a valid player ID (greater than or equal to 0)
+        if (!is_numeric($default_player) || $default_player < 0) {
+            return 99; // Invalid player ID
         }
-        return 99; // Missing parameter or update failure
+        // Prepare data for update
+        $data_query = array(
+            "player_id" => $default_player,
+        );
+        // Update settings using the update function
+        $update = fu_update_dashboard($data_query);
+        // Check the result of the update and compare values
+        if ($update === true) {
+            // Specific condition if the player ID was updated or changed
+            if ($default_player == 0 || $default_player != $data["player_id"]) {
+                return 2; // Player ID mismatch condition
+            }
+            return 1; // Successful update
+        }
+    }
+    return 99; // Missing parameter or update failure
+}
+
+if ($section == "registration" && boomAllow(90)) {
+    if (isset($_POST["set_activation"]) && isset($_POST["set_registration"]) && isset($_POST["set_regmute"]) && isset($_POST["set_max_username"]) && isset($_POST["set_min_age"]) && isset($_POST["set_max_reg"])) {
+        // Sanitize inputs
+        $registration = escape($_POST["set_registration"]);
+        $regmute = escape($_POST["set_regmute"]);
+        $activation = escape($_POST["set_activation"]);
+        $max_name = escape($_POST["set_max_username"]);
+        $min_age = escape($_POST["set_min_age"]);
+        $max_reg = escape($_POST["set_max_reg"]);
+        // Validate the fields
+        if (!is_numeric($activation) || !in_array($activation, [0, 1])) {
+            return 99;  // Invalid activation value
+        }
+        if (!is_numeric($regmute) || !in_array($regmute, [0, 1])) {
+            return 99;  // Invalid regmute value
+        }
+        if (!is_numeric($max_name) || $max_name <= 0) {
+            return 99;  // Invalid max_username value
+        }
+        if (!is_numeric($min_age) || $min_age < 13) {
+            return 99;  // Invalid min_age value (assuming 13 is the minimum valid age)
+        }
+        if (!is_numeric($max_reg) || $max_reg <= 0) {
+            return 99;  // Invalid max_reg value
+        }
+        // Update user verification if activation is disabled
+        if ($activation == 0) {
+            $mysqli->query("UPDATE boom_users SET user_verify = 0 WHERE user_id > 0");
+        }
+        // Prepare data for update
+        $data_query = array(
+            "registration" => $registration,
+            "regmute" => $regmute,
+            "activation" => $activation,
+            "max_username" => $max_name,
+            "min_age" => $min_age,
+            "max_reg" => $max_reg,
+        );
+        // Update the settings
+        $update = fu_update_dashboard($data_query);
+        // Check if the update was successful
+        if ($update === true) {
+            return 1;  // Successful update
+        }
+    }
+    // Return 99 if any parameter is missing or update failed
+    return 99;
+}
+
+if ($section == "guest" && boomAllow(90)) {
+    if (isset($_POST["set_allow_guest"]) && isset($_POST["set_guest_form"]) && isset($_POST["set_guest_talk"]) && isset($_POST["set_max_greg"])) {
+        // Sanitize inputs
+        $allow_guest = escape($_POST["set_allow_guest"]);
+        $guest_form = escape($_POST["set_guest_form"]);
+        $guest_talk = escape($_POST["set_guest_talk"]);
+        $guest_per_day = escape($_POST["set_max_greg"]);
+        // Validate the values
+        if (!in_array($allow_guest, [0, 1])) {
+            return 99;  // Invalid allow_guest value
+        }
+        if (!in_array($guest_form, [0, 1])) {
+            return 99;  // Invalid guest_form value
+        }
+        if (!in_array($guest_talk, [0, 1])) {
+            return 99;  // Invalid guest_talk value
+        }
+        if (!is_numeric($guest_per_day) || $guest_per_day <= 0) {
+            return 99;  // Invalid max guest per day value
+        }
+        // Handle logic for cleaning guest list if guest allowance is disabled
+        if ($allow_guest == 0 && $allow_guest != $data["allow_guest"]) {
+            cleanList("guest");
+        }
+        // Prepare data for update
+        $data_query = array(
+            "allow_guest" => $allow_guest,
+            "guest_form" => $guest_form,
+            "guest_talk" => $guest_talk,
+            "guest_per_day" => $guest_per_day,
+        );
+        // Update the dashboard settings
+        $update = fu_update_dashboard($data_query);
+        // Check if the update was successful
+        if ($update === true) {
+            return 1;  // Successful update
+        }
+    }
+    return 99;  // Missing parameters or update failure
+}
+
+if ($section == "bridge_registration" && boomAllow(90)) {
+    if(isset($_POST["set_use_bridge"])) {
+        // Sanitize the input
+        $use_bridge = escape($_POST["set_use_bridge"]);
+        // Validate use_bridge input (expecting a numeric value of 0 or 1)
+        if (!in_array($use_bridge, [0, 1])) {
+            return 99;  // Invalid value for use_bridge
+        }
+        // If use_bridge is enabled (1) and the bridge file does not exist, return 404
+        if ($use_bridge == 1 && !file_exists(BOOM_PATH . "/../boom_bridge.php")) {
+            return 404;  // File not found or missing bridge configuration
+        }
+        // Prepare data for update
+        $data_query = array(
+            "use_bridge" => $use_bridge,
+        );
+        // Update the settings using the update function
+        $update = fu_update_dashboard($data_query);
+        // Check if the update was successful
+        if ($update === true) {
+            return 1;  // Successful update
+        }
+    }
+    return 99;  // Missing parameter or update failure
+}
+
+if ($section == "social_registration" && boomAllow(90)) {
+    // Check if all required fields are set
+    if (isset($_POST["set_facebook_login"], $_POST["set_facebook_id"], $_POST["set_facebook_secret"], 
+              $_POST["set_twitter_login"], $_POST["set_twitter_id"], $_POST["set_twitter_secret"], 
+              $_POST["set_google_login"], $_POST["set_google_id"], $_POST["set_google_secret"])) {
+        // Sanitize the inputs
+        $data_query = array(
+            "facebook_login" => escape($_POST["set_facebook_login"]),
+            "facebook_id" => escape($_POST["set_facebook_id"]),
+            "facebook_secret" => escape($_POST["set_facebook_secret"]),
+            "google_login" => escape($_POST["set_google_login"]),
+            "google_id" => escape($_POST["set_google_id"]),
+            "google_secret" => escape($_POST["set_google_secret"]),
+            "twitter_login" => escape($_POST["set_twitter_login"]),
+            "twitter_id" => escape($_POST["set_twitter_id"]),
+            "twitter_secret" => escape($_POST["set_twitter_secret"]),
+        );
+        // Update settings using the update function
+        $update = fu_update_dashboard($data_query);
+        // Check if the update was successful
+        if ($update === true) {
+            return 1;  // Successful update
+        } else {
+            return 0;  // Update failed
+        }
+    }
+    // If required fields are missing, return 99
+    return 99;  // Missing parameters
+}
+ 
+if ($section == "limitation" && boomAllow(90)) {
+    // Check if all required parameters are set
+    if (isset(
+        $_POST["set_allow_cupload"], $_POST["set_allow_pupload"], $_POST["set_allow_wupload"], $_POST["set_allow_cover"], 
+        $_POST["set_allow_gcover"], $_POST["set_emo_plus"], $_POST["set_allow_direct"], $_POST["set_allow_room"], 
+        $_POST["set_allow_theme"], $_POST["set_allow_history"], $_POST["set_allow_colors"], $_POST["set_allow_name_color"], 
+        $_POST["set_allow_name_neon"], $_POST["set_allow_name_font"], $_POST["set_allow_verify"], $_POST["set_allow_name"], 
+        $_POST["set_allow_avatar"], $_POST["set_allow_mood"], $_POST["set_allow_grad"], $_POST["set_allow_neon"], 
+        $_POST["set_allow_font"], $_POST["set_allow_name_grad"], $_POST["set_allow_gift"], $_POST["set_allow_frame"]
+    )) {
+        // Sanitize and prepare data for update
+        $data_query = array(
+            "allow_main" => escape($_POST["set_allow_main"]),
+            "allow_private" => escape($_POST["set_allow_private"]),
+            "allow_pquote" => escape($_POST["set_allow_pquote"]),
+            "allow_quote" => escape($_POST["set_allow_quote"]),
+            "allow_avatar" => escape($_POST["set_allow_avatar"]),
+            "allow_cover" => escape($_POST["set_allow_cover"]),
+            "allow_gcover" => escape($_POST["set_allow_gcover"]),
+            "allow_cupload" => escape($_POST["set_allow_cupload"]),
+            "allow_pupload" => escape($_POST["set_allow_pupload"]),
+            "allow_wupload" => escape($_POST["set_allow_wupload"]),
+            "emo_plus" => escape($_POST["set_emo_plus"]),
+            "allow_direct" => escape($_POST["set_allow_direct"]),
+            "allow_room" => escape($_POST["set_allow_room"]),
+            "allow_theme" => escape($_POST["set_allow_theme"]),
+            "allow_history" => escape($_POST["set_allow_history"]),
+            "allow_verify" => escape($_POST["set_allow_verify"]),
+            "allow_name" => escape($_POST["set_allow_name"]),
+            "allow_mood" => escape($_POST["set_allow_mood"]),
+            "allow_colors" => escape($_POST["set_allow_colors"]),
+            "allow_grad" => escape($_POST["set_allow_grad"]),
+            "allow_neon" => escape($_POST["set_allow_neon"]),
+            "allow_font" => escape($_POST["set_allow_font"]),
+            "allow_name_color" => escape($_POST["set_allow_name_color"]),
+            "allow_name_grad" => escape($_POST["set_allow_name_grad"]),
+            "allow_name_neon" => escape($_POST["set_allow_name_neon"]),
+            "allow_name_font" => escape($_POST["set_allow_name_font"]),
+            "can_gift" => escape($_POST["set_allow_gift"]),
+            "can_frame" => escape($_POST["set_allow_frame"]),
+        );
+        // Perform the update
+        $update = fu_update_dashboard($data_query);
+        // Check the result of the update
+        if ($update === true) {
+            return 1;  // Successful update
+        } else {
+            return 0;  // Update failed
+        }
+    }
+    // If any parameter is missing, return 99
+    return 99;  // Missing parameters
+}
+
+if ($section == "staff_limitation" && boomAllow(100)) {
+    // Check if the essential parameters are set
+    if (isset(
+        $_POST["set_can_mute"], $_POST["set_can_ghost"], $_POST["set_can_vghost"], $_POST["set_can_kick"], 
+        $_POST["set_can_ban"], $_POST["set_can_delete"], $_POST["set_can_rank"], $_POST["set_can_raction"], 
+        $_POST["set_can_modavat"], $_POST["set_can_modcover"], $_POST["set_can_modmood"], $_POST["set_can_modabout"], 
+        $_POST["set_can_modcolor"], $_POST["set_can_modname"], $_POST["set_can_modemail"], $_POST["set_can_modpass"], 
+        $_POST["set_can_modvpn"], $_POST["set_can_flood"], $_POST["set_can_warn"]
+    )) {
+        // Escape and prepare data for update
+        $data_query = array(
+            "can_mute" => escape($_POST["set_can_mute"]),
+            "can_ghost" => escape($_POST["set_can_ghost"]),
+            "can_vghost" => escape($_POST["set_can_vghost"]),
+            "can_kick" => escape($_POST["set_can_kick"]),
+            "can_ban" => escape($_POST["set_can_ban"]),
+            "can_delete" => escape($_POST["set_can_delete"]),
+            "can_rank" => escape($_POST["set_can_rank"]),
+            "can_raction" => escape($_POST["set_can_raction"]),
+            "can_modavat" => escape($_POST["set_can_modavat"]),
+            "can_modcover" => escape($_POST["set_can_modcover"]),
+            "can_modmood" => escape($_POST["set_can_modmood"]),
+            "can_modabout" => escape($_POST["set_can_modabout"]),
+            "can_modcolor" => escape($_POST["set_can_modcolor"]),
+            "can_modname" => escape($_POST["set_can_modname"]),
+            "can_modemail" => escape($_POST["set_can_modemail"]),
+            "can_modpass" => escape($_POST["set_can_modpass"]),
+            "can_modvpn" => escape($_POST["set_can_modvpn"]),
+            "can_flood" => escape($_POST["set_can_flood"]),
+            "can_warn" => escape($_POST["set_can_warn"]),
+        );
+        // Perform the update
+        $update = fu_update_dashboard($data_query);
+        // Check the result of the update and return appropriate response
+        if ($update === true) {
+            return 1;  // Successful update
+        } else {
+            return 0;  // Update failed
+        }
+    }
+    // If any required parameter is missing, return 99
+    return 99;  // Missing parameters
+}
+
+if ($section == "email_settings" && boomAllow(100)) {
+    // Check if all required parameters are set
+    if (isset(
+        $_POST["set_mail_type"], $_POST["set_site_email"], $_POST["set_email_from"], $_POST["set_smtp_host"],
+        $_POST["set_smtp_username"], $_POST["set_smtp_password"], $_POST["set_smtp_port"], $_POST["set_smtp_type"]
+    )) {
+        // Escape and prepare data for update
+        $mail_type = escape($_POST["set_mail_type"]);
+        $site_email = escape($_POST["set_site_email"]);
+        $email_from = escape($_POST["set_email_from"]);
+        $smtp_host = escape($_POST["set_smtp_host"]);
+        $smtp_username = escape($_POST["set_smtp_username"]);
+        $smtp_password = escape($_POST["set_smtp_password"]);
+        $smtp_port = escape($_POST["set_smtp_port"]);
+        $smtp_type = escape($_POST["set_smtp_type"]);
+        // Prepare data for update
+        $data_query = array(
+            "mail_type" => $mail_type,
+            "site_email" => $site_email,
+            "email_from" => $email_from,
+            "smtp_host" => $smtp_host,
+            "smtp_username" => $smtp_username,
+            "smtp_password" => $smtp_password,
+            "smtp_port" => $smtp_port,
+            "smtp_type" => $smtp_type,
+        );
+        // Perform the update
+        $update = fu_update_dashboard($data_query);
+
+        // Return appropriate response based on the update result
+        if ($update === true) {
+            return 1;  // Successful update
+        } else {
+            return 0;  // Update failed
+        }
+    }
+    // If any required parameter is missing, return 99
+    return 99;  // Missing parameters
+}
+
+if ($section == "chat" && boomAllow(90)) {
+    // Check if all required parameters are set
+    if (isset(
+        $_POST["set_gender_ico"], $_POST["set_flag_ico"], $_POST["set_max_main"], $_POST["set_max_private"],
+        $_POST["set_speed"], $_POST["set_max_offcount"], $_POST["set_allow_logs"]
+    )) {
+        // Escape and prepare data for update
+        $gender_ico = escape($_POST["set_gender_ico"]);
+        $flag_ico = escape($_POST["set_flag_ico"]);
+        $max_main = escape($_POST["set_max_main"]);
+        $max_private = escape($_POST["set_max_private"]);
+        $max_offcount = escape($_POST["set_max_offcount"]);
+        $speed = escape($_POST["set_speed"]);
+        $allow_logs = escape($_POST["set_allow_logs"]);
+        // Prepare data for update
+        $data_query = array(
+            "gender_ico" => $gender_ico,
+            "flag_ico" => $flag_ico,
+            "max_main" => $max_main,
+            "max_private" => $max_private,
+            "speed" => $speed,
+            "max_offcount" => $max_offcount,
+            "allow_logs" => $allow_logs,
+        );
+        // Perform the update
+        $update = fu_update_dashboard($data_query);
+
+        // Return appropriate response based on the update result
+        if ($update === true) {
+            return 1;  // Successful update
+        } else {
+            return 0;  // Update failed
+        }
+    }
+    // If any required parameter is missing, return 99
+    return 99;  // Missing parameters
+}
+
+if ($section == "delays" && boomAllow(90)) {
+    // Check if all required parameters are set
+    if (isset(
+        $_POST["set_chat_delete"], $_POST["set_private_delete"], $_POST["set_wall_delete"], $_POST["set_member_delete"],
+        $_POST["set_room_delete"], $_POST["set_act_delay"]
+    )) {
+        // Escape and prepare data for update
+        $act_delay = escape($_POST["set_act_delay"]);
+        $chat = escape($_POST["set_chat_delete"]);
+        $private = escape($_POST["set_private_delete"]);
+        $wall = escape($_POST["set_wall_delete"]);
+        $member = escape($_POST["set_member_delete"]);
+        $room = escape($_POST["set_room_delete"]);
+        // Prepare data for update
+        $data_query = array(
+            "act_delay" => $act_delay,
+            "chat_delete" => $chat,
+            "private_delete" => $private,
+            "wall_delete" => $wall,
+            "last_clean" => '0',  // Set to 0 as per the original logic
+            "member_delete" => $member,
+            "room_delete" => $room,
+        );
+        // Perform the update
+        $update = fu_update_dashboard($data_query);
+        // Return appropriate response based on the update result
+        if ($update === true) {
+            return 1;  // Successful update
+        } else {
+            return 0;  // Update failed
+        }
+    }
+    // If any required parameter is missing, return 99
+    return 99;  // Missing parameters
+}
+
+if ($section == "modules" && boomAllow(90)) {
+    // Check if all required parameters are set
+    if (isset(
+        $_POST["set_use_wall"], $_POST["set_use_lobby"], $_POST["set_cookie_law"], 
+        $_POST["set_use_like"], $_POST["set_use_geo"]
+    )) {
+        // Escape and prepare data for update
+        $use_like = escape($_POST["set_use_like"]);
+        $use_lobby = escape($_POST["set_use_lobby"]);
+        $use_wall = escape($_POST["set_use_wall"]);
+        $cookie_law = escape($_POST["set_cookie_law"]);
+        $use_geo = escape($_POST["set_use_geo"]);
+        // Perform deletions if 'use_wall' is set to 0
+        if ($use_wall == 0) {
+            $mysqli->query("DELETE FROM boom_notification WHERE notify_source = 'post'");
+            $mysqli->query("DELETE FROM boom_report WHERE report_type = '2'");
+        }
+        // Prepare data for update
+        $data_query = array(
+            "use_geo" => $use_geo,
+            "use_like" => $use_like,
+            "use_lobby" => $use_lobby,
+            "use_wall" => $use_wall,
+            "cookie_law" => $cookie_law,
+        );
+        // Perform the update operation
+        $update = fu_update_dashboard($data_query);
+        // Return appropriate response based on the update result
+        if ($update === true) {
+            return 1;  // Successful update
+        } else {
+            return 0;  // Update failed
+        }
+    }
+    // If any required parameter is missing, return 99
+    return 99;  // Missing parameters
+}
+
+// OneSignal settings
+if ($section == "setting_notifications" && boomAllow(100)) {
+    // Check if all required POST parameters are set
+    if (isset($_POST["onesignal_web_push_id"], $_POST["onesignal_web_reset_key"], $_POST["allow_onesignal"])) {
+        // Escape and prepare data for update
+        $onesignal_web_push_id = escape($_POST["onesignal_web_push_id"]);
+        $onesignal_web_reset_key = escape($_POST["onesignal_web_reset_key"]);
+        $allow_onesignal = escape($_POST["allow_onesignal"]);
+
+        // Prepare data for update
+        $data_query = array(
+            "onesignal_web_push_id" => $onesignal_web_push_id,
+            "onesignal_web_reset_key" => $onesignal_web_reset_key,
+            "allow_onesignal" => $allow_onesignal,
+        );
+
+        // Update the dashboard settings
+        $update = fu_update_dashboard($data_query);
+
+        // Return success if update is successful
+        if ($update === true) {
+            return 1;  // Success
+        } else {
+            return 0;  // Update failed
+        }
     }
 
-    if ($section == "registration" && boomAllow(90)) {
-        if (isset($_POST["set_activation"]) && isset($_POST["set_registration"]) && isset($_POST["set_regmute"]) && isset($_POST["set_max_username"]) && isset($_POST["set_min_age"])) {
-            $registration = escape($_POST["set_registration"]);
-            $regmute = escape($_POST["set_regmute"]);
-            $activation = escape($_POST["set_activation"]);
-            $max_name = escape($_POST["set_max_username"]);
-            $min_age = escape($_POST["set_min_age"]);
-            $max_reg = escape($_POST["set_max_reg"]);
-            if ($activation == 0) {
-                $mysqli->query("UPDATE boom_users SET user_verify = 0 WHERE user_id > 0");
-            }
-         $data_query = array(
-    			"registration" => $registration,
-    			"regmute" => $regmute,
-    			"activation" => $activation,
-    			"max_username" 		=> $max_name,
-    			"min_age" => $min_age,
-    		    "max_reg" => $max_reg,
-			);
-			$update = fu_update_dashboard($data_query);
-            if($update ===true){
-				return 1;
-			}
+    // If any required parameter is missing, return 99
+    return 99;  // Missing parameters
+}
+// Gold settings
+if ($section == "admin_gold" && boomAllow(100)) {
+    // Check if all required parameters are set
+    if (isset($_POST["set_use_gold"], $_POST["set_can_sgold"], $_POST["set_can_rgold"])) {
+        // Escape and prepare data for update
+        $use_gold = escape($_POST["set_use_gold"]);
+        $can_sgold = escape($_POST["set_can_sgold"]);
+        $can_rgold = escape($_POST["set_can_rgold"]);
+        $allow_gold = escape($_POST["set_allow_gold"]);
+        $gold_delay = escape($_POST["set_gold_delay"]);
+        $gold_base = escape($_POST["set_gold_base"]);
+        $can_vgold = escape($_POST["set_can_vgold"]);
+
+        // Prepare data for update
+        $data_query = array(
+            "use_gold" => $use_gold,
+            "can_sgold" => $can_sgold,
+            "can_rgold" => $can_rgold,
+            "gold_delay" => $gold_delay,
+            "gold_base" => $gold_base,
+            "can_vgold" => $can_vgold,
+            "allow_gold" => $allow_gold,
+        );
+
+        // Update the dashboard settings
+        $update = fu_update_dashboard($data_query);
+
+        // Return success if update is successful
+        if ($update === true) {
+            return 1;  // Success
+        } else {
+            return 0;  // Update failed
         }
-        return 99;
-    }
-    if ($section == "guest" && boomAllow(90)) {
-        if (isset($_POST["set_allow_guest"]) && isset($_POST["set_guest_form"]) && isset($_POST["set_guest_talk"])) {
-            $allow_guest = escape($_POST["set_allow_guest"]);
-            $guest_form = escape($_POST["set_guest_form"]);
-            $guest_talk = escape($_POST["set_guest_talk"]);
-             $guest_per_day = escape($_POST["set_max_greg"]);
-            if ($allow_guest == 0 && $allow_guest != $data["allow_guest"]) {
-                cleanList("guest");
-            }
-            //$mysqli->query("UPDATE boom_setting SET allow_guest = '" . $allow_guest . "', guest_form = '" . $guest_form . "', guest_talk = '" . $guest_talk . "' WHERE id = '1'");
-          $data_query = array(
-    			"allow_guest" => $allow_guest,
-    			"guest_form" => $guest_form,
-    			"guest_talk" => $guest_talk,
-    			"guest_per_day" => $guest_per_day,
-			);
-			$update = fu_update_dashboard($data_query);
-            if($update ===true){
-				return 1;
-			}
-           
-           // return 1;
-        }
-        return 99;
-    }
-    if ($section == "bridge_registration" && boomAllow(90)) {
-        if (isset($_POST["set_use_bridge"])) {
-            $use_bridge = escape($_POST["set_use_bridge"]);
-            
-            // Check if the bridge is enabled and the file does not exist
-            if (0 < $use_bridge && !file_exists(BOOM_PATH . "/../boom_bridge.php")) {
-                return 404;
-            }
-    
-            // Prepare data for update
-            $data_query = array(
-                "use_bridge" => $use_bridge,
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
     }
 
-    if ($section == "social_registration" && boomAllow(90)) {
-        if (isset($_POST["set_facebook_login"]) && isset($_POST["set_facebook_id"]) && isset($_POST["set_facebook_secret"]) && isset($_POST["set_twitter_login"]) && isset($_POST["set_twitter_id"]) && isset($_POST["set_twitter_secret"]) && isset($_POST["set_google_login"]) && isset($_POST["set_google_id"]) && isset($_POST["set_google_secret"])) {
-            // Escape and prepare data for update
-            $data_query = array(
-                "facebook_login" => escape($_POST["set_facebook_login"]),
-                "facebook_id" => escape($_POST["set_facebook_id"]),
-                "facebook_secret" => escape($_POST["set_facebook_secret"]),
-                "google_login" => escape($_POST["set_google_login"]),
-                "google_id" => escape($_POST["set_google_id"]),
-                "google_secret" => escape($_POST["set_google_secret"]),
-                "twitter_login" => escape($_POST["set_twitter_login"]),
-                "twitter_id" => escape($_POST["set_twitter_id"]),
-                "twitter_secret" => escape($_POST["set_twitter_secret"]),
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
+    // If any required parameter is missing, return 99
+    return 99;  // Missing parameters
+}
 
-    if ($section == "limitation" && boomAllow(90)) {
-        if (isset($_POST["set_allow_cupload"]) && isset($_POST["set_allow_pupload"]) && isset($_POST["set_allow_wupload"]) && isset($_POST["set_allow_cover"]) && isset($_POST["set_allow_gcover"]) && isset($_POST["set_emo_plus"]) && isset($_POST["set_allow_direct"]) && isset($_POST["set_allow_room"]) && isset($_POST["set_allow_theme"]) && isset($_POST["set_allow_history"]) && isset($_POST["set_allow_colors"]) && isset($_POST["set_allow_name_color"]) && isset($_POST["set_allow_name_neon"]) && isset($_POST["set_allow_name_font"]) && isset($_POST["set_allow_verify"]) && isset($_POST["set_allow_name"]) && isset($_POST["set_allow_avatar"]) && isset($_POST["set_allow_mood"]) && isset($_POST["set_allow_grad"]) && isset($_POST["set_allow_neon"]) && isset($_POST["set_allow_font"]) && isset($_POST["set_allow_name_grad"])) {
-            // Escape and prepare data for update
-            $data_query = array(
-                "allow_main" => escape($_POST["set_allow_main"]),
-                "allow_private" => escape($_POST["set_allow_private"]),
-                "allow_pquote" => escape($_POST["set_allow_pquote"]),
-                "allow_quote" => escape($_POST["set_allow_quote"]),
-                "allow_avatar" => escape($_POST["set_allow_avatar"]),
-                "allow_cover" => escape($_POST["set_allow_cover"]),
-                "allow_gcover" => escape($_POST["set_allow_gcover"]),
-                "allow_cupload" => escape($_POST["set_allow_cupload"]),
-                "allow_pupload" => escape($_POST["set_allow_pupload"]),
-                "allow_wupload" => escape($_POST["set_allow_wupload"]),
-                "emo_plus" => escape($_POST["set_emo_plus"]),
-                "allow_direct" => escape($_POST["set_allow_direct"]),
-                "allow_room" => escape($_POST["set_allow_room"]),
-                "allow_theme" => escape($_POST["set_allow_theme"]),
-                "allow_history" => escape($_POST["set_allow_history"]),
-                "allow_verify" => escape($_POST["set_allow_verify"]),
-                "allow_name" => escape($_POST["set_allow_name"]),
-                "allow_mood" => escape($_POST["set_allow_mood"]),
-                "allow_colors" => escape($_POST["set_allow_colors"]),
-                "allow_grad" => escape($_POST["set_allow_grad"]),
-                "allow_neon" => escape($_POST["set_allow_neon"]),
-                "allow_font" => escape($_POST["set_allow_font"]),
-                "allow_name_color" => escape($_POST["set_allow_name_color"]),
-                "allow_name_grad" => escape($_POST["set_allow_name_grad"]),
-                "allow_name_neon" => escape($_POST["set_allow_name_neon"]),
-                "allow_name_font" => escape($_POST["set_allow_name_font"]),
-                "can_gift" => escape($_POST["set_allow_gift"]),
-                "can_frame" => escape($_POST["set_allow_frame"]),
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
-    if ($section == "staff_limitation" && boomAllow(100)) {
-         if (isset($_POST["set_can_ghost"])){
-             // Escape and prepare data for update
-            $data_query = array(
-                "can_mute" => escape($_POST["set_can_mute"]),
-                "can_ghost" => escape($_POST["set_can_ghost"]),
-                "can_vghost" => escape($_POST["set_can_vghost"]),
-                "can_kick" => escape($_POST["set_can_kick"]),
-                "can_ban" => escape($_POST["set_can_ban"]),
-                "can_delete" => escape($_POST["set_can_delete"]),
-                "can_rank" => escape($_POST["set_can_rank"]),
-                "can_raction" => escape($_POST["set_can_raction"]),
-                "can_modavat" => escape($_POST["set_can_modavat"]),
-                "can_modcover" => escape($_POST["set_can_modcover"]),
-                "can_modmood" => escape($_POST["set_can_modmood"]),
-                "can_modabout" => escape($_POST["set_can_modabout"]),
-                "can_modcolor" => escape($_POST["set_can_modcolor"]),
-                "can_modname" => escape($_POST["set_can_modname"]),
-                "can_modemail" => escape($_POST["set_can_modemail"]),
-                "can_modpass" => escape($_POST["set_can_modpass"]),
-                "can_modvpn" => escape($_POST["set_can_modvpn"]),
-                "can_flood" => escape($_POST["set_can_flood"]),
-                "can_warn" => escape($_POST["set_can_warn"]),
-            );
-                
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-             
-         }
-          return 99;
-    }
-    if ($section == "email_settings" && boomAllow(100)) {
-        if (isset($_POST["set_mail_type"]) && isset($_POST["set_site_email"]) && isset($_POST["set_email_from"]) && isset($_POST["set_smtp_host"]) && isset($_POST["set_smtp_username"]) && isset($_POST["set_smtp_password"]) && isset($_POST["set_smtp_port"]) && isset($_POST["set_smtp_type"])) {
-            $mail_type = escape($_POST["set_mail_type"]);
-            $site_email = escape($_POST["set_site_email"]);
-            $email_from = escape($_POST["set_email_from"]);
-            $smtp_host = escape($_POST["set_smtp_host"]);
-            $smtp_username = escape($_POST["set_smtp_username"]);
-            $smtp_password = escape($_POST["set_smtp_password"]);
-            $smtp_port = escape($_POST["set_smtp_port"]);
-            $smtp_type = escape($_POST["set_smtp_type"]);
-    
-            // Prepare data for update
-            $data_query = array(
-                "mail_type" => $mail_type,
-                "site_email" => $site_email,
-                "email_from" => $email_from,
-                "smtp_host" => $smtp_host,
-                "smtp_username" => $smtp_username,
-                "smtp_password" => $smtp_password,
-                "smtp_port" => $smtp_port,
-                "smtp_type" => $smtp_type,
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
-
-    if ($section == "chat" && boomAllow(90)) {
-        if (isset($_POST["set_gender_ico"]) && isset($_POST["set_flag_ico"]) && isset($_POST["set_max_main"]) && isset($_POST["set_max_private"]) && isset($_POST["set_speed"]) && isset($_POST["set_max_offcount"]) && isset($_POST["set_allow_logs"])) {
-            $gender_ico = escape($_POST["set_gender_ico"]);
-            $flag_ico = escape($_POST["set_flag_ico"]);
-            $max_main = escape($_POST["set_max_main"]);
-            $max_private = escape($_POST["set_max_private"]);
-            $max_offcount = escape($_POST["set_max_offcount"]);
-            $speed = escape($_POST["set_speed"]);
-            $allow_logs = escape($_POST["set_allow_logs"]);
-    
-            // Prepare data for update
-            $data_query = array(
-                "gender_ico" => $gender_ico,
-                "flag_ico" => $flag_ico,
-                "max_main" => $max_main,
-                "max_private" => $max_private,
-                "speed" => $speed,
-                "max_offcount" => $max_offcount,
-                "allow_logs" => $allow_logs,
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
-
-    if ($section == "delays" && boomAllow(90)) {
-        if (isset($_POST["set_chat_delete"]) && isset($_POST["set_private_delete"]) && isset($_POST["set_wall_delete"]) && isset($_POST["set_member_delete"]) && isset($_POST["set_room_delete"]) && isset($_POST["set_act_delay"])) {
-            $act_delay = escape($_POST["set_act_delay"]);
-            $chat = escape($_POST["set_chat_delete"]);
-            $private = escape($_POST["set_private_delete"]);
-            $wall = escape($_POST["set_wall_delete"]);
-            $member = escape($_POST["set_member_delete"]);
-            $room = escape($_POST["set_room_delete"]);
-    
-            // Prepare data for update
-            $data_query = array(
-                "act_delay" => $act_delay,
-                "chat_delete" => $chat,
-                "private_delete" => $private,
-                "wall_delete" => $wall,
-                "last_clean" => '0', // Set to 0 as per the original logic
-                "member_delete" => $member,
-                "room_delete" => $room,
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
-
-    if ($section == "modules" && boomAllow(90)) {
-        if (isset($_POST["set_use_wall"]) && isset($_POST["set_use_lobby"]) && isset($_POST["set_cookie_law"])) {
-            $use_like = escape($_POST["set_use_like"]);
-            $use_lobby = escape($_POST["set_use_lobby"]);
-            $use_wall = escape($_POST["set_use_wall"]);
-            $cookie_law = escape($_POST["set_cookie_law"]);
-            $use_geo = escape($_POST["set_use_geo"]);
-            // Perform deletions if needed
-            if ($use_wall == 0) {
-                $mysqli->query("DELETE FROM boom_notification WHERE notify_source = 'post'");
-                $mysqli->query("DELETE FROM boom_report WHERE report_type = '2'");
-            }
-    
-            // Prepare data for update
-            $data_query = array(
-                "use_geo" => $use_geo,
-                "use_like" => $use_like,
-                "use_lobby" => $use_lobby,
-                "use_wall" => $use_wall,
-                "cookie_law" => $cookie_law,
-            );
-    
-            // Update settings using the update function
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
-
-
-    // onesignal settings
-
-     if ($section == "setting_notifications" && boomAllow(100)) {
-        if (isset($_POST["onesignal_web_push_id"]) && isset($_POST["onesignal_web_reset_key"]) && isset($_POST["allow_onesignal"])) {
-            $onesignal_web_push_id = escape($_POST["onesignal_web_push_id"]);
-            $onesignal_web_reset_key = escape($_POST["onesignal_web_reset_key"]);
-            $allow_onesignal = escape($_POST["allow_onesignal"]);
-    
-            $data_query = array(
-                "onesignal_web_push_id" => $onesignal_web_push_id,
-                "onesignal_web_reset_key" => $onesignal_web_reset_key,
-                "allow_onesignal" => $allow_onesignal,
-            );
-    
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
-      // gold settings
-
-     if ($section == "admin_gold" && boomAllow(100)) {
-        if (isset($_POST["set_use_gold"]) && isset($_POST["set_can_sgold"]) && isset($_POST["set_can_rgold"])) {
-            $use_gold = escape($_POST["set_use_gold"]);
-            $can_sgold = escape($_POST["set_can_sgold"]);
-            $can_rgold = escape($_POST["set_can_rgold"]);
-            $allow_gold = escape($_POST["set_allow_gold"]);
-            $gold_delay = escape($_POST["set_gold_delay"]);
-            $gold_base = escape($_POST["set_gold_base"]);
-            $can_vgold = escape($_POST["set_can_vgold"]);
-            $data_query = array(
-                "use_gold" => $use_gold,
-                "can_sgold" => $can_sgold,
-                "can_rgold" => $can_rgold,
-                "use_gold" => $can_rgold,
-                "gold_delay" => $gold_delay,
-                "gold_base" => $gold_base,
-                "can_vgold" => $can_vgold,
-                "allow_gold" => $allow_gold,
-            );
-    
-            $update = fu_update_dashboard($data_query);
-    
-            if ($update === true) {
-                return 1;
-            }
-        }
-        return 99;
-    }
-       // gold settings
-
-        if ($section === "security" && boomAllow(100)) {
+if ($section === "security" && boomAllow(100)) {
         // Check if required POST variables are set
         if (
             isset($_POST["set_use_recapt"], $_POST["set_recapt_key"], $_POST["set_recapt_secret"],
@@ -540,10 +672,8 @@ function saveAdminPanel($section){
                 "use_vpn"       => escape($_POST["set_use_vpn"]),
                 "vpn_delay"     => escape($_POST["set_vpn_delay"]),
             );
-    
             // Update settings in the dashboard
             $update = fu_update_dashboard($data_query);
-    
             // Return success or error code
             return $update === true ? 1 : 99;
         } else {
@@ -551,107 +681,191 @@ function saveAdminPanel($section){
             return 99;
         }
     }
-   if ($section == "gateway_mods" && boomAllow(100)) {
-         if (isset($_POST["gateway_mods"])) {
-            // Process PayPal settings if provided
-            if (isset($_POST["allow_paypal"]) && 
-                isset($_POST["paypal_mode"]) && 
-                isset($_POST["paypalTestingClientKey"]) &&
-                isset($_POST["paypalTestingSecretKey"]) &&
-                isset($_POST["paypalLiveClientKey"]) &&
-                isset($_POST["paypalLiveSecretKey"])) {
-        
-                $data_query = array(
-                    "allow_paypal" => escape($_POST["allow_paypal"]),
-                    "paypal_mode" => escape($_POST["paypal_mode"]),
-                    "paypalTestingClientKey" => escape($_POST["paypalTestingClientKey"]),
-                    "paypalTestingSecretKey" => escape($_POST["paypalTestingSecretKey"]),
-                    "paypalLiveClientKey" => escape($_POST["paypalLiveClientKey"]),
-                    "paypalLiveSecretKey" => escape($_POST["paypalLiveSecretKey"]),
-                    "use_wallet" => escape($_POST["use_wallet"]),
-                    "point_cost" => escape($_POST["dollar_to_point_cost"]),
-                    "currency" => escape($_POST["currency"]),
-                );
-        
-                $update = fu_update_dashboard($data_query);
-        
-                if ($update === true) {
-                    return 1;
-                } else {
-                    return 0; // Handle update failure
-                }
+if ($section == "gateway_mods" && boomAllow(100)) {
+    // CSRF token validation (ensure it's included in the form and checked here)
+    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] == $_SESSION['csrf_token']) {
+        if (isset($_POST["gateway_mods"])) {
+            // Validate and sanitize each expected input
+            $allow_paypal = filter_var($_POST["allow_paypal"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $paypal_mode = in_array($_POST["paypal_mode"], ['sandbox', 'live']) ? $_POST["paypal_mode"] : null;
+            $paypalTestingClientKey = filter_var($_POST["paypalTestingClientKey"], FILTER_SANITIZE_STRING);
+            $paypalTestingSecretKey = filter_var($_POST["paypalTestingSecretKey"], FILTER_SANITIZE_STRING);
+            $paypalLiveClientKey = filter_var($_POST["paypalLiveClientKey"], FILTER_SANITIZE_STRING);
+            $paypalLiveSecretKey = filter_var($_POST["paypalLiveSecretKey"], FILTER_SANITIZE_STRING);
+            $use_wallet = filter_var($_POST["use_wallet"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $point_cost = filter_var($_POST["dollar_to_point_cost"], FILTER_VALIDATE_FLOAT);
+            $currency = filter_var($_POST["currency"], FILTER_SANITIZE_STRING);
+            // Check for any missing or invalid values
+            if (is_null($allow_paypal) || !$paypal_mode || empty($paypalTestingClientKey) || empty($paypalTestingSecretKey) ||
+                empty($paypalLiveClientKey) || empty($paypalLiveSecretKey) || is_null($use_wallet) || !is_numeric($point_cost) ||
+                empty($currency)) {
+                return 0; // Invalid data
             }
-        } 
+            // Prepare data for update
+            $data_query = array(
+                "allow_paypal" => $allow_paypal,
+                "paypal_mode" => $paypal_mode,
+                "paypalTestingClientKey" => $paypalTestingClientKey,
+                "paypalTestingSecretKey" => $paypalTestingSecretKey,
+                "paypalLiveClientKey" => $paypalLiveClientKey,
+                "paypalLiveSecretKey" => $paypalLiveSecretKey,
+                "use_wallet" => $use_wallet,
+                "point_cost" => $point_cost,
+                "currency" => $currency,
+            );
+            // Update the dashboard
+            $update = fu_update_dashboard($data_query);
+            // Return result based on success
+            return $update === true ? 1 : 0; // Return 1 on success, 0 on failure
+        }
+    } else {
+        // CSRF token mismatch, handle accordingly
+        return 0; // Token validation failed
     }
-
-  if ($section === "websocket" && boomAllow(100)) {
-       if (isset($_POST["set_websocket_path"]) && isset($_POST["set_websocket_port"]) && isset($_POST["set_websocket_mode"])) {
-            $data_query = array(
-                "websocket_path"    => escape($_POST["set_websocket_path"]),
-                "websocket_port"    => escape($_POST["set_websocket_port"]),
-                "websocket_mode" => escape($_POST["set_websocket_mode"]),
-                 "websocket_protocol" => escape($_POST["set_websocket_protocol"]),
-                  "istyping_mode" => escape($_POST["set_istyping_mode"]),
-            );
-             // Update settings in the dashboard
-            $update = fu_update_dashboard($data_query);
-                 // Return success or error code
-            return $update === true ? 1 : 99;
-        } else {
-            // Missing required POST parameters
-            return 99;
-        }
-  }
-  if ($section === "store_control" && boomAllow(100)) {
-       if (isset($_POST["set_use_store"]) && isset($_POST["set_use_frame"])) {
-            $data_query = array(
-				"use_store"  => escape($_POST["set_use_store"]),
-                "use_frame"  => escape($_POST["set_use_frame"]),
-                "use_wings"  => escape($_POST["set_use_wings"]),
-            );
-             // Update settings in the dashboard
-            $update = fu_update_dashboard($data_query);
-                 // Return success or error code
-            return $update === true ? 1 : 99;
-        } else {
-            // Missing required POST parameters
-            return 99;
-        }
-  }
-    if ($section === "xp_system" && boomAllow(100)) {
-       if (isset($_POST["set_use_level"]) && isset($_POST["set_exp_gift"])) {
-            $data_query = array(
-				"use_level"  => escape($_POST["set_use_level"]),
-				"exp_gift"  => escape($_POST["set_exp_gift"]),
-				"exp_post"  => escape($_POST["set_exp_post"]),
-				"exp_priv"  => escape($_POST["set_exp_priv"]),
-				"exp_chat"  => escape($_POST["set_exp_chat"]),
-            );
-             // Update settings in the dashboard
-            $update = fu_update_dashboard($data_query);
-                 // Return success or error code
-            return $update === true ? 1 : 99;
-        } else {
-            // Missing required POST parameters
-            return 99;
-        }
-  }
-  if ($section === "gold_reward" && boomAllow(100)) {
-       if (isset($_POST["set_allow_sendcoins"]) && isset($_POST["set_allow_takecoins"])) {
-            $data_query = array(
-				"allow_takecoins"  => escape($_POST["set_allow_takecoins"]),
-				"allow_sendcoins"  => escape($_POST["set_allow_sendcoins"]),
-            );
-             // Update settings in the dashboard
-            $update = fu_update_dashboard($data_query);
-                 // Return success or error code
-            return $update === true ? 1 : 99;
-        } else {
-            // Missing required POST parameters
-            return 99;
-        }
-  }
 }
+
+if($section === "websocket" && boomAllow(100)) {
+    // CSRF token validation (make sure it's included in the form)
+    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+        // Check for required POST parameters
+        if (isset($_POST["set_websocket_path"], $_POST["set_websocket_port"], $_POST["set_websocket_mode"], $_POST["set_websocket_protocol"], $_POST["set_istyping_mode"])) {
+            // Validate inputs
+            $websocket_path = filter_var($_POST["set_websocket_path"], FILTER_SANITIZE_URL);
+            $websocket_port = filter_var($_POST["set_websocket_port"], FILTER_VALIDATE_INT);
+            $websocket_mode = in_array($_POST["set_websocket_mode"], ['production', 'development'], true) ? $_POST["set_websocket_mode"] : null;
+            $websocket_protocol = in_array($_POST["set_websocket_protocol"], ['ws', 'wss'], true) ? $_POST["set_websocket_protocol"] : null;
+            $istyping_mode = filter_var($_POST["set_istyping_mode"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            // Validate required fields
+            if (!$websocket_path || !$websocket_port || !$websocket_mode || !$websocket_protocol || is_null($istyping_mode)) {
+                return 99; // Invalid data
+            }
+            // Prepare the data query
+            $data_query = array(
+                "websocket_path"    => $websocket_path,
+                "websocket_port"    => $websocket_port,
+                "websocket_mode"    => $websocket_mode,
+                "websocket_protocol"=> $websocket_protocol,
+                "istyping_mode"     => $istyping_mode,
+            );
+            // Update the settings
+            $update = fu_update_dashboard($data_query);
+            // Return success or failure code
+            return $update === true ? 1 : 99; // Return success or error
+        } else {
+            // Missing required POST parameters
+            return 99;
+        }
+    } else {
+        // CSRF token mismatch
+        return 99; // Token validation failed
+    }
+}
+
+if ($section === "store_control" && boomAllow(100)) {
+    // CSRF token validation (ensure it is included in the form)
+    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+        // Check if required POST parameters are set
+        if (isset($_POST["set_use_store"], $_POST["set_use_frame"], $_POST["set_use_wings"])) {
+            // Validate inputs
+            $use_store = filter_var($_POST["set_use_store"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $use_frame = filter_var($_POST["set_use_frame"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $use_wings = filter_var($_POST["set_use_wings"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            // Check if any validation failed
+            if (is_null($use_store) || is_null($use_frame) || is_null($use_wings)) {
+                return 99; // Invalid input data
+            }
+            // Prepare the data query
+            $data_query = array(
+                "use_store"  => $use_store,
+                "use_frame"  => $use_frame,
+                "use_wings"  => $use_wings,
+            );
+            // Update the dashboard settings
+            $update = fu_update_dashboard($data_query);
+            // Return success or error code
+            return $update === true ? 1 : 99; // Return success or failure
+        } else {
+            // Missing required POST parameters
+            return 99;
+        }
+    } else {
+        // CSRF token mismatch
+        return 99; // Token validation failed
+    }
+}
+
+if ($section === "xp_system" && boomAllow(100)) {
+    // CSRF token validation (ensure it is included in the form)
+    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+
+        // Check if required POST parameters are set
+        if (isset($_POST["set_use_level"], $_POST["set_exp_gift"], $_POST["set_exp_post"], $_POST["set_exp_priv"], $_POST["set_exp_chat"])) {
+            // Validate inputs
+            $use_level = filter_var($_POST["set_use_level"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $exp_gift = filter_var($_POST["set_exp_gift"], FILTER_VALIDATE_FLOAT);
+            $exp_post = filter_var($_POST["set_exp_post"], FILTER_VALIDATE_FLOAT);
+            $exp_priv = filter_var($_POST["set_exp_priv"], FILTER_VALIDATE_FLOAT);
+            $exp_chat = filter_var($_POST["set_exp_chat"], FILTER_VALIDATE_FLOAT);
+            // Validate that all required fields are valid
+            if (is_null($use_level) || $exp_gift === false || $exp_post === false || $exp_priv === false || $exp_chat === false) {
+                return 99; // Invalid data
+            }
+            // Prepare the data query for update
+            $data_query = array(
+                "use_level"  => $use_level,
+                "exp_gift"   => $exp_gift,
+                "exp_post"   => $exp_post,
+                "exp_priv"   => $exp_priv,
+                "exp_chat"   => $exp_chat,
+            );
+            // Update the dashboard settings
+            $update = fu_update_dashboard($data_query);
+
+            // Return success or error code
+            return $update === true ? 1 : 99; // Return 1 on success, 99 on failure
+        } else {
+            // Missing required POST parameters
+            return 99;
+        }
+    } else {
+        // CSRF token mismatch
+        return 99; // Token validation failed
+    }
+}
+
+if($section === "gold_reward" && boomAllow(100)) {
+    // CSRF token validation (ensure it is included in the form)
+    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+        // Check if required POST parameters are set
+        if (isset($_POST["set_allow_sendcoins"], $_POST["set_allow_takecoins"])) {
+            // Validate and sanitize inputs
+            $allow_sendcoins = filter_var($_POST["set_allow_sendcoins"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $allow_takecoins = filter_var($_POST["set_allow_takecoins"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            // Validate if both are valid booleans
+            if (is_null($allow_sendcoins) || is_null($allow_takecoins)) {
+                return 99; // Invalid input data
+            }
+            // Prepare the data query
+            $data_query = array(
+                "allow_sendcoins"  => $allow_sendcoins,
+                "allow_takecoins"  => $allow_takecoins,
+            );
+            // Update the dashboard settings
+            $update = fu_update_dashboard($data_query);
+            // Return success or error code
+            return $update === true ? 1 : 99; // Return success (1) or failure (99)
+        } else {
+            // Missing required POST parameters
+            return 99;
+        }
+    } else {
+        // CSRF token mismatch
+        return 99; // Token validation failed
+    }
+}
+
+}
+
 function get_settings() {
     global $db;
     // Fetch settings where 'setting' equals 1
@@ -667,38 +881,58 @@ function get_settings() {
 
 function sendDataToSocket() {
     global $data;
-    // URL of the Socket.IO server endpoint
-   $s_protocol = $data['websocket_protocol'];
-   $s_server = $data['websocket_path'];
-   $s_port = $data['websocket_port'];	    
-    $url = "https://{$s_server}:$s_port/update-config"; // Replace with your actual Socket.IO server URL
+    // Retrieve WebSocket server settings
+    $s_protocol = isset($data['websocket_protocol']) ? $data['websocket_protocol'] : 'https';
+    $s_server = isset($data['websocket_path']) ? $data['websocket_path'] : '';
+    $s_port = isset($data['websocket_port']) ? $data['websocket_port'] : '';
+    $s_auth_token = 'lucifer666';
+    // Ensure that server and port are valid
+    if (empty($s_server) || empty($s_port)) {
+        return 'Invalid WebSocket server or port';
+    }
+    // Construct the URL to the Socket.IO server endpoint
+    $url = "{$s_protocol}://{$s_server}:{$s_port}/update-config"; // Use HTTPS by default
+    // Fetch settings to send in the request
     $data_query = get_settings();
+    // Ensure data_query is an array and not empty
+    if (empty($data_query)) {
+        return 'No settings to send';
+    }
     // Initialize cURL session
     $ch = curl_init($url);
-
     // Set cURL options
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'x-auth-token: lucifer666' // Replace with your actual token
-    ]);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, [
+		'Content-Type: application/json',
+		'x-auth-token: ' . $s_auth_token  // Use the token retrieved securely
+	]);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data_query));
-
-    // Execute the request and get the response
+    // Security: Ensure SSL verification (for production environments)
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2); // Verify the host matches the certificate
+    // Execute the request and capture the response
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    // Close cURL session
+    // Handle cURL errors (if any)
+    if ($response === false) {
+        $error_msg = curl_error($ch);
+        curl_close($ch);
+        return 'cURL error: ' . $error_msg;
+    }
+    // Close the cURL session
     curl_close($ch);
-
-    // Optionally, handle different HTTP response codes
-    if ($httpCode === 200) {
-        //return $response;
-    } elseif ($httpCode === 403) {
-       // return 'Forbidden';
-    } else {
-       // return 'Error: ' . $response;
+    // Handle different HTTP response codes
+    switch ($httpCode) {
+        case 200:
+            // Success - Handle success response (optional)
+            return $response;
+        case 403:
+            return 'Forbidden: Access Denied';
+        case 500:
+            return 'Internal Server Error: Server failed to process the request';
+        default:
+            return 'Error: HTTP Code ' . $httpCode . ' - ' . $response;
     }
 }
 function boomPageContent($content, $target){
@@ -711,29 +945,43 @@ function boomPageContent($content, $target){
     if (empty($content)) {
         $content = "";
     }
-    // Sanitize the target
+    // Sanitize the target (assuming escape is a function to sanitize input)
     $target = escape($_POST["page_target"]); // Assuming you have escape function to sanitize input
+    // Validate target (to prevent potential issues like XSS or unwanted characters)
+    if (!preg_match("/^[a-zA-Z0-9-_]+$/", $target)) {
+        return "Invalid target name";
+    }
     // Prepare and execute the SELECT query securely using a prepared statement
     $stmt = $mysqli->prepare("SELECT * FROM boom_page WHERE page_name = ?");
+    if ($stmt === false) {
+        return "Error preparing SELECT statement";
+    }
     $stmt->bind_param("s", $target); // Bind parameter as a string
     $stmt->execute();
     $result = $stmt->get_result();
     if ($result->num_rows > 0) {
         // Page exists, update the content
         $stmt_update = $mysqli->prepare("UPDATE boom_page SET page_content = ? WHERE page_name = ?");
+        if ($stmt_update === false) {
+            return "Error preparing UPDATE statement";
+        }
         $stmt_update->bind_param("ss", $content, $target); // Bind both parameters as strings
         $stmt_update->execute();
         $stmt_update->close();
     } else {
         // Page doesn't exist, insert new page
         $stmt_insert = $mysqli->prepare("INSERT INTO boom_page (page_name, page_content) VALUES (?, ?)");
+        if ($stmt_insert === false) {
+            return "Error preparing INSERT statement";
+        }
         $stmt_insert->bind_param("ss", $target, $content); // Bind both parameters as strings
         $stmt_insert->execute();
         $stmt_insert->close();
     }
     $stmt->close(); // Close the select statement
-    return 1;
+    return 1; // Success
 }
+
 
 
 ?>

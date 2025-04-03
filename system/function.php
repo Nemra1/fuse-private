@@ -566,42 +566,78 @@ function botPostChat($id, $room, $content, $custom = array()){
 
 function updateLastActive($user_id){
     global $mysqli;
+    // Get the current timestamp
     $current_time = time();
-    $mysqli->query("UPDATE boom_users SET last_active = '$current_time' WHERE user_id = '$user_id'");
+    // Prepare the update query
+    $stmt = $mysqli->prepare("UPDATE boom_users SET last_active = ? WHERE user_id = ?");
+    if ($stmt === false) {
+        // Error preparing the statement
+        return false;
+    }
+    // Bind parameters and execute the query
+    $stmt->bind_param("ii", $current_time, $user_id);
+    if (!$stmt->execute()) {
+        // Error executing the query
+        $stmt->close();
+        return false;
+    }
+    // Close the statement after execution
+    $stmt->close();
+    return true;  // Success
 }
+
 function postPrivate($from, $to, $content, $snum = ''){
     global $mysqli, $data;
+    // Ensure $from and $to are integers
     $from = intval($from);
     $to = intval($to);
+    // Sanitize content to prevent XSS
     $content = trim($content); 
     $content = htmlspecialchars($content, ENT_QUOTES, 'UTF-8'); // Prevent XSS
+    // Validate inputs
+    if ($from <= 0 || $to <= 0 || empty($content)) {
+        return false; // Invalid input
+    }
     $time = time();
-    // Use prepared statement to insert private message
+    // Use prepared statement to insert private message securely
     $stmt = $mysqli->prepare("INSERT INTO boom_private (time, target, hunter, message) VALUES (?, ?, ?, ?)");
+    if ($stmt === false) {
+        return false; // Prepare failed
+    }
     $stmt->bind_param("iiis", $time, $to, $from, $content);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        $stmt->close();
+        return false; // Execute failed
+    }
     $last_id = $stmt->insert_id;
     $stmt->close();
     // Update recipient's message count securely
     if ($to !== $from) {
         $stmt = $mysqli->prepare("UPDATE boom_users SET pcount = pcount + 1 WHERE user_id = ?");
+        if ($stmt === false) {
+            return false; // Prepare failed
+        }
         $stmt->bind_param("i", $to);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return false; // Execute failed
+        }
         $stmt->close();
-        // Handle OneSignal notification
+        // Handle OneSignal notification if enabled
         if ($data['allow_onesignal'] == '1') {
             $rec_data = userDetails($to);
             $from_data = userDetails($from);
             $last_active = intval($rec_data['last_active']);
             $current_time = time();
             $inactive_time = 60; // 1 minute threshold
+
             if (($current_time - $last_active) > $inactive_time) {
                 $notification_msg = 'You have a message from 🧐 ' . htmlspecialchars($from_data['user_name'], ENT_QUOTES, 'UTF-8');
                 sendNotification($rec_data['push_id'], $notification_msg);
             }
         }
     }
-    // Handle private log
+    // Handle private log if a serial number is provided
     if (!empty($snum)) {
         $user_post = array(
             'id' => $last_id,
@@ -617,6 +653,7 @@ function postPrivate($from, $to, $content, $snum = ''){
 
     return true;
 }
+
 
 function sendNotification($userId, $message) {
     global $data,$cody;

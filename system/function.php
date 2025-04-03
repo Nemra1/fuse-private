@@ -1706,14 +1706,21 @@ function getTopic($t){
 	}
 }
 function boomRoomData($r){
-	global $mysqli, $data;
-	$room = array();
-	$get_room = $mysqli->query("SELECT * FROM boom_rooms WHERE room_id = $r");
-	if($get_room->num_rows > 0){
-		$room = $get_room->fetch_assoc();
-		return $room;
-	}
+    global $mysqli;
+    $room = null; // Default return value when no room is found
+    // Use a prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("SELECT * FROM boom_rooms WHERE room_id = ?");
+    $stmt->bind_param("i", $r);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if($result->num_rows > 0){
+        $room = $result->fetch_assoc(); // Fetch room data
+    }
+    // Close the prepared statement
+    $stmt->close();
+    return $room; // Return the room data (or null if not found)
 }
+
 
 function boomConsole($type, $custom = array()){
     global $mysqli, $data;
@@ -1766,21 +1773,40 @@ function boomConsole($type, $custom = array()){
 }
 
 function boomHistory($type, $custom = array()){
-	global $mysqli, $data;
-	$def = array(
-		'hunter'=> $data['user_id'],
-		'target'=> 0,
-		'rank'=> 0,
-		'delay'=> 0,
-		'reason'=> '',
-		'content'=> '',
-	);
-	$c = array_merge($def, $custom);
-	if($c['target'] == 0){
-		return false;
-	}
-	$mysqli->query("INSERT INTO boom_history (hunter, target, htype, delay, reason, history_date) VALUES ('{$c['hunter']}', '{$c['target']}', '$type',  '{$c['delay']}', '{$c['reason']}', '" . time() . "')");
+    global $mysqli, $data;
+    // Default values for the history data
+    $def = array(
+        'hunter' => $data['user_id'],
+        'target' => 0,
+        'rank'   => 0,
+        'delay'  => 0,
+        'reason' => '',
+        'content' => '',
+    );
+    // Merge custom values with default ones
+    $c = array_merge($def, $custom);
+    // Ensure that a valid target is provided
+    if ($c['target'] == 0) {
+        return false; // Return false if no target is provided
+    }
+    // Prepare the SQL query to prevent SQL injection
+    $stmt = $mysqli->prepare(
+        "INSERT INTO boom_history (hunter, target, htype, delay, reason, history_date) 
+        VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    $history_date = time(); // Get current timestamp
+    // Bind parameters to the prepared statement
+    $stmt->bind_param("iiisii", $c['hunter'], $c['target'], $type, $c['delay'], $c['reason'], $history_date);
+    // Execute the query and check for success
+    if ($stmt->execute()) {
+        $stmt->close(); // Close the prepared statement
+        return true;    // Return true if the insert was successful
+    } else {
+        $stmt->close(); // Close the prepared statement in case of failure
+        return false;   // Return false if the insert failed
+    }
 }
+
 function renderReason($t){
 	global $lang;
 	switch($t){
@@ -2074,9 +2100,21 @@ function boomMerge($a, $b){
 	return trim($c);
 }
 function clearNotifyAction($id, $type){
-	global $mysqli;
-	$mysqli->query("DELETE FROM boom_notification WHERE notified = '$id' AND notify_source = '$type'");
+    global $mysqli;
+    // Prepare the SQL query to prevent SQL injection
+    $stmt = $mysqli->prepare("DELETE FROM boom_notification WHERE notified = ? AND notify_source = ?");
+    // Bind the parameters to the prepared statement
+    $stmt->bind_param("is", $id, $type); // 'i' for integer, 's' for string
+    // Execute the query and check for success
+    if ($stmt->execute()) {
+        $stmt->close(); // Close the prepared statement
+        return true;    // Return true if the query executed successfully
+    } else {
+        $stmt->close(); // Close the prepared statement in case of failure
+        return false;   // Return false if the query failed
+    }
 }
+
 function setToken(){
 	global $data, $cody;
 	if(!empty($_SESSION[BOOM_PREFIX . 'token'])){
@@ -3333,44 +3371,112 @@ function ignoring($user){
 		return true;
 	}
 }
-function userFullDetails($id, $room = ''){
-	global $mysqli, $data;
-	if($room == ''){
-		$room = $data['user_roomid'];
-	}
-	$user = userDetails($id);
-	if(!empty($user)){
-		$getuser = $mysqli->query("
-			SELECT
-			IFNULL((SELECT fstatus FROM boom_friends WHERE hunter = '{$data['user_id']}' AND target = '$id'), 0) as friendship,
-			(SELECT count(ignore_id) FROM boom_ignore WHERE ignorer = '$id' AND ignored = '{$data['user_id']}' ) as ignored,
-			(SELECT count(ignore_id) FROM boom_ignore WHERE ignorer = '{$data['user_id']}' AND ignored = '$id') as ignoring,
-			IFNULL((SELECT action_muted FROM boom_room_action WHERE action_user = '$id' AND action_room = '$room'), 0) as room_muted,
-			IFNULL((SELECT action_blocked FROM boom_room_action WHERE action_user = '$id' AND action_room = '$room'), 0) as room_blocked,
-			IFNULL((SELECT room_rank FROM boom_room_staff WHERE room_staff = '$id' AND room_id = '$room'), 0) as room_ranking
-		");
-		if($getuser->num_rows > 0){
-			return array_merge($user, $getuser->fetch_assoc());
-		}
-	}
-	return [];
+
+function userFullDetails($id, $room = '') {
+    global $mysqli, $data;
+    // Set the default room value if not provided
+    if ($room == '') {
+        $room = $data['user_roomid'];
+    }
+    // Fetch the basic user details (assuming this function is defined elsewhere)
+    $user = userDetails($id);
+    if (!empty($user)) {
+        // Define the queries and their bind parameters
+        $queries = [
+            [
+                'query' => "SELECT IFNULL(fstatus, 0) FROM boom_friends WHERE hunter = ? AND target = ?",
+                'params' => [$data['user_id'], $id],
+                'resultKey' => 'friendship'
+            ],
+            [
+                'query' => "SELECT COUNT(ignore_id) FROM boom_ignore WHERE ignorer = ? AND ignored = ?",
+                'params' => [$id, $data['user_id']],
+                'resultKey' => 'ignored'
+            ],
+            [
+                'query' => "SELECT COUNT(ignore_id) FROM boom_ignore WHERE ignorer = ? AND ignored = ?",
+                'params' => [$data['user_id'], $id],
+                'resultKey' => 'ignoring'
+            ],
+            [
+                'query' => "SELECT IFNULL(action_muted, 0) FROM boom_room_action WHERE action_user = ? AND action_room = ?",
+                'params' => [$id, $room],
+                'resultKey' => 'room_muted'
+            ],
+            [
+                'query' => "SELECT IFNULL(action_blocked, 0) FROM boom_room_action WHERE action_user = ? AND action_room = ?",
+                'params' => [$id, $room],
+                'resultKey' => 'room_blocked'
+            ],
+            [
+                'query' => "SELECT IFNULL(room_rank, 0) FROM boom_room_staff WHERE room_staff = ? AND room_id = ?",
+                'params' => [$id, $room],
+                'resultKey' => 'room_ranking'
+            ]
+        ];
+        $userData = [];
+        // Iterate over each query, bind parameters, and fetch the result
+        foreach ($queries as $q) {
+            $stmt = $mysqli->prepare($q['query']);
+            $stmt->bind_param(str_repeat('i', count($q['params'])), ...$q['params']);
+            $stmt->execute();
+            $stmt->bind_result($result);
+            $stmt->fetch();
+            $userData[$q['resultKey']] = $result;
+            $stmt->close();
+        }
+        // Merge the fetched data with the user data
+        return array_merge($user, $userData);
+    }
+    return [];  // Return an empty array if the user is not found or no data
 }
+
 function userRelationDetails($id){
-	global $mysqli, $data;
-	$user = userDetails($id);
-	if(!empty($user)){
-		$getuser = $mysqli->query("
-			SELECT
-			IFNULL((SELECT fstatus FROM boom_friends WHERE hunter = '{$data['user_id']}' AND target = '$id'), 0) as friendship,
-			(SELECT count(ignore_id) FROM boom_ignore WHERE ignorer = '$id' AND ignored = '{$data['user_id']}' ) as ignored,
-			(SELECT count(ignore_id) FROM boom_ignore WHERE ignorer = '{$data['user_id']}' AND ignored = '$id') as ignoring
-		");
-		if($getuser->num_rows > 0){
-			return array_merge($user, $getuser->fetch_assoc());
-		}
-	}
-	return [];
+    global $mysqli, $data;
+    // Fetch user details
+    $user = userDetails($id);
+    if(!empty($user)){
+        // Define the queries in an array
+        $queries = [
+            [
+                'query' => "SELECT IFNULL(fstatus, 0) FROM boom_friends WHERE hunter = ? AND target = ?",
+                'params' => [$data['user_id'], $id],
+                'resultKey' => 'friendship'
+            ],
+            [
+                'query' => "SELECT count(ignore_id) FROM boom_ignore WHERE ignorer = ? AND ignored = ?",
+                'params' => [$id, $data['user_id']],
+                'resultKey' => 'ignored'
+            ],
+            [
+                'query' => "SELECT count(ignore_id) FROM boom_ignore WHERE ignorer = ? AND ignored = ?",
+                'params' => [$data['user_id'], $id],
+                'resultKey' => 'ignoring'
+            ]
+        ];
+        // Prepare and execute each query
+        $userData = [];
+        foreach ($queries as $query) {
+            $stmt = $mysqli->prepare($query['query']);
+            // Bind the parameters
+            $stmt->bind_param(str_repeat('i', count($query['params'])), ...$query['params']);
+            // Execute the query
+            $stmt->execute();
+            // Get the result and store it in the result key
+            $result = $stmt->get_result();
+            if ($result->num_rows > 0) {
+                $userData[$query['resultKey']] = $result->fetch_row()[0];
+            } else {
+                $userData[$query['resultKey']] = 0;
+            }
+            $stmt->close();
+        }
+        // Merge the user details and the additional data
+        return array_merge($user, $userData);
+    }
+    return [];  // Return an empty array if no user found or no data
 }
+
 function setUserRoom(){
  	global $data, $mysqli;
 	$room = myRoomDetails($data['user_roomid']);

@@ -3851,23 +3851,35 @@ function gif_list(){
 }
 //will deleted
 function record_gift($gdata){
-	global $mysqli;
-	$target_id = $gdata['target_id'];
-	$gift_id = $gdata['gift_id'];
-	$room_id = $gdata['room_id'];
-	$hunter_id =  $gdata['hunter_id'];
-	$check_gift = $mysqli->query("SELECT id FROM boom_users_gift WHERE target = '{$target_id}' AND gift = '{$gift_id}'");
-	if($check_gift->num_rows > 0){
-		$mysqli->query("UPDATE boom_users_gift SET gift_count = gift_count + 1, gift_date = '" . time() . "' WHERE target = {$target_id} AND gift = {$gift_id}");
-	}
-	else {
-		$mysqli->query("INSERT INTO `boom_users_gift` (target,hunter,room_id, gift, gift_date) VALUES ('{$target_id}','{$hunter_id}','{$room_id}','{$gift_id}',".time().")");
-	} 
+    global $mysqli;
+    // Extract the necessary data from the input array
+    $target_id = $gdata['target_id'];
+    $gift_id = $gdata['gift_id'];
+    $room_id = $gdata['room_id'];
+    $hunter_id = $gdata['hunter_id'];
+    // Prepare the query to check if the gift has already been recorded
+    $stmt = $mysqli->prepare("SELECT id FROM boom_users_gift WHERE target = ? AND gift = ?");
+    $stmt->bind_param('ii', $target_id, $gift_id);  // 'ii' because both target and gift are integers
+    // Execute the query
+    $stmt->execute();
+    $result = $stmt->get_result();
+    // Check if the gift already exists in the database
+    if ($result->num_rows > 0) {
+        // If it exists, update the gift count and gift date
+        $update_stmt = $mysqli->prepare("UPDATE boom_users_gift SET gift_count = gift_count + 1, gift_date = ? WHERE target = ? AND gift = ?");
+        $current_time = time();
+        $update_stmt->bind_param('iii', $current_time, $target_id, $gift_id);
+        $update_stmt->execute();
+    } else {
+        // If it doesn't exist, insert a new record
+        $insert_stmt = $mysqli->prepare("INSERT INTO boom_users_gift (target, hunter, room_id, gift, gift_date) VALUES (?, ?, ?, ?, ?)");
+        $current_time = time();
+        $insert_stmt->bind_param('iiiii', $target_id, $hunter_id, $room_id, $gift_id, $current_time);
+        $insert_stmt->execute();
+    }
 }
 
-
 // ghost function
-
 function systemSpamGhost($user, $custom = ''){
 	global $data,$cody;
 	if(isGhosted($user)){
@@ -3880,27 +3892,48 @@ function systemSpamGhost($user, $custom = ''){
 	}
 }
 function userIsGhosted($id){
-	global $mysqli;
-	$get_user = $mysqli->query("SELECT user_ghost FROM boom_users WHERE user_id = '$id'");
-	if($get_user->num_rows > 0){
-		$user = $get_user->fetch_assoc();
-		if(isGhosted($user)){
-			return true;
-		}
-	}
+    global $mysqli;
+    // Prepare the query to retrieve the user ghost status
+    $stmt = $mysqli->prepare("SELECT user_ghost FROM boom_users WHERE user_id = ?");
+    $stmt->bind_param('i', $id);  // 'i' because user_id is an integer
+    // Execute the query
+    $stmt->execute();
+    $result = $stmt->get_result();
+    // Check if the user exists and is ghosted
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        if (isGhosted($user)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function systemGhost($user, $delay){
-	global $mysqli;
-	$ghost_end = max($user['user_ghost'], calMinutesUp($delay));
-	$mysqli->query("UPDATE boom_users SET user_ghost = '$ghost_end' WHERE user_id = '{$user['user_id']}'");	
-	//redisUpdateUser($user['user_id']);
+    global $mysqli;
+    // Calculate the ghost end time
+    $ghost_end = max($user['user_ghost'], calMinutesUp($delay));
+    // Prepare the query to update the user ghost status
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_ghost = ? WHERE user_id = ?");
+    $stmt->bind_param('ii', $ghost_end, $user['user_id']); // 'i' for integer parameters
+    // Execute the query
+    $stmt->execute();
+    // Optionally update the Redis cache
+    // redisUpdateUser($user['user_id']);
 }
+
 function systemUnghost($user){
-	global $mysqli;
-	$mysqli->query("UPDATE boom_users SET user_ghost = '0' WHERE user_id = '{$user['user_id']}'");
-	//redisUpdateUser($user['user_id']);
+    global $mysqli;
+    // Prepare the query to set user_ghost to 0
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_ghost = ? WHERE user_id = ?");
+    // Bind parameters (0 for un-ghosting, user_id as integer)
+    $stmt->bind_param('ii', $ghost_value = 0, $user['user_id']);
+    // Execute the query
+    $stmt->execute();
+    // Optionally update the Redis cache
+    // redisUpdateUser($user['user_id']);
 }
+
 function canGhost(){
 	global $data;
 	if(boomAllow($data['can_ghost'])){
@@ -4093,11 +4126,19 @@ function canWhitelist($user){
 	}
 }
 function systemSoftKick($user, $delay, $reason = ''){
-	global $mysqli,$data;
-	$this_delay = max($user['user_kick'], calMinutesUp($delay));
-	$mysqli->query("UPDATE boom_users SET user_kick = '$this_delay', kick_msg = '$reason', user_action = user_action + 1 WHERE user_id = '{$user['user_id']}'");
-	//redisUpdateUser($user['user_id']);
+    global $mysqli;
+    // Calculate the new kick delay
+    $this_delay = max($user['user_kick'], calMinutesUp($delay));
+    // Prepare the query to update the user's kick information
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_kick = ?, kick_msg = ?, user_action = user_action + 1 WHERE user_id = ?");
+    // Bind the parameters: the new kick delay, reason, and user_id
+    $stmt->bind_param('isi', $this_delay, $reason, $user['user_id']);
+    // Execute the query
+    $stmt->execute();
+    // Optionally update the Redis cache
+    // redisUpdateUser($user['user_id']);
 }
+
 function systemVpnKick($user){
 	global $mysqli, $data;
 	if(isKicked($user)){

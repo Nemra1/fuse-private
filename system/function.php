@@ -830,77 +830,116 @@ function getFriendList($id, $type = 0) {
     return $friend_list;
 }
 
-function getRankList($rank){
-	global $mysqli;
-	$list = array();
-	$find_list = $mysqli->query("SELECT user_id FROM boom_users WHERE user_rank = '$rank'");
-	if($find_list->num_rows > 0){
-		while($find = $find_list->fetch_assoc()){
-			array_push($list, $find['user_id']);
-		}
-	}
-	return $list;
-}
-function getStaffList(){
-	global $mysqli;
-	$list = array();
-	$find_list = $mysqli->query("SELECT user_id FROM boom_users WHERE user_rank >= 70");
-	if($find_list->num_rows > 0){
-		while($find = $find_list->fetch_assoc()){
-			array_push($list, $find['user_id']);
-		}
-	}
-	return $list;
-}
-function boomListNotify($list, $type, $custom = array()){
-	global $mysqli, $data;
-	if(!empty($list)){
-		$values = '';
-		foreach($list as $user){
-			$def = array(
-				'hunter'=> $data['system_id'],
-				'room'=> $data['user_roomid'],
-				'rank'=> 0,
-				'delay'=> 0,
-				'reason'=> '',
-				'source'=> 'system',
-				'sourceid'=> 0,
-				'custom' => '',
-				'custom2' => '',
-			);
-			$c = array_merge($def, $custom);
-			$values .= "('{$c['hunter']}', '$user', '$type', '" . time() . "', '{$c['source']}', '{$c['sourceid']}', '{$c['rank']}', '{$c['delay']}', '{$c['reason']}', '{$c['custom']}', '{$c['custom2']}'),";
-		}
-		$values = rtrim($values, ',');
-		$mysqli->query("INSERT INTO boom_notification ( notifier, notified, notify_type, notify_date, notify_source, notify_id, notify_rank, notify_delay, notify_reason, notify_custom, notify_custom2) VALUES $values");
-		updateListNotify($list);
-	}
+function getRankList($rank) {
+    global $mysqli;
+    $rank = intval($rank); // Ensure rank is an integer
+    $list = [];
+    // Use prepared statement to prevent SQL injection
+    $stmt = $mysqli->prepare("SELECT user_id FROM boom_users WHERE user_rank = ?");
+    $stmt->bind_param("i", $rank);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($find = $result->fetch_assoc()) {
+        $list[] = $find['user_id'];
+    }
+    $stmt->close();
+    return $list;
 }
 
-
-function boomNotify($type, $custom = array()){
-	global $mysqli, $data;
-	$def = array(
-		'hunter'=> $data['system_id'],
-		'target'=> 0,
-		'room'=> $data['user_roomid'],
-		'rank'=> 0,
-		'delay'=> 0,
-		'reason'=> '',
-		'source'=> 'system',
-		'sourceid'=> 0,
-		'custom' => '',
-		'custom2' => '',
-		'icon' => '',
-	);
-	$c = array_merge($def, $custom);
-	if($c['target'] == 0){
-		return false;
-	}
-	$mysqli->query("INSERT INTO boom_notification ( notifier, notified, notify_type, notify_date, notify_source, notify_id, notify_rank, notify_delay, notify_reason, notify_custom, notify_custom2, notify_icon) 
-	VALUE ('{$c['hunter']}', '{$c['target']}', '$type', '" . time() . "', '{$c['source']}', '{$c['sourceid']}', '{$c['rank']}', '{$c['delay']}', '{$c['reason']}', '{$c['custom']}', '{$c['custom2']}' , '{$c['icon']}')");
-	updateNotify($c['target']); 
+function getStaffList() {
+    global $mysqli;
+    $list = [];
+    // Use prepared statement for better security and performance
+    $stmt = $mysqli->prepare("SELECT user_id FROM boom_users WHERE user_rank >= ?");
+    $staff_rank = 70;
+    $stmt->bind_param("i", $staff_rank);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($find = $result->fetch_assoc()) {
+        $list[] = $find['user_id'];
+    }
+    $stmt->close();
+    return $list;
 }
+function boomListNotify($list, $type, $custom = array()) {
+    global $mysqli, $data;
+    if (empty($list)) {
+        return false;
+    }
+    $stmt = $mysqli->prepare("
+        INSERT INTO boom_notification 
+        (notifier, notified, notify_type, notify_date, notify_source, notify_id, notify_rank, notify_delay, notify_reason, notify_custom, notify_custom2) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    $current_time = time();
+    foreach ($list as $user) {
+        $def = [
+            'hunter'   => $data['system_id'],
+            'room'     => $data['user_roomid'],
+            'rank'     => 0,
+            'delay'    => 0,
+            'reason'   => '',
+            'source'   => 'system',
+            'sourceid' => 0,
+            'custom'   => '',
+            'custom2'  => '',
+        ];
+        $c = array_merge($def, $custom);
+        // Bind parameters
+        $stmt->bind_param(
+            "iisisiissss", 
+            $c['hunter'], $user, $type, $current_time, 
+            $c['source'], $c['sourceid'], $c['rank'], $c['delay'], 
+            $c['reason'], $c['custom'], $c['custom2']
+        );
+        $stmt->execute();
+    }
+    $stmt->close();
+    updateListNotify($list);
+    return true;
+}
+function boomNotify($type, $custom = array()) {
+    global $mysqli, $data;
+    $def = array(
+        'hunter'   => $data['system_id'],
+        'target'   => 0,
+        'room'     => $data['user_roomid'],
+        'rank'     => 0,
+        'delay'    => 0,
+        'reason'   => '',
+        'source'   => 'system',
+        'sourceid' => 0,
+        'custom'   => '',
+        'custom2'  => '',
+        'icon'     => '',
+    );
+    $c = array_merge($def, $custom);
+    // Validate target ID
+    $c['target'] = intval($c['target']);
+    if ($c['target'] <= 0) {
+        return false;
+    }
+    // Prepare the SQL statement
+    $stmt = $mysqli->prepare("
+        INSERT INTO boom_notification 
+        (notifier, notified, notify_type, notify_date, notify_source, notify_id, notify_rank, notify_delay, notify_reason, notify_custom, notify_custom2, notify_icon) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    $current_time = time();
+    // Bind the parameters
+    $stmt->bind_param(
+        "iiisisiissss", 
+        $c['hunter'], $c['target'], $type, $current_time, 
+        $c['source'], $c['sourceid'], $c['rank'], $c['delay'], 
+        $c['reason'], $c['custom'], $c['custom2'], $c['icon']
+    );
+    $stmt->execute();
+    $stmt->close();
+    // Update notifications
+    updateNotify($c['target']); 
+    return true;
+}
+
 function updateNotify($id){
 	global $mysqli;
 	$mysqli->query("UPDATE boom_users SET naction = naction + 1 WHERE user_id = '$id'");

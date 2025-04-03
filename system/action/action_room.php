@@ -79,113 +79,104 @@ function get_in_room(){
 			echo json_encode($res);
 			exit();
 	} 
-	if($s == 'addRoom' && boomLogged() === true) {
-		// Escape incoming POST data to prevent SQL injection
-		$set_pass = escape($_POST["set_pass"]);
-		$set_type = escape($_POST["set_type"]);
-		$set_name = escape($_POST['set_name']);
-		$set_description = escape($_POST['set_description']);
-		// Check if user has permission to add a room and if the room type is valid
-		if (!canRoom() || !roomType($set_type)) {
-			$res['code'] = 0;
-			$res['msg'] = 'You do not have permission to add a room or your level is not allowed';
-			echo json_encode($res); // Send response and exit
-			exit();
-		}
-		// Default room system setting
-		$room_system = 0;
-		if (boomAllow(100)) {
-			$room_system = 1; // System room if user has permission 100
-		}
-		// Validate room name
-		if (!validRoomName($set_name)) {
-			$res['code'] = 0;
-			$res['msg'] = 'Room Name is not valid';
-			echo json_encode($res);
-			exit();
-		}
-		// Validate room description length
-		if (isToolong($set_description, $cody['max_description'])) {
-			$res['code'] = 1;
-			$res['msg'] = 'Description is too long';
-			echo json_encode($res);
-			exit();
-		}
-		// Check if the user has reached the max number of rooms
-		$max_room = $mysqli->query("SELECT room_id FROM boom_rooms WHERE room_creator = '{$data['user_id']}'");
-		if ($max_room->num_rows >= $cody['max_room'] && !boomAllow(70)) {
-			$res['code'] = 5;
-			$res['msg'] = 'Reached Max Rooms';
-			echo json_encode($res);
-			exit();
-		}
-		// Check for duplicate room name
-		$check_duplicate = $mysqli->query("SELECT room_name FROM boom_rooms WHERE room_name = '$set_name'");
-		if ($check_duplicate->num_rows > 0) {
-			$res['code'] = 6;
-			$res['msg'] = 'Error: Duplicate room name';
-			echo json_encode($res);
-			exit();
-		}
-		// Validate password length (if provided)
-		if (mb_strlen($set_pass) > 20) {
-			$res['code'] = 1;
-			$res['msg'] = 'The password is more than 20 characters';
-			echo json_encode($res);
-			exit();
-		}
-		// Insert new room into database
-		$stmt = $mysqli->prepare("
-			INSERT INTO boom_rooms (room_name, access, description, password, room_system, room_creator, room_action)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
-		");
-		$room_action_time = time(); // Room creation time
-		$stmt->bind_param("sssssii", $set_name, $set_type, $set_description, $set_pass, $room_system, $data['user_id'], $room_action_time);
-		$stmt->execute();
-		$last_id = $mysqli->insert_id;
-		$stmt->close();
-		// Clean up previous room staff data for the new room
-		$mysqli->query("DELETE FROM boom_room_staff WHERE room_id = '$last_id'");
-		// Assign the user to the room
-		if (!boomAllow(90)) { // If not a system user
-			$stmt = $mysqli->prepare("
-				UPDATE boom_users 
-				SET user_roomid = ?, last_action = ?, user_role = '6' 
-				WHERE user_id = ?
-			");
-			$stmt->bind_param("iii", $last_id, $room_action_time, $data['user_id']);
+		if ($s == 'addRoom' && boomLogged() === true) {
+			// Escape and validate incoming POST data
+			$set_pass = escape($_POST["set_pass"]);
+			$set_type = escape($_POST["set_type"]);
+			$set_name = escape($_POST['set_name']);
+			$set_description = escape($_POST['set_description']);
+			// Check if user has permission and if room type is valid
+			if (!canRoom() || !roomType($set_type)) {
+				echo json_encode(['code' => 0, 'msg' => 'You do not have permission to add a room or your level is not allowed']);
+				exit();
+			}
+			// Default room system setting
+			$room_system = boomAllow(100) ? 1 : 0;
+			// Validate room name
+			if (!validRoomName($set_name)) {
+				echo json_encode(['code' => 0, 'msg' => 'Room Name is not valid']);
+				exit();
+			}
+			// Validate room description length
+			if (isToolong($set_description, $cody['max_description'])) {
+				echo json_encode(['code' => 1, 'msg' => 'Description is too long']);
+				exit();
+			}
+			// Validate password length
+			if (mb_strlen($set_pass) > 20) {
+				echo json_encode(['code' => 1, 'msg' => 'The password is more than 20 characters']);
+				exit();
+			}
+			// Check if user has reached the max number of rooms
+			$stmt = $mysqli->prepare("SELECT COUNT(room_id) FROM boom_rooms WHERE room_creator = ?");
+			$stmt->bind_param("i", $data['user_id']);
 			$stmt->execute();
+			$stmt->bind_result($room_count);
+			$stmt->fetch();
 			$stmt->close();
-			// Add user as staff with role 6 (admin)
-			$stmt = $mysqli->prepare("
-				INSERT INTO boom_room_staff (room_id, room_staff, room_rank)
-				VALUES (?, ?, '6')
-			");
-			$stmt->bind_param("ii", $last_id, $data['user_id']);
+			if ($room_count >= $cody['max_room'] && !boomAllow(70)) {
+				echo json_encode(['code' => 5, 'msg' => 'Reached Max Rooms']);
+				exit();
+			}
+			// Check for duplicate room name
+			$stmt = $mysqli->prepare("SELECT room_id FROM boom_rooms WHERE room_name = ?");
+			$stmt->bind_param("s", $set_name);
 			$stmt->execute();
+			$stmt->store_result();
+			if ($stmt->num_rows > 0) {
+				echo json_encode(['code' => 6, 'msg' => 'Error: Duplicate room name']);
+				$stmt->close();
+				exit();
+			}
 			$stmt->close();
-		} else { // For system users
+			// Insert new room
 			$stmt = $mysqli->prepare("
-				UPDATE boom_users 
-				SET user_roomid = ?, last_action = ? 
-				WHERE user_id = ?
+				INSERT INTO boom_rooms (room_name, access, description, password, room_system, room_creator, room_action)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
 			");
-			$stmt->bind_param("iii", $last_id, $room_action_time, $data['user_id']);
+			$room_action_time = time();
+			$stmt->bind_param("ssssiii", $set_name, $set_type, $set_description, $set_pass, $room_system, $data['user_id'], $room_action_time);
 			$stmt->execute();
+			$last_id = $stmt->insert_id;
 			$stmt->close();
+			// Assign the user to the room
+			if (!boomAllow(90)) { // If not a system user
+				$stmt = $mysqli->prepare("
+					UPDATE boom_users 
+					SET user_roomid = ?, last_action = ?, user_role = '6' 
+					WHERE user_id = ?
+				");
+				$stmt->bind_param("iii", $last_id, $room_action_time, $data['user_id']);
+				$stmt->execute();
+				$stmt->close();
+				// Add user as staff with role 6 (admin)
+				$stmt = $mysqli->prepare("INSERT INTO boom_room_staff (room_id, room_staff, room_rank) VALUES (?, ?, '6')");
+				$stmt->bind_param("ii", $last_id, $data['user_id']);
+				$stmt->execute();
+				$stmt->close();
+			} else { // For system users
+				$stmt = $mysqli->prepare("
+					UPDATE boom_users 
+					SET user_roomid = ?, last_action = ? 
+					WHERE user_id = ?
+				");
+				$stmt->bind_param("iii", $last_id, $room_action_time, $data['user_id']);
+				$stmt->execute();
+				$stmt->close();
+			}
+			// Get room info to return
+			$groom = roomInfo($last_id);
+			// Log room creation
+			boomConsole('create_room', ['room' => $groom['room_id']]);
+			// Send success response
+			echo json_encode([
+				'code' => 7,
+				'msg' => 'The room has been added successfully',
+				'r' => ['name' => $groom['room_name'], 'id' => $groom['room_id']]
+			]);
+			exit();
 		}
-		// Get the room info to return
-		$groom = roomInfo($last_id);
-		// Log the room creation
-		boomConsole('create_room', array('room' => $groom['room_id']));
-		// Send success response
-		$res['code'] = 7;
-		$res['msg'] = 'The room has been added successfully';
-		$res['r'] = array('name' => $groom['room_name'], 'id' => $groom['room_id']);
-		header("Content-type: application/json");
-		echo json_encode($res); // Return response
-		exit();
-	}
+
 	if($s == 'leave_room') {
 		// Ensure the user is logged in
 		if (!boomLogged()) {

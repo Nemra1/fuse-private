@@ -681,28 +681,40 @@ function validName($name){
 	return false;
 }
 function doCurl($url, $f = array()){
-	$result = '';
-	if(function_exists('curl_init')){
-		$curl = curl_init();
-		curl_setopt($curl, CURLOPT_URL, $url);
-		if(!empty($f)){
-			curl_setopt($curl, CURLOPT_POST, true);
-			curl_setopt($curl, CURLOPT_POSTFIELDS, $f);
-		}
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5);
-		curl_setopt($curl, CURLOPT_TIMEOUT, 10);
-		curl_setopt($curl, CURLOPT_HEADER, false);
-		curl_setopt($curl, CURLOPT_REFERER, @$_SERVER['HTTP_HOST']);
-		$result = curl_exec($curl);
-		if(curl_errno($curl)){
-			$result = '';
-		}
-		curl_close($curl);
-	}
-	return $result;
+    $result = '';
+    if(function_exists('curl_init')){
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        // If POST data is provided, set POST options
+        if(!empty($f)){
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $f);
+        }
+        // Set additional curl options
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true); // Enable SSL verification
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2); // Ensure the host matches the certificate's common name
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 5); // Connection timeout
+        curl_setopt($curl, CURLOPT_TIMEOUT, 10); // Total request timeout
+        curl_setopt($curl, CURLOPT_HEADER, false); // Do not include headers in the output
+        curl_setopt($curl, CURLOPT_REFERER, @$_SERVER['HTTP_HOST']); // Set the referer header
+        $result = curl_exec($curl);
+        // Check for errors
+        if(curl_errno($curl)){
+            // Log the error or return false for easier error tracking
+            error_log('cURL error: ' . curl_error($curl));
+            $result = false; // Return false instead of an empty string to indicate an error
+        }
+        curl_close($curl);
+    } else {
+        // Handle case where cURL is not available
+        error_log('cURL is not installed or not enabled on this server');
+        $result = false; // Return false if cURL is unavailable
+    }
+    return $result;
 }
+
+
 function trimCommand($text, $trim){
 	return trim(str_replace($trim, '', $text));
 }

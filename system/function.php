@@ -684,37 +684,43 @@ function sendNotification($userId, $message) {
     return $result;
 }
 function sendNotificationToAll($message) {
-      global $data,$cody;
-    $appId =$data['onesignal_web_push_id']; // Replace with your OneSignal App ID
-    $restApiKey = $data['onesignal_web_reset_key']; // Replace with your OneSignal REST API Key
-
+    global $data,$cody;
+    $appId = $data['onesignal_web_push_id']; // OneSignal App ID
+    $restApiKey = $data['onesignal_web_reset_key']; // OneSignal REST API Key
     $content = array(
         "en" => $message
     );
-
     $fields = array(
         'app_id' => $appId,
         'contents' => $content,
         'included_segments' => array('All') // Target all subscribers
     );
-
     $headers = array(
         'Content-Type: application/json; charset=utf-8',
         'Authorization: Basic ' . $restApiKey
     );
-
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, 'https://onesignal.com/api/v1/notifications');
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    // For production, set to true and remove verification disable.
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true); 
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
     $result = curl_exec($ch);
+    // Error handling for cURL request
+    if (curl_errno($ch)) {
+        error_log('cURL Error: ' . curl_error($ch)); // Log cURL error
+        $result = false; // Set result as false on failure
+    }
     curl_close($ch);
-
+    // Log or handle the result if needed
+    if ($result === false) {
+        error_log('Notification sending failed.');
+    }
     return $result;
 }
+
 function getAllSubscribers($appId, $restApiKey) {
     global $data, $cody;
     $url = "https://onesignal.com/api/v1/players";
@@ -4394,9 +4400,7 @@ function getRaisedHandUsers($raisedHandData) {
     } else {
         $raisedHands = $raisedHandData; // Assume it's already an array
     }
-
     $userDetailsList = array();
-
     if (!empty($raisedHands) && is_array($raisedHands)) {
         foreach ($raisedHands as $user_id) {
             $userDetails = userDetails($user_id);

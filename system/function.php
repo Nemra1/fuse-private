@@ -1831,17 +1831,43 @@ function renderReason($t){
 	}
 }
 function userUnmute($user){
-	global $mysqli;
-	if(!guestMuted()){
-		clearNotifyAction($user['user_id'], 'mute');
-		$mysqli->query("UPDATE boom_users SET user_mute = 0, mute_msg = '', user_regmute = 0 WHERE user_id = '{$user['user_id']}'");
-		boomNotify('unmute', array('target'=> $user['user_id'], 'source'=> 'mute'));
-	}
+    global $mysqli;
+    // Check if the user is not a guest and is muted
+    if(!guestMuted()){
+        // Clear any mute-related notifications
+        clearNotifyAction($user['user_id'], 'mute');
+        // Use cl_update_user_data to update user mute status
+        $updateData = array(
+            'user_mute' => 0,
+            'mute_msg' => '',
+            'user_regmute' => 0
+        );
+        $unmuteSuccess = cl_update_user_data($user['user_id'], $updateData);
+        // Check if the update was successful
+        if ($unmuteSuccess) {
+            // Send unmute notification
+            boomNotify('unmute', array('target'=> $user['user_id'], 'source'=> 'mute'));
+        } else {
+            // Log error if unmute update fails
+            error_log("Failed to unmute user with ID: {$user['user_id']}");
+        }
+    }
 }
+
 function userUnkick($user){
-	global $mysqli;
-	$mysqli->query("UPDATE boom_users SET user_kick = 0 WHERE user_id = '{$user['user_id']}'");
+    global $mysqli;
+    // Update user data using the cl_update_user_data function
+    $unkick = cl_update_user_data($user['user_id'], array('user_kick' => 0));
+    // Check if the update was successful
+    if($unkick){
+        return true; // Successfully un-kicked the user
+    } else {
+        // Log an error if the un-kick failed
+        error_log("Failed to unkick user with ID: {$user['user_id']}");
+        return false; // Return false if the operation failed
+    }
 }
+
 	/*
 	if(roomMuted()){
 		$d['rm'] = 1;

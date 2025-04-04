@@ -34,8 +34,8 @@ if(!allowGuest()){
 	</div>
 	<?php if(boomRecaptcha()){ ?>
 	<div class="recapcha_div tmargin5">
-		<div id="boom_recaptcha" class="guest_recaptcha">
-		</div>
+		<!-- Guest Form Recaptcha -->
+		<div id="recaptcha_guest"></div>
 	</div>
 	<?php } ?>
 	<div class="login_control">

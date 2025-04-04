@@ -32,7 +32,7 @@ require('../config.php');
 	<div class="clear"></div>
 	<?php if(boomRecaptcha()){ ?>
 	<div class="recapcha_div tmargin10">
-		<div id="boom_recaptcha" class="register_recaptcha">
+		<div id="boom_recaptcha_register" class="register_recaptcha">
 		</div>
 	</div>
 	<?php } ?>

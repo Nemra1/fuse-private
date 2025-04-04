@@ -46,24 +46,26 @@ window.onfocus = function() {
 window.onblur = function() {
     focused = false;
 }
+
 var OneSignal = window.OneSignal || [];
 OneSignal.push(function() {
-    OneSignal.init({
-        appId: onesignal_web_push_id, // Replace with your OneSignal App ID
-        safari_web_id: "web.onesignal.auto.641afdf7-f4bf-4e2a-9c3a-de381580c8ca",
-    });
+	if(allow_OneSignal){
+		OneSignal.init({
+			appId: onesignal_web_push_id, // Replace with your OneSignal App ID
+			safari_web_id: "web.onesignal.auto.641afdf7-f4bf-4e2a-9c3a-de381580c8ca",
+		});
+		OneSignal.getUserId().then(function(userId) {
+			if (userId) {
+				console.log('Success:', userId);
+				// Save the user ID to your database
 
-    OneSignal.getUserId().then(function(userId) {
-        if (userId) {
-            console.log('Success:', userId);
-            // Save the user ID to your database
-
-            saveUserIdToDatabase(userId);
-        } else {
-            // Prompt user to subscribe
-            OneSignal.registerForPushNotifications();
-        }
-    });
+				saveUserIdToDatabase(userId);
+			} else {
+				// Prompt user to subscribe
+				OneSignal.registerForPushNotifications();
+			}
+		});		
+	}
 });
 
 function saveUserIdToDatabase(userId) {

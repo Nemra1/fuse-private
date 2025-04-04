@@ -4,7 +4,9 @@ $(document).ready(function(){
 	modalPending();
 	adsBotspeak();
 	get_daymode();
-	checkNotification();
+	if(allow_OneSignal=="1"){
+		checkNotification();
+	}
 	setTimeout(cleanData, 5000)
 	runModal = setInterval(modalPending, 1500);
 	runClean = setInterval(cleanData, 300000);

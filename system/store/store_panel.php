@@ -106,10 +106,9 @@ function Fu_premiumName($plan, $user){
 					</div>
 			</label>
 			<?php } 
-		}
-	?> 
+			}
+		?> 
 
-			
 		</div>
 	</div>
 	</div>
@@ -123,7 +122,7 @@ function Fu_premiumName($plan, $user){
 					$is_checked = ($data['user_rank'] == $key['user_rank']) ? 'checked' : '';
 					?>    
 				<label  for="rank_pack_<?php echo $key['id']?>" data-pack-name="<?php echo $key['pack_name']?>" class="store_card" style="background-image: url(<?php echo $key['image']?>);">
-					<input data-type="rank_tab" type="radio" data-id="<?php echo $key['id']?>" name="pack_selection" id="rank_pack_<?php echo $key['id']?>" value="<?php echo $key['p_amounts']?>" style="display:none;" <?php echo $is_checked; ?>>
+					<input data-type="rank_tab" type="radio" data-id="<?php echo $key['id']?>" name="pack_selection" id="rank_pack_<?php echo $key['id']?>" value="<?php echo $key['price']?>" style="display:none;" <?php echo $is_checked; ?>>
 						<div class="store_content store_content_rank">
 							<div class="store_logo">
 							  <img src="default_images/rank/<?php echo rankIcon($key['user_rank']); ?>" alt="" class="image">

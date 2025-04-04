@@ -58,8 +58,6 @@ function newsReplyCount($id) {
     error_log("newsReplyCount SQL Error: " . $mysqli->error);
     return 0;
 }
-
-
 function moreNews(){
     global $mysqli, $data;
     // Validate and sanitize input
@@ -103,9 +101,6 @@ function moreNews(){
     }
     return $news_content;
 }
-
-
-
 function newsReply() {
     global $mysqli, $data, $cody;
     // Validate input
@@ -373,8 +368,6 @@ function postSystemNews() {
     return showNews($news_id);
 }
 
-
-
 function deleteNews() {
     global $mysqli, $data, $lang, $cody;
     $news_id = (int) $_POST["remove_news"];  // Explicitly cast to integer to avoid SQL injection risk
@@ -436,8 +429,6 @@ function deleteNews() {
         return "Error: " . $e->getMessage();
     }
 }
-
-
 
 function newsLike() {
     global $mysqli, $data, $lang, $cody;

@@ -10,7 +10,7 @@ if($f == "bot_speakers") {
 		exit(); // Stop further script execution after sending an error response
 	}	
     $res = array();
-	if ($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "del_bot") {
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "del_bot" && boomLogged()) {
 		header("Content-Type: application/json");
 		// Validate and sanitize input
 		$bot_id = filter_input(INPUT_POST, 'bot_id', FILTER_VALIDATE_INT, [
@@ -36,7 +36,7 @@ if($f == "bot_speakers") {
 			exit();
 		}
 	}
-	if ($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "admin_bot_byroom") {
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "admin_bot_byroom" && boomLogged()) {
 		header("Content-Type: application/json");
 		// Validate and sanitize input
 		$group_id = filter_input(INPUT_POST, 'checkbot_room', FILTER_VALIDATE_INT, [
@@ -53,7 +53,7 @@ if($f == "bot_speakers") {
 		echo json_encode(!empty($bots) ? $bots : emptyZone($lang['empty']));
 		exit();
 	}
-	if ($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "admin_bot_info") {
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "admin_bot_info" && boomLogged()) {
 		header("Content-Type: application/json");
 		// Validate and sanitize input
 		$bot_id = filter_input(INPUT_POST, 'bot_id', FILTER_VALIDATE_INT, [
@@ -74,7 +74,7 @@ if($f == "bot_speakers") {
 		echo json_encode(!empty($bot_info) ? $bot_info : emptyZone($lang['empty']));
 		exit();
 	}
-	if($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "update_bot") {
+	if($_SERVER['REQUEST_METHOD'] === 'POST' && $s === "update_bot" && boomLogged()) {
 		header("Content-Type: application/json");
 		// Validate and sanitize required inputs
 		$bot_id = filter_input(INPUT_POST, 'bot_id', FILTER_VALIDATE_INT, [
@@ -115,7 +115,7 @@ if($f == "bot_speakers") {
 		echo json_encode($response);
 		exit();
 	}
-	if ($s === "add_bot_modal") {
+	if ($s === "add_bot_modal" && boomLogged()) {
 		header("Content-Type: application/json");
 		// Generate the modal content
 		$content = boomTemplate('element/bots/add_bot');
@@ -134,7 +134,7 @@ if($f == "bot_speakers") {
 			exit();
 		}
 	}
-	if ($s === "add_bot") {
+	if ($s === "add_bot" && boomLogged()) {
 		header("Content-Type: application/json");
 		// Default response
 		$res = ["status" => 400, "message" => "Invalid input data"];
@@ -179,7 +179,7 @@ if($f == "bot_speakers") {
 		}
 		exit();
 	}
-	if ($s === "update_bot_set") {
+	if ($s === "update_bot_set" && boomLogged()) {
 		header("Content-Type: application/json");
 		// Validate input
 		if (!isset($_POST['bot_delay'], $_POST['allow_bot'])) {

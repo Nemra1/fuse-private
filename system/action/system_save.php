@@ -13,7 +13,7 @@ if (isset($_POST["store_name"]) && isset($_POST["store_pass"])) {
 if (isset($_POST["save_admin_section"])) {
     $section = escape($_POST["save_admin_section"]);
     echo saveadminpanel($section);
-    echo sendDataToSocket();
+    //echo sendDataToSocket();
     exit;
 }
 if (isset($_POST["test_mail"]) && isset($_POST["test_email"])) {

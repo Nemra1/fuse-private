@@ -23,14 +23,15 @@ function boomUpdateChat($v){
     ];
 
     // Initialize and configure cURL securely
-    $curl = curl_init();
-    curl_setopt($curl, CURLOPT_URL, "https://your-api-url.com/update");  // Replace with actual URL
-    curl_setopt($curl, CURLOPT_POST, true);
-    curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($install));
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true); // Enabling SSL verification
-    curl_setopt($curl, CURLOPT_HEADER, false);
-    curl_setopt($curl, CURLOPT_REFERER, $_SERVER["HTTP_HOST"]);
+		$curl = curl_init();
+		curl_setopt($curl, CURLOPT_URL, "https://your-api-url.com/update");
+		curl_setopt($curl, CURLOPT_POST, true);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($install));
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true); // Enable SSL certificate verification
+		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2); // Ensure the host matches the certificate
+		curl_setopt($curl, CURLOPT_HEADER, false);
+		curl_setopt($curl, CURLOPT_REFERER, $_SERVER["HTTP_HOST"]);
 
     // Execute cURL request
     $result = curl_exec($curl);

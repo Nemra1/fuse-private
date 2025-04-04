@@ -14,7 +14,10 @@ if ($f == 'room_icon') {
         exit();
     }
 }
-
+if(isset($_POST['remove_icon'])){
+	echo removeRoomIcon();
+	die();
+}
 function addRoomIcon() {
     global $mysqli, $data;
     // Check if user has permission to edit room
@@ -134,10 +137,7 @@ function removeRoomIcon(){
 //	echo staffAddRoomIcon();
 //	die();
 //}
-//if(isset($_POST['remove_icon'])){
-//	echo removeRoomIcon();
-//	die();
-//}
+
 //if(isset($_POST['staff_remove_icon'])){
 //	echo staffRemoveRoomIcon();
 //	die();

@@ -2,7 +2,8 @@
 require __DIR__ . "./../config_session.php";
 
 
-if (isset($_POST['update_status'])) {
+if(isset($_POST['update_status'])) {
+	 header('Content-Type: application/json');
     // Escape and validate the status
     $status = escape($_POST['update_status']);
     // Validate the status to ensure it's a valid value (1 as default if invalid)
@@ -11,43 +12,55 @@ if (isset($_POST['update_status'])) {
     }
     // Prepare the query with a parameterized statement to prevent SQL injection
     $update_stmt = $mysqli->prepare("UPDATE boom_users SET user_status = ? WHERE user_id = ?");
-    // Bind parameters to the prepared statement
     $update_stmt->bind_param("ii", $status, $data['user_id']);
     // Execute the query and check for success
     if ($update_stmt->execute()) {
-        // Return success with status title and icon
-        echo boomCode(1, array(
+        echo boomCode(200, array(
             'text' => statusTitle($status),
-            'icon' => newStatusIcon($status)
+            'icon' => newStatusIcon($status),
+            'msg'  => 'Status updated successfully.'
         ));
     } else {
-        // Return failure if the update query failed
-        echo boomCode(0, array('error' => 'Failed to update status'));
+        echo boomCode(500, array(
+            'error' => 'Failed to update status',
+            'msg'   => 'Unable to save your status. Please try again later.'
+        ));
     }
     die();
 }
 
+
 if (isset($_POST['edit_username'], $_POST['new_name'])) {
+	 header('Content-Type: application/json');
     $new_name = escape($_POST['new_name']);
     // Check if the user has permission to change the username
     if (!canName()) {
-        echo 0; // No permission to change username
+        echo boomCode(403, array(
+            'msg' => 'You do not have permission to change your username.'
+        ));
         die();
     }
+
     // Check if the new name is the same as the current username
     if ($new_name == $data['user_name']) {
-        echo 1; // No change needed
+        echo boomCode(1, array(
+            'msg' => 'No change needed, you already have this username.'
+        ));
         die();
     }
     // Validate the new name
     if (!validName($new_name)) {
-        echo 2; // Invalid name
+        echo boomCode(400, array(
+            'msg' => 'Invalid username. Please choose a valid one.'
+        ));
         die();
     }
     // Check if the new name is available and doesn't match the current name
     if (!boomSame($new_name, $data['user_name'])) {
         if (!boomUsername($new_name)) {
-            echo 3; // Username already taken
+            echo boomCode(409, array(
+                'msg' => 'Username already taken. Please choose another one.'
+            ));
             die();
         }
     }
@@ -59,12 +72,18 @@ if (isset($_POST['edit_username'], $_POST['new_name'])) {
         // Log the name change and perform other related actions
         boomConsole('change_name', array('custom' => $data['user_name']));
         changeNameLog($data, $new_name);      
-        echo 1; // Success
+        echo boomCode(200, array(
+            'msg' => 'Username updated successfully.',
+            'new_name' => $new_name
+        ));
     } else {
-        echo 0; // Failed to update username
-    }  
+        echo boomCode(500, array(
+            'msg' => 'Failed to update username. Please try again later.'
+        ));
+    }
     die();
 }
+
 
 if (isset($_POST['save_color'], $_POST['save_bold'], $_POST['save_font'])) {
     $c = escape($_POST['save_color']);
@@ -92,43 +111,69 @@ if (isset($_POST['save_color'], $_POST['save_bold'], $_POST['save_font'])) {
 }
 
 if (isset($_POST['save_mood'])) {
+    header('Content-Type: application/json');
     $mood = escape($_POST['save_mood']);
     // Check if the user has permission to change their mood
     if (!canMood()) {
-        echo 0; // No permission to change mood
-        die();
+        echo json_encode([
+            'status' => 'error',
+            'code' => 403,
+            'message' => 'Permission denied to change mood.'
+        ]);
+        exit;
     }
     // Validate the mood input
     if (isBadText($mood)) {
-        echo 2; // Invalid text (e.g., offensive content)
-        die();
+        echo json_encode([
+            'status' => 'error',
+            'code' => 400,
+            'message' => 'Inappropriate mood content.'
+        ]);
+        exit;
     }
     if (isTooLong($mood, 40)) {
-        echo 0; // Mood is too long
-        die();
+        echo json_encode([
+            'status' => 'error',
+            'code' => 413,
+            'message' => 'Mood text is too long (max 40 characters).'
+        ]);
+        exit;
     }
     // If the mood hasn't changed, return the current mood
     if ($mood == $data['user_mood']) {
-        echo getMood($data); // Return the existing mood
-        die();
+        echo json_encode([
+            'status' => 'success',
+            'code' => 200,
+            'message' => 'Mood unchanged.',
+            'mood' => getMood($data)
+        ]);
+        exit;
     }
-    // Prepare the SQL query with a prepared statement to prevent SQL injection
+    // Prepare and execute update query
     $update_stmt = $mysqli->prepare("
         UPDATE boom_users 
         SET user_mood = ? 
         WHERE user_id = ?
     ");
     $update_stmt->bind_param("si", $mood, $data['user_id']);
-    // Execute the query and check if successful
     if ($update_stmt->execute()) {
-        // Fetch the updated user details
         $u = userDetails($data['user_id']);
-        echo getMood($u); // Return the updated mood
+        echo json_encode([
+            'status' => 'success',
+            'code' => 200,
+            'message' => 'Mood updated successfully.',
+            'mood' => getMood($u)
+        ]);
     } else {
-        echo 0; // Failed to update mood
+        echo json_encode([
+            'status' => 'error',
+            'code' => 500,
+            'message' => 'Failed to update mood.'
+        ]);
     }
-    die();
+    exit;
 }
+
 
 if (isset($_POST['save_info'], $_POST['age'], $_POST['gender'])) {
     $age = escape($_POST['age']);
@@ -250,35 +295,39 @@ if (isset($_POST['save_about'], $_POST['about'])) {
 		}
 	}
 if (isset($_POST['change_sound'], $_POST['chat_sound'], $_POST['private_sound'], $_POST['notify_sound'], $_POST['name_sound'])) {
-    // Escape input values to prevent SQL injection
+	header('Content-Type: application/json');
     $chat_sound = escape($_POST['chat_sound']);
     $private_sound = escape($_POST['private_sound']);
     $notify_sound = escape($_POST['notify_sound']);
     $name_sound = escape($_POST['name_sound']);
-    // Concatenate sound codes for different categories
     $sound = soundCode('chat', $chat_sound) . soundCode('private', $private_sound) . soundCode('notify', $notify_sound) . soundCode('name', $name_sound);
-    // If no sounds are selected, set sound to 0
     if (empty($sound)) {
         $sound = 0;
     }
-    // Use prepared statement to prevent SQL injection and update user sound
     $update_stmt = $mysqli->prepare("
         UPDATE boom_users 
         SET user_sound = ? 
         WHERE user_id = ?
     ");
     $update_stmt->bind_param("ii", $sound, $data['user_id']);
-    // Execute the query and check if it was successful
     if ($update_stmt->execute()) {
-        echo boomCode(1, array('data' => $sound)); // Success
+        echo boomCode(200, array(
+            'data' => $sound,
+            'msg'  => 'Sound settings saved successfully.'
+        ));
     } else {
-        echo boomCode(0); // Error
+      echo boomCode(500, array(
+            'data' => 0,
+            'msg'  => 'Failed to save sound settings.'
+        ));
     }
     die();
 }
 
+
 //UPDATE profile privace
 if (isset($_POST['save_shared'])) {
+	header('Content-Type: application/json');
     if (boomLogged()) {
         // Escape input values to prevent SQL injection
         $ashare = escape($_POST['ashare']);
@@ -298,15 +347,16 @@ if (isset($_POST['save_shared'])) {
         $update_query = cl_update_user_data($data['user_id'], $update_privacy);
         // Optionally, handle the result of $update_query, if necessary
         if ($update_query) {
-            echo boomCode(1, array('status' => 'Privacy settings updated.'));
+            echo boomCode(200, array('msg' => 'Privacy settings updated.'));
         } else {
-            echo boomCode(0, array('status' => 'Error updating privacy settings.'));
+            echo boomCode(0, array('msg' => 'Error updating privacy settings.'));
         }
     }
 }
 
 //UPDATE PUSHE NOTIFICATION user_id
 if (isset($_POST['update_pushId'])) {
+	header('Content-Type: application/json');
     if (boomLogged()) {
         // Escape the user input to prevent SQL injection
         $push_id = escape($_POST['userId']);

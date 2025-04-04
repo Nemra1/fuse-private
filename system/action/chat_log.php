@@ -59,7 +59,6 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 	if(useGold()){
 		$d['gold'] = (int) $data['user_gold'];
 	}
-	
 	// notification check
 	if($notify < $data['naction']){
 		$get_notify = $mysqli->query("SELECT
@@ -127,7 +126,6 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 				$main = 0;
 			}
 		}
-
 	if($main == 1){
 		if($log->num_rows > 0){
 			while ($chat = $log->fetch_assoc()){
@@ -137,8 +135,7 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 				}
 			}
 		}
-	}
-	
+	}	
 	if(!delExpired($data['rltime'])){
 		$d['del'] = array();
 		$todelete = explode(",", $data['rldelete']);
@@ -146,8 +143,7 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 			$delpost = trim($delpost);
 			array_push($d['del'], $delpost);
 		}
-	}
-	
+	}	
 	// private logs part
     if ($preload == 1) {
         $privlog = $mysqli->query("
@@ -203,44 +199,23 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 			// Close the prepared statement to free up resources
 			$stmt->close();
 		}
-	}
-
-	
+	}	
 	// topic part
 	if($fload == 0){
 		if($data['topic'] != ''){
 			$d['top'] = getTopic($data['topic']);
 		}
-	}
-	
+	}	
 	// room access part
 	if(canEditRoom()){
 		$d['rset'] = 1;
-	}
-	
+	}	
 	// room ranking
 	if(haveRole($data['user_role'])){
 		$d['role'] = $data['user_role'];
-	}
-	
+	}	
 	// mute check
 	$d['rm'] = checkMute($data);
-	/*
-	if(roomMuted()){
-		$d['rm'] = 1;
-	}
-	if(guestMuted()){
-		$d['rm'] = 2;
-	}
-	if(mutedData($data)){
-		if(isMuted($data) || isRegmute($data)){
-			$d['rm'] = 2;
-		}
-		else {
-			userUnmute($data);
-		}
-	}*/
-	
     if($gnotif){
         $d['gnotif'] =$gnotif;
     }
@@ -264,6 +239,7 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 	$d['spd'] = (int)$data['speed'];
 	$d['acd'] = $data['act_delay'];
 	$d['pico'] = $data['private_count'];
+	//$d['userRelationDetails'] = roomDetails($room);
 
 	echo json_encode($d, JSON_UNESCAPED_UNICODE);
 }

@@ -45,6 +45,7 @@ if(!boomAllow(100)){
 					<div class="setting_element">
 						<p class="label"><?php echo $lang['pcheck_api']; ?></p>
 						<input id="set_vpn_key" class="full_input" value="<?php echo $data['vpn_key']; ?>" type="text"/>
+						<a target="_blank" href="http://proxycheck.io" class="main">For Proxycheck Api Keys click Here</a>
 					</div>
 					<div class="setting_element ">
 						<p class="label"><?php echo $lang['use_vpn']; ?></p>

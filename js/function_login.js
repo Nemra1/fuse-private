@@ -1,10 +1,13 @@
 var waitReply = 0;
+let recaptchaWidgets = {
+	login: null,
+	register: null,
+	guest: null
+};
 
 $(document).ready(function(){
-
 	selectIt();
 	bcCookie();
-	
 	$(document).keypress(function(e) {
 		if(e.which == 13) {
 			if($('#login_form_box:visible').length){
@@ -44,9 +47,10 @@ getLogin = function(){
 getGuestLogin = function(){
 	$.post('system/box/guest_login.php', {
 		}, function(response) {
+			resetRecaptcha('guest');    // Reset the Recaptcha for the guest form
 			if(response != 0){
 				showModal(response);
-				renderRecaptcha();
+				renderRecaptcha('guest', 'recaptcha_guest'); // re-render after AJAX load
 			}
 			else {
 				return false;
@@ -58,7 +62,7 @@ getRegistration = function(){
 		}, function(response) {
 			if(response != 0){
 				showModal(response);
-				renderRecaptcha();
+				renderRecaptcha('register', 'boom_recaptcha_register');
 			}
 			else {
 				return false;
@@ -95,64 +99,69 @@ hideArrow = function(d){
 		$("#last_active .left-arrow, #last_active .right-arrow").show();	
 	}
 }
-sendLogin = function(){
-	var upass = $('#user_password').val();
-	var uuser = $('#user_username').val();
-	if(upass == '' || uuser == ''){
-		callSaved(system.emptyField, 3);
-		return false;
-	}
-	else if (/^\s+$/.test($('#user_password').val())){
-		callSaved(system.emptyField, 3);
-		$('#user_password').val("");
-		return false;
-	}
-	else if (/^\s+$/.test($('#user_username').val())){
-		callSaved(system.emptyField, 3);
-		$('#user_username').val("");
-		return false;
-	}
-	else {
-		if(waitReply == 0){
-			waitReply = 1;
-			$.post(FU_Ajax_Requests_File(), {
-				f:"system_login",
-				s:"member_login",
-				password: upass, 
-				username: uuser
-				}, function(res) {
-					if(res.code == 1){
-						callSaved(system.badLogin, 3);
-						$('#user_password').val("");
-					}
-					else if (res.code == 2){
-						callSaved(system.badLogin, 3);
-						$('#user_password').val("");
-					}
-					else if (res.code == 3){
-						callSaved(res.msg, 1);
-						// Secure reload with delay
-						setTimeout(function() {
-							location.reload(true); // true forces reload from server
-						}, res.reload_delay || 2000); // Default 3s if not specified
-
-					}
-					waitReply = 0;
-			});
-		}
-		else {
-			return false;
-		}
-	}
+sendLogin = function() {
+    var upass = $('#user_password').val();
+    var uuser = $('#user_username').val();
+    let loginToken = getRecaptchaToken('login');  // Get the Recaptcha token for the login form
+    if (upass == '' || uuser == '') {
+        callSaved(system.emptyField, 3);
+        return false;
+    }
+    else if (/^\s+$/.test($('#user_password').val())) {
+        callSaved(system.emptyField, 3);
+        $('#user_password').val("");
+        return false;
+    }
+    else if (/^\s+$/.test($('#user_username').val())) {
+        callSaved(system.emptyField, 3);
+        $('#user_username').val("");
+        return false;
+    }
+    else {
+        // Validate Recaptcha if required
+        if (recapt > 0 && loginToken === '') {
+            callSaved(system.missingRecaptcha, 3);
+            return false;
+        }
+        // Proceed with login if no issues
+        if (waitReply == 0) {
+            waitReply = 1;
+            $.post(FU_Ajax_Requests_File(), {
+                f: "system_login",
+                s: "member_login",
+                password: upass,
+                username: uuser,
+                recaptcha_response: loginToken  // Include Recaptcha token in the request
+            }, function(res) {
+                if (res.code == 1) {
+                    callSaved(system.badLogin, 3);
+                    $('#user_password').val("");
+                }
+                else if (res.code == 2) {
+                    callSaved(system.badLogin, 3);
+                    $('#user_password').val("");
+                }
+                else if (res.code == 3) {
+                    callSaved(res.msg, 1);
+                    setTimeout(function() {
+                        location.reload(true);  // Reload the page after a successful login
+                    }, res.reload_delay || 2000); // Default delay if not specified
+                }
+                waitReply = 0;
+            });
+        } else {
+            return false;
+        }
+    }
 }
+
 sendRegistration = function() {
     var upass = $('#reg_password').val().trim(); // Trim inputs to remove spaces
     var uuser = $('#reg_username').val().trim();
     var uemail = $('#reg_email').val().trim();
     var ugender = $('#login_select_gender').val();
     var uage = $('#login_select_age').val();
-    var regRecapt = getRecapt();
-
+	let regRecapt = getRecaptchaToken('register');
     // Validate empty fields
     if(upass === '' || uuser === '' || uemail === ''){
         callSaved(system.emptyField, 3);
@@ -175,13 +184,11 @@ sendRegistration = function() {
         $('#reg_email').val(""); // Clear input
         return false;
     }
-
     // Validate recaptcha if required
     if(recapt > 0 && regRecapt === ''){
         callSaved(system.missingRecaptcha, 3);
         return false;
     }
-
     // Process registration if all checks pass
     if(waitReply === 0){
         waitReply = 1;
@@ -198,7 +205,6 @@ sendRegistration = function() {
             if(res.code != 1){
                 resetRecaptcha();
             }
-
            switch(String(res.code)) { 
                 case '2':
                 case '3':
@@ -260,48 +266,37 @@ sendRegistration = function() {
 }
 
 sendGuestLogin = function(){
-    var gname = $('#guest_username').val().trim(); // Trim leading/trailing spaces
+    var gname = $('#guest_username').val().trim();
     var ggender = $('#guest_gender').val();
     var gage = $('#guest_age').val();
-    var guestRecapt = getRecapt();
-
-    // Check if the name is empty
-    if(gname === ''){
-        callSaved(system.emptyField, 3);
-        return false;
-    }
-
-    // Check if the username contains only spaces
-    if (/^\s+$/.test(gname)){
+    var guestRecapt = getRecaptchaToken('guest');
+    // Check if the username is empty or just whitespace
+    if (!gname || /^\s+$/.test(gname)) {
         callSaved(system.emptyField, 3);
         $('#guest_username').val(""); // Clear input
         return false;
     }
-
-    // Check if recaptcha is required and missing
-    if (recapt > 0 && guestRecapt === ''){
+    // Check reCAPTCHA
+    if (recapt > 0 && guestRecapt === '') {
         callSaved(system.missingRecaptcha, 3);
         return false;
     }
-
-    // If all checks pass, proceed to send the AJAX request
-    if(waitReply === 0){
+    if (waitReply === 0) {
         waitReply = 1;
         $.post(FU_Ajax_Requests_File(), {
-			f:"system_login",
-			s:"guest_login",
+            f: "system_login",
+            s: "guest_login",
             guest_name: gname,
             guest_gender: ggender,
             guest_age: gage,
             recaptcha: guestRecapt
         }, function(response) {
-            // Reset recaptcha if necessary
-            if(response.code != 1){
-                resetRecaptcha();
+            // Reset guest reCAPTCHA only if needed
+            if (response.code != 1) {
+                resetRecaptcha('guest');
             }
-
-            // Handle different responses
-            switch(response.code) {
+            // Handle server response
+            switch (response.code) {
                 case 4:
                     callSaved(system.invalidUsername, 3);
                     $('#guest_username').val("");
@@ -313,23 +308,23 @@ sendGuestLogin = function(){
                 case 6:
                     callSaved(system.missingRecaptcha, 3);
                     break;
-                case 16:
-                    callSaved(system.maxReg, 3);
-                    break;
                 case 13:
                     callSaved(system.selAge, 3);
                     break;
                 case 14:
                     callSaved(system.error, 3);
                     break;
+                case 16:
+                    callSaved(system.maxReg, 3);
+                    break;
                 case 1:
-                    location.reload(); // Successful login
+                    location.reload(); // Success
                     break;
                 default:
                     callSaved(system.error, 3);
             }
 
-            waitReply = 0; // Reset waitReply flag
+            waitReply = 0;
         });
     }
     return false; // Ensure no form submission
@@ -406,21 +401,44 @@ hideCookieBar = function(){
 			$('.cookie_wrap').fadeOut(400);
 	});
 }
-resetRecaptcha = function(){
-	if(recapt > 0){
-		grecaptcha.reset();
-	}
+
+// Render Recaptcha for any form (login, register, etc.)
+function renderRecaptcha(form, elementId) {
+    if (typeof grecaptcha === 'undefined') return;  // Check if Recaptcha script is loaded
+    if (recaptchaWidgets[form] !== null) {
+        // If Recaptcha widget is already rendered, reset it
+        grecaptcha.reset(recaptchaWidgets[form]);
+    } else if (document.getElementById(elementId)) {
+        // If the element exists, render the Recaptcha
+        recaptchaWidgets[form] = grecaptcha.render(elementId, {
+            'sitekey': recaptKey // Ensure 'recaptKey' is set correctly
+        });
+    }
 }
-renderRecaptcha = function(){
-	if(recapt > 0){
-		grecaptcha.render("boom_recaptcha", { 'sitekey': recaptKey, });
-	}
+function resetRecaptcha(form) {
+    if (recaptchaWidgets[form] !== null) {
+        grecaptcha.reset(recaptchaWidgets[form]);
+    }
 }
-getRecapt = function(){
-	if(recapt > 0){
-		return grecaptcha.getResponse();
-	}
-	else {
-		return 'disabled';
-	}
+function getRecaptchaToken(form) {
+    if (recaptchaWidgets[form] !== null) {
+        const token = grecaptcha.getResponse(recaptchaWidgets[form]);
+        console.log(token); // Debugging: Log the token to check if it's being retrieved
+        return token;
+    }
+    return '';
 }
+// Ensure Recaptcha is rendered when the page loads for login form
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof grecaptcha !== 'undefined') {
+        renderRecaptcha('login', 'recaptcha_login');
+		renderRecaptcha('register', 'recaptcha_register');
+    }
+
+});
+// Example: Reset Recaptcha for login form after the page reloads
+window.addEventListener('load', function() {
+    resetRecaptcha('login');    // Reset the Recaptcha for the login form
+    resetRecaptcha('register'); // Reset the Recaptcha for the register form
+    resetRecaptcha('guest');    // Reset the Recaptcha for the guest form
+});

@@ -124,6 +124,7 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 		var bbfv = '<?php echo $bbfv; ?>';
 		var rtlMode = '<?php echo $brtl; ?>';
 		const csrf_token = '<?php echo CSRF_TOKEN; ?>';
+		const allow_OneSignal =  '<?php echo $data['allow_onesignal']; ?>';
 	<?php 
 	if($data['websocket_mode']==1){ ?>
         const s_protocol = '<?php echo $data['websocket_protocol']; ?>';
@@ -157,7 +158,6 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 		var uSound = '<?php echo $data['user_sound']; ?>';
 		var logged = 1;
 		var systemLoaded = 0;
-		var allow_OneSignal =  '<?php echo $data['allow_onesignal']; ?>';
 		var onesignal_web_push_id =  '<?php echo $data['onesignal_web_push_id']; ?>';
 		var allow_gift = '<?php echo $data['use_gift']; ?>';
     	var uQuote = <?php echo $data['allow_quote']; ?>;

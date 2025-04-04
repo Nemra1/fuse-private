@@ -30,35 +30,84 @@ $subscribers = getAllSubscribers($appId, $restApiKey);
 
 ?>
    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .pagination {
-            margin: 20px 0;
-        }
-        .pagination a {
-            margin: 0 5px;
-            text-decoration: none;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .pagination a.active {
-            background-color: #4CAF50;
-            color: white;
-            border: 1px solid #4CAF50;
-        }
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+/* Header styles */
+th {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+    font-size: 16px;
+    text-transform: uppercase;
+}
+
+/* Cell styles */
+td {
+    padding: 12px;
+    text-align: left;
+    font-size: 14px;
+    background-color: #f9f9f9;
+    color: black;          /* Text color set to black */
+    font-weight: bold;     /* Make text bold */
+}
+
+/* Hover effect for table rows */
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Pagination styles */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.pagination a {
+    padding: 10px 16px;
+    margin: 0 5px;
+    text-decoration: none;
+    background-color: #f1f1f1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    font-weight: bold;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Active page styles */
+.pagination a.active {
+    background-color: #4CAF50;
+    color: white;
+    border: 1px solid #4CAF50;
+}
+
+/* Hover effect for pagination links */
+.pagination a:hover {
+    background-color: #ddd;
+    color: #333;
+}
+
+/* Disabled page styles */
+.pagination a.disabled {
+    background-color: #f9f9f9;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
     </style>
 <div class="page_indata">
 	<div id="page_wrapper">
@@ -133,12 +182,12 @@ $subscribers = getAllSubscribers($appId, $restApiKey);
                                           if (isset($user_in['data']) && !is_null($user_in['data']) && isset($user_in['data']['user_name'])) {
                                                 echo htmlspecialchars($user_in['data']['user_name']);
                                             } else {
-                                                echo 'User is not exist Database';
+                                                echo 'User Deleted';
                                             }?>
                                             
                                         </td>
                                         <td><?php echo htmlspecialchars($subscriber['id']); ?></td>
-                                        <td><?php echo htmlspecialchars($subscriber['last_active']); ?></td>
+                                        <td><?php echo htmlspecialchars(chatDate($subscriber['last_active'])); ?></td>
                                         <td><?php echo htmlspecialchars($subscriber['device_type']); ?></td>
                                     </tr>
                                <?php 

@@ -609,6 +609,7 @@ saveSettings = function(source){
 			set_wall_delete: $('#set_wall_delete').val(),
 			set_member_delete: $('#set_member_delete').val(),
 			set_room_delete: $('#set_room_delete').val(),
+			set_online_forever: $('#online_forever').val(),
 			token: utk,
 			}, function(response) {
 				if(response == 1){

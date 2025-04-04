@@ -68,6 +68,8 @@
 					<div class="wow_form_fields recapcha_div">
 						<!-- Login Form Recaptcha -->
 						<div id="recaptcha_login" class="g-recaptcha" data-sitekey="<?php echo $data['recapt_key']; ?>"></div>
+						<a onclick="resetRecaptcha('login');" class="main" >Reset Recaptcha</a>
+						</br>
 					</div>
 					<?php } ?>
 					<?php } ?>
@@ -165,6 +167,8 @@
 					<?php if(boomRecaptcha()){ ?>
 						<!-- Registration Form Recaptcha -->
 						<div id="recaptcha_register" class="g-recaptcha" data-sitekey="<?php echo $data['recapt_key']; ?>"></div>
+						<a onclick="resetRecaptcha('register');" class="main" >Reset Recaptcha</a>
+						</br>
 					<?php } ?>
 					<div class="terms">
 						<input type="checkbox" name="accept_terms" id="accept_terms" onchange="activateButton(this)" />
@@ -221,7 +225,6 @@ $('#openLogin ,.another_login').click(() => {
 $('#openRegister').click(() => {
    $('#login_div').hide();
    $('#register_div').css('display', 'flex');
-
 })
 $('.dontHaveAnAccount p button').click(() => {
    $('#openRegister').click();

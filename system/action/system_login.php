@@ -74,7 +74,7 @@ if ($f == 'system_login') {
 			echo fu_json_results($res);
 			exit;
 		}
-		if($s == 'guest_login') {
+		if ($s == 'guest_login') {
 			$res = [
 				'code' => 1,
 				'guest_lang' => getLanguage(),
@@ -83,32 +83,43 @@ if ($f == 'system_login') {
 			// Check for conditions that prevent login
 			if (!allowGuest()) {
 				$res['code'] = 0;
-			}
-			if (!boomCheckRecaptcha()) {
-				$res['code'] = 6; // Recaptcha verification failed
+				$res['msg'] = 'Guest login is not allowed.';
 			}
 			if (!okGuest($res['guest_ip'])) {
 				$res['code'] = 16; // Prevent new guest login if already exists
+				$res['msg'] = 'A guest is already logged in from this IP address.';
 			}
 			// Sanitize and validate user input
 			$res['guest_name'] = trim(escape($_POST["guest_name"] ?? ''));
 			$res['guest_gender'] = trim(escape($_POST["guest_gender"] ?? ''));
 			$res['guest_age'] = trim(escape($_POST["guest_age"] ?? ''));
+			$res['recaptcha'] = trim(escape($_POST["recaptcha"] ?? ''));
+			if (boomRecaptcha()) {
+				// Validate reCAPTCHA
+				if ($res['recaptcha'] && !boomCheckRecaptcha($res['recaptcha'])) {
+					$res['code'] = 6; // Recaptcha verification failed
+					$res['msg'] = 'Please complete the reCAPTCHA.';
+				}
+			}
 			// Name validation
 			if (!validName($res['guest_name'])) {
 				$res['code'] = 4; // Invalid name
+				$res['msg'] = 'Invalid name. Please use a valid name.';
 			}
 			// Username availability check
 			if (!boomUsername($res['guest_name'])) {
 				$res['code'] = 5; // Invalid username
+				$res['msg'] = 'This username is already taken or invalid.';
 			}
 			// Guest form validation
 			if (guestForm()) {
 				if (!validAge($res['guest_age'])) {
 					$res['code'] = 13; // Invalid age
+					$res['msg'] = 'Please enter a valid age.';
 				}
 				if (!validGender($res['guest_gender'])) {
 					$res['code'] = 14; // Invalid gender
+					$res['msg'] = 'Please select a valid gender.';
 				}
 			}
 			// Only proceed if no errors
@@ -133,12 +144,21 @@ if ($f == 'system_login') {
 				// Handle failure to insert user
 				if (empty($user)) {
 					$res['code'] = 2; // Database insert failed
+					$res['msg'] = 'Failed to create guest user. Please try again.';
+				} else {
+					// Success: Guest user created
+					$res['code'] = 200; // Successful guest creation
+					$res['msg'] = 'Guest user successfully created.';
+					$res['guest_id'] = $user['user_id']; // Assuming $user contains the newly created user
+					$res['reload_delay'] = 2; // Delay before reload
 				}
 			}
+
 			// Send response as JSON
 			echo fu_json_results($res);
 			exit;
 		}
+
 		if ($s == 'system_register') {
 			$user_ip = getIp();
 			$user_name = trim(escape($_POST["username"] ?? ''));
@@ -147,7 +167,7 @@ if ($f == 'system_login') {
 			$user_email = trim(escape($_POST["email"] ?? ''));
 			$user_gender = escape($_POST["gender"] ?? '');
 			$user_age = escape($_POST["age"] ?? '');
-			$recaptcha = isset($_POST['recaptcha']) ? $_POST['recaptcha'] : '';
+			$res['recaptcha'] = isset($_POST['recaptcha']) ? $_POST['recaptcha'] : '';
 			$referrer_id = isset($_POST['referrer_id']) ? intval(escape($_POST['referrer_id'])) : NULL;
 			// Check for empty fields
 			if (empty($user_password) || empty($user_name) || empty($user_email)) {
@@ -163,12 +183,12 @@ if ($f == 'system_login') {
 				echo fu_json_results($res);
 				exit;
 			}
-			// Validate reCAPTCHA
-			if ($recaptcha && !boomCheckRecaptcha($recaptcha)) {
-				$res['code'] = 7;  // Invalid reCAPTCHA
-				$res['msg'] = 'Please complete the reCAPTCHA';
-				echo fu_json_results($res);
-				exit;
+			if (boomRecaptcha()) {
+				// Validate reCAPTCHA
+				if ($res['recaptcha'] && !boomCheckRecaptcha($res['recaptcha'])) {
+					$res['code'] = 6; // Recaptcha verification failed
+					$res['msg'] = 'Please complete the reCAPTCHA.';
+				}
 			}
 			// Further validation checks (username, email, password, etc.)
 			if (!validName($user_name)) {

@@ -17,9 +17,11 @@ function like_profile($target){
 		    $current_time = time();
 		    $inactive_time = 60; // 1 minute
             if(($current_time - $last_active) > $inactive_time){
-		        // User is inactive, send a notification
-		        $notification_msg = $data['user_name'].' like Your Profile 💖';
-		        sendNotification($target['push_id'], $notification_msg);
+				if($data['allow_onesignal']==1){
+					// User is inactive, send a notification
+					$notification_msg = $data['user_name'].' like Your Profile 💖';
+					sendNotification($target['push_id'], $notification_msg);					
+				}
 		    }      	
     }else{
         $db->where('hunter', $me);
@@ -118,9 +120,11 @@ if ($f == "action_member") {
     		    $current_time = time();
     		    $inactive_time = 60; // 1 minute
                 if(($current_time - $last_active) > $inactive_time){
-    		        // User is inactive, send a notification
-    		        $notification_msg = $data['user_name'].' '.$lang['gold_share'].intval($goldAmount);
-    		        sendNotification($receiver['push_id'], $notification_msg);
+					if($data['allow_onesignal']==1){
+						// User is inactive, send a notification
+						$notification_msg = $data['user_name'].' '.$lang['gold_share'].intval($goldAmount);
+						sendNotification($receiver['push_id'], $notification_msg);
+					}
     		    }                 
                 $data_array['status'] = 200; // Success
             } else {

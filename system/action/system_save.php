@@ -112,8 +112,8 @@ if ($section == "display" && boomAllow(100)) {
         $theme = trim(escape($_POST["set_main_theme"]));
         // Validate login page filename
         $login_page_path = BOOM_PATH . "/control/login/" . $login_page . "/login.php";
-        // Check if the login page file exists and is within the expected directory
-        if (file_exists($login_page_path) && strpos(realpath($login_page_path), BOOM_PATH . "/control/login/") === 0) {
+        // Check if the login page file exists
+        if (file_exists($login_page_path)) {
             // Prepare data for update
             $data_query = array(
                 "login_page" => $login_page,

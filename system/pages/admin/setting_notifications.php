@@ -1,6 +1,4 @@
 <?php
-
-
 require __DIR__ . "../../../config_session.php";
 if (!boomAllow(100)) {
     exit;
@@ -94,8 +92,7 @@ $subscribers = getAllSubscribers($appId, $restApiKey);
 							<div class="setting_element">
 								<p class="label">Enable Push Notifications</p>
 								<select id="allow_onesignal">
-									<option value="1">yes</option>
-									<option value="0">no</option>
+								 <?php echo yesNo($data["allow_onesignal"]); ?>
 								</select>
 
 							</div>

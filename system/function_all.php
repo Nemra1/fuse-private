@@ -1511,13 +1511,34 @@ function systemUnban($user){
 	$mysqli->query("UPDATE boom_users SET user_banned = 0, ban_msg = '', user_action = user_action + 1 WHERE user_id = '{$user['user_id']}'");
 	$mysqli->query("DELETE FROM boom_banned WHERE ip = '{$user['user_ip']}' OR ban_user = '{$user['user_id']}'");
 }
-function systemMute($user, $delay, $reason = ''){
-	global $mysqli;
-	$mute_end = max($user['user_mute'], calMinutesUp($delay));
-	$mysqli->query("UPDATE boom_users SET user_mute = '$mute_end', mute_msg = '$reason', user_regmute = 0, user_mmute = 0, room_mute = 0 WHERE user_id = '{$user['user_id']}'");
-	clearNotifyAction($user['user_id'], 'mute');
-	muteLog($user);
+function systemMute($user, $delay, $reason = '') {
+    global $mysqli;
+    // Validate inputs to prevent invalid data
+    if (!isset($user['user_id']) || !is_numeric($user['user_id'])) {
+        return false; // Invalid user ID
+    }
+    if (!is_numeric($delay) || $delay < 0) {
+        return false; // Invalid delay value
+    }
+    // Calculate the mute end time based on the current mute time and the delay
+    $mute_end = max($user['user_mute'], calMinutesUp($delay));
+    // Use a safe, prepared query to update user mute status
+    $system_mute = cl_update_user_data($user['user_id'], array(
+        'user_mute' => $mute_end,
+        'mute_msg' => $reason,
+        'user_regmute' => 0,
+        'user_mmute' => 0,
+        'room_mute' => 0,
+    ));
+    // If update is successful, process further actions
+    if($system_mute) {
+        clearNotifyAction($user['user_id'], 'mute');
+        muteLog($user);        
+        return true; // Successfully muted
+    }
+    return false; // Failed to mute the user
 }
+
 
 function systemUnmute($user){
 	global $mysqli;
@@ -2470,55 +2491,51 @@ function boomUsername($name){
 }
 function checkFlood() {
     global $data;
-
     // Check if flood prevention is allowed based on user permissions
     if (boomAllow($data['can_flood'])) {
-        return false;
+        return false; // Allow flooding if user has permission
     }
-
-    // Define constants
-    $floodInterval = 2; // Interval in seconds to check for flooding
+    // Define flood interval in seconds (how long to wait before sending another message)
+    $floodInterval = 2; // 2 seconds between messages
+    // Define the session prefix to ensure uniqueness for each user
     $sessionPrefix = BOOM_PREFIX;
     $currentTime = time();
-
     // Initialize session variables if not set
     if (!isset($_SESSION[$sessionPrefix . 'last'], $_SESSION[$sessionPrefix . 'flood'])) {
         $_SESSION[$sessionPrefix . 'last'] = $currentTime;
         $_SESSION[$sessionPrefix . 'flood'] = 0;
     }
-
-    // Retrieve session variables
+    // Retrieve the last message time and flood count from session
     $lastActionTime = $_SESSION[$sessionPrefix . 'last'];
     $floodCount = $_SESSION[$sessionPrefix . 'flood'];
-
+    // Check if the user is attempting to send a message too quickly
     if ($lastActionTime >= $currentTime - $floodInterval) {
-        // Increment flood count and update last action time
+        // Increment the flood count since the user is sending messages too frequently
         $_SESSION[$sessionPrefix . 'last'] = $currentTime;
         $_SESSION[$sessionPrefix . 'flood'] = ++$floodCount;
-
-        // Check if flood limit has been reached
+        // If the flood count exceeds the max allowed, take action
         if ($floodCount >= $data['max_flood']) {
-            // Handle flood action based on configuration
+            // Perform actions based on the flood configuration
             switch ($data['flood_action']) {
                 case 1:
-                    systemFloodKick($data);
+                    systemFloodKick($data); // Kick the user
                     return true;
                 case 2:
-                    systemFloodMute($data);
+                    systemFloodMute($data); // Mute the user
                     return true;
                 default:
-                    // If the action is not defined, return false
-                    return false;
+                    return false; // No action taken
             }
         }
     } else {
-        // Reset flood count and update last action time
+        // Reset flood count if the user is allowed to send a message
         $_SESSION[$sessionPrefix . 'last'] = $currentTime;
         $_SESSION[$sessionPrefix . 'flood'] = 0;
     }
-
-    return false;
+    return false; // No flood detected
 }
+
+
 
 function boomUseSocial(){
 	global $data;

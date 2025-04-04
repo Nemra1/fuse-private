@@ -18,7 +18,22 @@ require("database.php");
 require("variable.php");
 require("function.php");
 require("function_all.php");
-
+// Enable caching in production mode
+if ($cody['dev_mode'] === 1) {
+	header("Cache-Control: no-cache, no-store, must-revalidate");
+	header("Pragma: no-cache");
+	header("Expires: 0");
+} else {
+	header("Cache-Control: public, max-age=31536000, immutable"); // Cache for production
+}
+if($cody['secure_header'] === 1) {
+	// Security headers
+	//header("X-Content-Type-Options: nosniff");
+	////header("X-Frame-Options: DENY"); // Or use SAMEORIGIN if you need some frames
+	//header("X-XSS-Protection: 1; mode=block");
+	// Improved Content-Security-Policy
+	//header("Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline';");
+}
 if ($check_install != 1) {
     $chat_install = 2;
 } else {

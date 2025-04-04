@@ -466,53 +466,70 @@ function userPostChat($content, $custom = array()){
 
 function userPostChatFile($content, $file_name, $type, $custom = array()){
     global $mysqli, $data;
+    
     // Default custom values
     $def = array(
         'type' => 'public__message',
-        'file2' => '', // Assuming this is an optional additional file
+        'file2' => '', // Optional additional file
     );
     $c = array_merge($def, $custom);
+
     // Sanitize input variables
-    $content = escape($content); 
+    $content = $content; 
     $file_name = escape($file_name);
     $type = escape($type);
+
     // Prepare chat message insert
     $stmt = $mysqli->prepare("INSERT INTO `boom_chat` (post_date, user_id, post_message, post_roomid, type, file) VALUES (?, ?, ?, ?, ?, ?)");
     if ($stmt === false) {
         return false; // Error preparing the query
     }
+
     $time_now = time();
     $file_placeholder = 1; // Assuming file exists, this can be set dynamically
-    $stmt->bind_param("iisssi", $time_now, $data['user_id'], $content, $data['user_roomid'], $c['type'], $file_placeholder);
+
+    // Assign values to variables first
+    $user_id = $data['user_id'];
+    $user_roomid = $data['user_roomid'];
+    $message_type = $c['type'];
+
+    $stmt->bind_param("iisssi", $time_now, $user_id, $content, $user_roomid, $message_type, $file_placeholder);
+    
     if (!$stmt->execute()) {
         $stmt->close();
         return false; // Error executing the query
     }
+
     $rel = $stmt->insert_id;
     $stmt->close();
+
     // Perform chat action (notify about new message)
-    chatAction($data['user_roomid']);
+    chatAction($user_roomid);
+
     // Handle file upload insert
     $stmt_upload = $mysqli->prepare("INSERT INTO `boom_upload` (file_name, date_sent, file_user, file_zone, file_type, relative_post) VALUES (?, ?, ?, ?, ?, ?)");
     if ($stmt_upload === false) {
         return false; // Error preparing the file insert query
     }
-    // Insert file info into boom_upload table
-    if ($c['file2'] != '') {
-        $stmt_upload->bind_param("siisssi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel, $c['file2']);
+
+    // Assign values to variables before binding
+    $file_zone = 'chat';
+    $file2 = $c['file2'];
+
+    if (!empty($file2)) {
+        $stmt_upload->bind_param("siissi", $file_name, $time_now, $user_id, $file_zone, $type, $rel);
     } else {
-        $stmt_upload->bind_param("siissi", $file_name, $time_now, $data['user_id'], $file_zone = 'chat', $type, $rel);
+        $stmt_upload->bind_param("siissi", $file_name, $time_now, $user_id, $file_zone, $type, $rel);
     }
+
     if (!$stmt_upload->execute()) {
         $stmt_upload->close();
         return false; // Error executing the query
     }
+
     $stmt_upload->close();
     return true; // Success
 }
-
-
-
 
 function systemPostChat($room, $content, $custom = array()){
     global $mysqli, $data;
@@ -906,46 +923,28 @@ function boomListNotify($list, $type, $custom = array()) {
     updateListNotify($list);
     return true;
 }
-function boomNotify($type, $custom = array()) {
-    global $mysqli, $data;
-    $def = array(
-        'hunter'   => $data['system_id'],
-        'target'   => 0,
-        'room'     => $data['user_roomid'],
-        'rank'     => 0,
-        'delay'    => 0,
-        'reason'   => '',
-        'source'   => 'system',
-        'sourceid' => 0,
-        'custom'   => '',
-        'custom2'  => '',
-        'icon'     => '',
-    );
-    $c = array_merge($def, $custom);
-    // Validate target ID
-    $c['target'] = intval($c['target']);
-    if ($c['target'] <= 0) {
-        return false;
-    }
-    // Prepare the SQL statement
-    $stmt = $mysqli->prepare("
-        INSERT INTO boom_notification 
-        (notifier, notified, notify_type, notify_date, notify_source, notify_id, notify_rank, notify_delay, notify_reason, notify_custom, notify_custom2, notify_icon) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
-    $current_time = time();
-    // Bind the parameters
-    $stmt->bind_param(
-        "iiisisiissss", 
-        $c['hunter'], $c['target'], $type, $current_time, 
-        $c['source'], $c['sourceid'], $c['rank'], $c['delay'], 
-        $c['reason'], $c['custom'], $c['custom2'], $c['icon']
-    );
-    $stmt->execute();
-    $stmt->close();
-    // Update notifications
-    updateNotify($c['target']); 
-    return true;
+function boomNotify($type, $custom = array()){
+	global $mysqli, $data;
+	$def = array(
+		'hunter'=> $data['system_id'],
+		'target'=> 0,
+		'room'=> $data['user_roomid'],
+		'rank'=> 0,
+		'delay'=> 0,
+		'reason'=> '',
+		'source'=> 'system',
+		'sourceid'=> 0,
+		'custom' => '',
+		'custom2' => '',
+		'icon' => '',
+	);
+	$c = array_merge($def, $custom);
+	if($c['target'] == 0){
+		return false;
+	}
+	$mysqli->query("INSERT INTO boom_notification ( notifier, notified, notify_type, notify_date, notify_source, notify_id, notify_rank, notify_delay, notify_reason, notify_custom, notify_custom2, notify_icon) 
+	VALUE ('{$c['hunter']}', '{$c['target']}', '$type', '" . time() . "', '{$c['source']}', '{$c['sourceid']}', '{$c['rank']}', '{$c['delay']}', '{$c['reason']}', '{$c['custom']}', '{$c['custom2']}' , '{$c['icon']}')");
+	updateNotify($c['target']); 
 }
 function updateNotify($id){
 	global $mysqli;
@@ -1370,7 +1369,6 @@ function createLog($data, $post, $ignore = ''){
 		$report = 1;
 		$m++;
 	}
-	
 	if(useFrame()) {
 		if (!empty($post['photo_frame'])) {
 			// Sanitize and validate the photo_frame input
@@ -1885,23 +1883,31 @@ function userUnkick($user){
 			userUnmute($data);
 		}
 	}*/
-function checkMute($data){
-	$r = 'c';
-	if(isMuted($data)){
-		$r .= 'mws';
-		if(!canPrivate()){
-			$r .= 'p';
-		}
-		return $r;
-	}
-	if(!canPrivate()){
-		$r .= 'p';
-	}
-	if(isMainMuted($data) || isRoomMuted($data) || !canMain()){
-		$r .= 'm';
-	}
-	return $r;
+function checkMute($data) {
+    // Initialize the mute flags as an associative array
+    $muteFlags = [
+        'isMuted' => false,        // Whether the user is muted
+        'canPrivate' => true,      // Whether the user can send private messages
+        'isMainMuted' => false,    // Whether the user is muted in the main room
+        'isRoomMuted' => false     // Whether the user is muted in the room
+    ];
+    // Check if the user is globally muted
+    if (isMuted($data)) {
+        $muteFlags['isMuted'] = true;
+        $muteFlags['isRoomMuted'] = true; // Assuming room mute is also part of global mute
+    }
+    if (!canPrivate()) {
+        $muteFlags['canPrivate'] = false; // User cannot send private messages
+    }
+	
+    // Check if the user is muted in the main room
+    if (isMainMuted($data) || isRoomMuted($data) || !canMain()) {
+        $muteFlags['isMainMuted'] = true;
+    }
+    return $muteFlags;
 }
+
+
 function muted(){
 	global $data;
 	if(isMuted($data) || isBanned($data) || isKicked($data) || outChat($data) || isRegmute($data) || guestMuted()){
@@ -2222,6 +2228,9 @@ function getMutedIcon($user, $c){
 	else if(isRoomMuted($user)){
 		return '<img title="' . $lang['muted'] . '" class="' . $c . '" src="default_images/actions/room_muted.svg"/>';
 	}
+	else if(isPrivateMuted($user)){
+		return '<img title="' . $lang['private_muted'] . '" class="' . $c . '" src="default_images/actions/private_mute.png"/>';
+	}	
 	else {
 		return '';
 	}
@@ -2765,7 +2774,7 @@ function canEditRoom(){
 
 function canPrivate(){
 	global $cody, $data;
-	if(boomAllow($cody['allow_private']) && !isPrivateMuted($data)){
+	if(boomAllow($data['allow_private']) && !isPrivateMuted($data)){
 		return true;
 	}
 }
@@ -3958,10 +3967,11 @@ function systemGhost($user, $delay){
 
 function systemUnghost($user){
     global $mysqli;
+	$ghost_value = 0;
     // Prepare the query to set user_ghost to 0
     $stmt = $mysqli->prepare("UPDATE boom_users SET user_ghost = ? WHERE user_id = ?");
     // Bind parameters (0 for un-ghosting, user_id as integer)
-    $stmt->bind_param('ii', $ghost_value = 0, $user['user_id']);
+    $stmt->bind_param('ii', $ghost_value, $user['user_id']);
     // Execute the query
     $stmt->execute();
     // Optionally update the Redis cache

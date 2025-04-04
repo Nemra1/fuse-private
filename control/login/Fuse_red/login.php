@@ -50,7 +50,7 @@
 				</div>
 			</div>
 			<div class="formDiv">
-				<div id="login" method="post">
+				<form id="login_form_box" method="post">
 					<p class="title"><?php echo $lang['login']; ?></p>
 					<?php if(bridgeMode(0)){ ?>
 					<div class="wow_form_fields">
@@ -64,6 +64,12 @@
 						</div>
 						<input id="user_password"  name="password" type="password" autocomplete="off" />
 					</div>
+					<?php if(boomRecaptcha()){ ?>
+					<div class="wow_form_fields recapcha_div">
+						<!-- Login Form Recaptcha -->
+						<div id="recaptcha_login" class="g-recaptcha" data-sitekey="<?php echo $data['recapt_key']; ?>"></div>
+					</div>
+					<?php } ?>
 					<?php } ?>
 					<div class="forgot_password">
 						<div class="terms forgotPass-terms">
@@ -91,7 +97,7 @@
 					<?php } ?>					
 
 					
-				</div>
+				</form>
 				<?php if(boomUseSocial() && !embedMode()){ ?>
 				<div class="social_btns">
 				<p><span></span><?php echo $lang['connect_with']; ?><span></span></p>
@@ -156,7 +162,10 @@
 								?>
 						</select>
 					</div>
-					<div class="g-recaptcha" data-sitekey="<?php echo $data['recapt_key']; ?>"></div>
+					<?php if(boomRecaptcha()){ ?>
+						<!-- Registration Form Recaptcha -->
+						<div id="recaptcha_register" class="g-recaptcha" data-sitekey="<?php echo $data['recapt_key']; ?>"></div>
+					<?php } ?>
 					<div class="terms">
 						<input type="checkbox" name="accept_terms" id="accept_terms" onchange="activateButton(this)" />
 						<label for="accept_terms">
@@ -212,6 +221,7 @@ $('#openLogin ,.another_login').click(() => {
 $('#openRegister').click(() => {
    $('#login_div').hide();
    $('#register_div').css('display', 'flex');
+
 })
 $('.dontHaveAnAccount p button').click(() => {
    $('#openRegister').click();

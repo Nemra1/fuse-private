@@ -102,7 +102,8 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
 <?php } ?>
 <?php if(boomRecaptcha() && !boomLogged()){ ?>
-<script src='https://google.com/recaptcha/api.js'></script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
 <?php } ?>
 <?php if(boomLogged()){ ?>
 <link rel="stylesheet" type="text/css" href="system/gifts/files/gifts.css<?php echo $bbfv; ?>" />

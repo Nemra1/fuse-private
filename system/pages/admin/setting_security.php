@@ -1,7 +1,5 @@
 <?php
 require __DIR__ . "../../../config_admin.php";
-
-
 if(!boomAllow(100)){
 	die();
 }
@@ -26,9 +24,8 @@ if(!boomAllow(100)){
 						<select id="set_use_recapt">
 							<option <?php echo selCurrent($data['use_recapt'], 0); ?> value="0"><?php echo $lang['none']; ?></option>
 							<option <?php echo selCurrent($data['use_recapt'], 1); ?> value="1">Google reCaptcha</option>
-							<option <?php echo selCurrent($data['use_recapt'], 2); ?> value="2">hCaptcha</option>
-							<option <?php echo selCurrent($data['use_recapt'], 3); ?> value="3">Cloudflare Turnstile</option>
 						</select>
+						<a target="_blank" href="https://www.google.com/recaptcha/admin" class="main">For Google Recaptcha Keys click Here</a>
 					</div>
 					<div class="setting_element">
 						<p class="label"><?php echo $lang['recapt_site']; ?></p>

@@ -24,7 +24,6 @@ if(isset($_POST['target'])){
 }
 ?>
 <div class="pad_box" style="overflow: auto;padding: 5px;" id="gift_modal">
-      <div class="alert hidden" id="gift_alert"></div>
 	<div class="boom_form">
         <div class="items-container gifts-container-modal" id="gifts-container">
             <?php

@@ -2,6 +2,8 @@
 	<form id="add_new_bot_form">
 		<div class="boom_form">
 			<input type="hidden" name="token" value="<?php echo setToken(); ?>" />
+			<input type="hidden" name="f" value="bot_speakers" />
+			<input type="hidden" name="s" value="add_bot" />
 			<div class="setting_element">
             <label for="fuse_bot_id" class="label">Select Speaker Bot</label>
             <select class="form-control" id="fuse_bot_id" name="fuse_bot_id">
@@ -56,7 +58,7 @@ $(document).on('click', '#add_bot_form', function(e) {
     }
     $button.prop('disabled', true); // Disable the button to prevent double click
     var data = new FormData($('#add_new_bot_form')[0]);
-    var url = '/requests.php?f=bot_speakers&s=add_bot';
+    var url = FU_Ajax_Requests_File();
     $.ajax({
         url: url,
         data: data,
@@ -66,11 +68,11 @@ $(document).on('click', '#add_bot_form', function(e) {
         contentType: false,
         processData: false,
         success: function(data) {
-            if (data.status == 200) {
-                callSaved(system.saved, 1);
+            if (data.status == 201) {
+                callSaved(data.message, 1);
                 hideModal();
             } else {
-                callSaved(system.error, 3);
+                callSaved(data.message, 3);
             }
         },
         complete: function() {

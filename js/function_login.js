@@ -99,10 +99,12 @@ hideArrow = function(d){
 		$("#last_active .left-arrow, #last_active .right-arrow").show();	
 	}
 }
-sendLogin = function() {
+sendLogin = async function() {
     var upass = $('#user_password').val();
     var uuser = $('#user_username').val();
-    let loginToken = getRecaptchaToken('login');  // Get the Recaptcha token for the login form
+	// Get the Recaptcha token for the login form
+   let loginToken = await getRecaptchaToken('login');
+	console.log(loginToken);
     if (upass == '' || uuser == '') {
         callSaved(system.emptyField, 3);
         return false;
@@ -131,22 +133,22 @@ sendLogin = function() {
                 s: "member_login",
                 password: upass,
                 username: uuser,
-                recaptcha_response: loginToken  // Include Recaptcha token in the request
+                recaptcha: loginToken  // Include Recaptcha token in the request
             }, function(res) {
                 if (res.code == 1) {
                     callSaved(system.badLogin, 3);
                     $('#user_password').val("");
-                }
-                else if (res.code == 2) {
+                }else if (res.code == 2) {
                     callSaved(system.badLogin, 3);
                     $('#user_password').val("");
-                }
-                else if (res.code == 3) {
+                }else if (res.code == 3) {
                     callSaved(res.msg, 1);
                     setTimeout(function() {
                         location.reload(true);  // Reload the page after a successful login
                     }, res.reload_delay || 2000); // Default delay if not specified
-                }
+                }else if (res.code == 6) {
+					callSaved(res.msg, 3);
+				}
                 waitReply = 0;
             });
         } else {
@@ -155,13 +157,13 @@ sendLogin = function() {
     }
 }
 
-sendRegistration = function() {
+sendRegistration = async function() {
     var upass = $('#reg_password').val().trim(); // Trim inputs to remove spaces
     var uuser = $('#reg_username').val().trim();
     var uemail = $('#reg_email').val().trim();
     var ugender = $('#login_select_gender').val();
     var uage = $('#login_select_age').val();
-	let regRecapt = getRecaptchaToken('register');
+	let regRecapt = await getRecaptchaToken('register');
     // Validate empty fields
     if(upass === '' || uuser === '' || uemail === ''){
         callSaved(system.emptyField, 3);
@@ -265,15 +267,15 @@ sendRegistration = function() {
     return false; // Prevent form submission
 }
 
-sendGuestLogin = function(){
-    var gname = $('#guest_username').val().trim();
-    var ggender = $('#guest_gender').val();
-    var gage = $('#guest_age').val();
-    var guestRecapt = getRecaptchaToken('guest');
+sendGuestLogin = async function(){
+    var gname = $('#guest_username').val().trim(); // Get guest username
+    var ggender = $('#guest_gender').val(); // Get guest gender
+    var gage = $('#guest_age').val(); // Get guest age
+    var guestRecapt = await  getRecaptchaToken('guest'); // Get reCAPTCHA token
     // Check if the username is empty or just whitespace
     if (!gname || /^\s+$/.test(gname)) {
         callSaved(system.emptyField, 3);
-        $('#guest_username').val(""); // Clear input
+        $('#guest_username').val(""); // Clear input field
         return false;
     }
     // Check reCAPTCHA
@@ -281,54 +283,65 @@ sendGuestLogin = function(){
         callSaved(system.missingRecaptcha, 3);
         return false;
     }
+    // Proceed only if we are not waiting for a response
     if (waitReply === 0) {
         waitReply = 1;
+        // Perform the AJAX request to PHP
         $.post(FU_Ajax_Requests_File(), {
-            f: "system_login",
-            s: "guest_login",
-            guest_name: gname,
-            guest_gender: ggender,
-            guest_age: gage,
-            recaptcha: guestRecapt
+            f: "system_login", // Function identifier
+            s: "guest_login", // Action identifier
+            guest_name: gname, // Guest name
+            guest_gender: ggender, // Guest gender
+            guest_age: gage, // Guest age
+            recaptcha: guestRecapt // reCAPTCHA response
         }, function(response) {
-            // Reset guest reCAPTCHA only if needed
+            // Reset guest reCAPTCHA if needed
             if (response.code != 1) {
                 resetRecaptcha('guest');
             }
-            // Handle server response
-            switch (response.code) {
-                case 4:
+            // Handle the server response
+            switch (String(response.code)) { 
+                case '4': // Invalid username
                     callSaved(system.invalidUsername, 3);
-                    $('#guest_username').val("");
+                    $('#guest_username').val(""); // Clear username input
                     break;
-                case 5:
+                case '5': // Username already exists
                     callSaved(system.usernameExist, 3);
-                    $('#guest_username').val("");
+                    $('#guest_username').val(""); // Clear username input
                     break;
-                case 6:
+                case '6': // Missing reCAPTCHA
                     callSaved(system.missingRecaptcha, 3);
                     break;
-                case 13:
+                case '13': // Invalid age
                     callSaved(system.selAge, 3);
                     break;
-                case 14:
+                case '14': // Invalid gender
                     callSaved(system.error, 3);
                     break;
-                case 16:
+                case '16': // Max guest registrations reached
                     callSaved(system.maxReg, 3);
                     break;
-                case 1:
-                    location.reload(); // Success
+                case '200': // Successful guest login
+                    callSaved(response.msg, 1);
+                    setTimeout(function() {
+                        location.reload(true);  // Reload the page after a successful login
+                    }, response.reload_delay || 2000); // Default delay of 2 seconds if not specified
                     break;
-                default:
+                default: // Any other error
                     callSaved(system.error, 3);
             }
 
-            waitReply = 0;
+            waitReply = 0; // Reset the wait state
+        }).fail(function() {
+            // Handle any AJAX errors
+            callSaved(system.error, 3);
+            waitReply = 0; // Reset the wait state
         });
     }
-    return false; // Ensure no form submission
+
+    return false; // Prevent form submission
 }
+
 
 sendRecovery = function() {
     var rEmail = $('#recovery_email').val().trim(); // Trim input to remove spaces

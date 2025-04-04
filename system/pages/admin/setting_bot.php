@@ -131,24 +131,24 @@ function bot_list_room(){
 			});
 		}
 	});   
-getBot_info = function(id,room_id){
- 		var bot_id = id;
-		if(bot_id == 0){
-			return false;
-		}
-		else {
-			$.post(FU_Ajax_Requests_File(), {
-			    f:'bot_speakers',
-			    s:'admin_bot_info',
-				bot_id: bot_id,
-				group_id :room_id,
-				token: utk,
-				}, function(response) {
-					showModal(response, 500);
-			});
-		}
-   
-}
+	getBot_info = function(id,room_id){
+			var bot_id = id;
+			if(bot_id == 0){
+				return false;
+			}
+			else {
+				$.post(FU_Ajax_Requests_File(), {
+					f:'bot_speakers',
+					s:'admin_bot_info',
+					bot_id: bot_id,
+					group_id :room_id,
+					token: utk,
+					}, function(response) {
+						showModal(response, 500);
+				});
+			}
+	   
+	}
 	$(document).on('change', '#fuse_bot_delay', function(){
 		var bot_delay = $(this).val();
 		if(bot_delay == 0){
@@ -159,6 +159,7 @@ getBot_info = function(id,room_id){
 			    f:'bot_speakers',
 			    s:'update_bot_set',
 				bot_delay: $(this).val(),
+				allow_bot: $('#allow_bot').val(),
 				token: utk,
 				}, function(response) {
 				callSaved(system.saved, 1);
@@ -176,36 +177,41 @@ getBot_info = function(id,room_id){
 				callSaved(system.saved, 1);
 			});
 	}); 	
-createBot = function(){
-	$.post(FU_Ajax_Requests_File(), {
-	    f:'bot_speakers',
-		s:'add_bot_modal',			    
-		token: utk,
-		}, function(response) {
-			showModal(response, 500);
-	});	
-}
-del_bot = function(id){
-        var elm_id = $("#bot_line_"+id);
- 		var bot_id = id;
-		if(bot_id == 0){
-			return false;
-		}
-		else {
-			$.post(FU_Ajax_Requests_File(), {
-        	    f:'bot_speakers',
-        		s:'del_bot',			    
-				bot_id: bot_id,
-				token: utk,
-				}, function(res){
-				    if(res.status ==200){
-				        callSaved(system.saved, 1);
-				        elm_id.remove()
-				    }else{
-				        callSaved(system.error, 3); 
-				    }
-			});
-		}
-   
-}
+	createBot = function(){
+		$.post(FU_Ajax_Requests_File(), {
+			f:'bot_speakers',
+			s:'add_bot_modal',			    
+			token: utk,
+			}, function(response) {
+				showModal(response.content, 500);
+		});	
+	}
+del_bot = function(id) {
+    var elm_id = $("#bot_line_" + id);
+    var bot_id = id;
+    // Early exit if bot_id is invalid
+    if (bot_id === 0 || isNaN(bot_id)) {
+        console.error('Invalid bot ID');
+        return false;
+    }
+    // Send the request to the server
+    $.post(FU_Ajax_Requests_File(), {
+        f: 'bot_speakers',
+        s: 'del_bot',
+        bot_id: bot_id,
+        token: utk  // CSRF token
+    }, function(res) {
+        if (res.status == 200) {
+            callSaved(system.saved, 1);
+            elm_id.remove(); // Remove the element from DOM
+        } else {
+            callSaved(system.error, 3); 
+        }
+    }).fail(function(xhr, status, error) {
+        // Handle AJAX failure
+        console.error("AJAX error: " + status + " - " + error);
+        callSaved(system.error, 3); 
+    });
+};
+
 </script>

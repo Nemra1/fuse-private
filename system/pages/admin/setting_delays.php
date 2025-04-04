@@ -43,6 +43,12 @@ echo elementTitle($lang["delay_settings"]);
                       </div>";
             }
             ?>
+			<div class="setting_element">
+				<p class="label">Keep all users online <span class="badge">New</span></p>
+				<select id="online_forever">
+				<?php echo yesNo($data["online_forever"]); ?>
+				</select>
+			</div>
             <button data="delays" type="button" class="save_admin reg_button theme_btn">
                 <i class="ri-save-line"></i> <?php echo htmlspecialchars($lang["save"], ENT_QUOTES, 'UTF-8'); ?>
             </button>

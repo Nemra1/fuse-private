@@ -647,10 +647,11 @@ function postPrivate($from, $to, $content, $snum = ''){
             $last_active = intval($rec_data['last_active']);
             $current_time = time();
             $inactive_time = 60; // 1 minute threshold
-
             if (($current_time - $last_active) > $inactive_time) {
-                $notification_msg = 'You have a message from 🧐 ' . htmlspecialchars($from_data['user_name'], ENT_QUOTES, 'UTF-8');
-                sendNotification($rec_data['push_id'], $notification_msg);
+				if($data['allow_onesignal']==1){
+					$notification_msg = 'You have a message from 🧐 ' . htmlspecialchars($from_data['user_name'], ENT_QUOTES, 'UTF-8');
+					sendNotification($rec_data['push_id'], $notification_msg);
+				}
             }
         }
     }

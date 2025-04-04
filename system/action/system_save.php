@@ -523,6 +523,7 @@ if ($section == "delays" && boomAllow(90)) {
         $wall = escape($_POST["set_wall_delete"]);
         $member = escape($_POST["set_member_delete"]);
         $room = escape($_POST["set_room_delete"]);
+        $online_forever = escape($_POST["set_online_forever"]);
         // Prepare data for update
         $data_query = array(
             "act_delay" => $act_delay,
@@ -532,6 +533,7 @@ if ($section == "delays" && boomAllow(90)) {
             "last_clean" => '0',  // Set to 0 as per the original logic
             "member_delete" => $member,
             "room_delete" => $room,
+            "online_forever" => $online_forever,
         );
         // Perform the update
         $update = fu_update_dashboard($data_query);

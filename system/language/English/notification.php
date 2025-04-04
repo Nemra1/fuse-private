@@ -24,4 +24,5 @@ $nlang['vipsys'] = 'A VIP membership has been added to your account';
 $nlang['custom'] = '%custom%';
 $nlang['add_gold'] = 'New amount of gold has been add to your account %data%';
 $nlang['remove_gold'] = ' You spend some gold for upgrade %data%';
+$nlang['gold'] = "You received %custom% gold.";
 ?>

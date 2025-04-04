@@ -24,5 +24,6 @@ $nlang['profile_visit'] = 'has visited your profile %data%';
 $nlang['add_gold'] = 'New amount of gold has been add to your account %data%';
 $nlang['remove_gold'] = ' You spend some gold for upgrade %data%';
 $nlang['withdraw'] = 'An amount has been deposited into your account %data%';
+$nlang['gold'] = "You received %custom% gold.";
 
 ?>

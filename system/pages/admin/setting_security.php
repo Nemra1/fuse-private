@@ -25,7 +25,7 @@ if(!boomAllow(100)){
 							<option <?php echo selCurrent($data['use_recapt'], 0); ?> value="0"><?php echo $lang['none']; ?></option>
 							<option <?php echo selCurrent($data['use_recapt'], 1); ?> value="1">Google reCaptcha</option>
 						</select>
-						<a target="_blank" href="https://www.google.com/recaptcha/admin" class="main">For Google Recaptcha Keys click Here</a>
+						<a target="_blank" href="https://www.google.com/recaptcha/admin" class="main">For Google Recaptcha v2 Keys click Here</a>
 					</div>
 					<div class="setting_element">
 						<p class="label"><?php echo $lang['recapt_site']; ?></p>

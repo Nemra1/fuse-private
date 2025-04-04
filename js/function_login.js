@@ -62,7 +62,7 @@ getRegistration = function(){
 		}, function(response) {
 			if(response != 0){
 				showModal(response);
-				renderRecaptcha('register', 'boom_recaptcha_register');
+				//renderRecaptcha('register', 'boom_recaptcha_register');
 			}
 			else {
 				return false;
@@ -143,9 +143,7 @@ sendLogin = async function() {
                     $('#user_password').val("");
                 }else if (res.code == 3) {
                     callSaved(res.msg, 1);
-                    setTimeout(function() {
-                        location.reload(true);  // Reload the page after a successful login
-                    }, res.reload_delay || 2000); // Default delay if not specified
+					setTimeout(() => location.reload(true), res.reload_delay || 2000);
                 }else if (res.code == 6) {
 					callSaved(res.msg, 3);
 				}
@@ -415,17 +413,23 @@ hideCookieBar = function(){
 	});
 }
 
-// Render Recaptcha for any form (login, register, etc.)
+
 function renderRecaptcha(form, elementId) {
-    if (typeof grecaptcha === 'undefined') return;  // Check if Recaptcha script is loaded
+    if (typeof grecaptcha === 'undefined') {
+        console.error("reCAPTCHA script is not loaded yet.");
+        return; // Exit if reCAPTCHA is not loaded
+    }
+    // Check if the recaptcha widget is already rendered for this form
     if (recaptchaWidgets[form] !== null) {
-        // If Recaptcha widget is already rendered, reset it
+        // If the widget is already rendered, reset it
         grecaptcha.reset(recaptchaWidgets[form]);
     } else if (document.getElementById(elementId)) {
-        // If the element exists, render the Recaptcha
+        // If the element exists and widget isn't rendered, render it
         recaptchaWidgets[form] = grecaptcha.render(elementId, {
-            'sitekey': recaptKey // Ensure 'recaptKey' is set correctly
+            'sitekey': recaptKey // Ensure 'recaptKey' is properly set
         });
+    } else {
+        console.warn("Element with ID '" + elementId + "' not found.");
     }
 }
 function resetRecaptcha(form) {
@@ -433,22 +437,34 @@ function resetRecaptcha(form) {
         grecaptcha.reset(recaptchaWidgets[form]);
     }
 }
-function getRecaptchaToken(form) {
-    if (recaptchaWidgets[form] !== null) {
-        const token = grecaptcha.getResponse(recaptchaWidgets[form]);
-        console.log(token); // Debugging: Log the token to check if it's being retrieved
-        return token;
-    }
-    return '';
+async function getRecaptchaToken(form) {
+    return new Promise((resolve, reject) => {
+        if (recaptchaWidgets[form] !== null) {
+            const token = grecaptcha.getResponse(recaptchaWidgets[form]);
+            console.log(token); // Debugging: Log the token to check if it's being retrieved
+            if (token) {
+                resolve(token); // Resolve the promise with the token
+            } else {
+                resolve(''); // Resolve with an empty string if no token is retrieved
+            }
+        } else {
+            console.warn('reCAPTCHA widget not found for form:', form); // Debugging: Log if widget is not found
+            resolve(''); // Resolve with an empty string if the widget is not found
+        }
+    });
 }
-// Ensure Recaptcha is rendered when the page loads for login form
 document.addEventListener('DOMContentLoaded', function () {
+    // Ensure grecaptcha is available and fully loaded
     if (typeof grecaptcha !== 'undefined') {
-        renderRecaptcha('login', 'recaptcha_login');
-		renderRecaptcha('register', 'recaptcha_register');
+        // Wait until reCAPTCHA is fully loaded
+        setTimeout(function () {
+            // Render reCAPTCHA for login and register forms
+            renderRecaptcha('login', 'recaptcha_login');
+            renderRecaptcha('register', 'recaptcha_register');
+        }, 3000); // Wait for 1 second before attempting to render
     }
-
 });
+
 // Example: Reset Recaptcha for login form after the page reloads
 window.addEventListener('load', function() {
     resetRecaptcha('login');    // Reset the Recaptcha for the login form

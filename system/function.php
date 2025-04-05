@@ -2088,9 +2088,14 @@ function boomEncrypt($d, $encr){
 	return sha1(str_rot13($d . $encr));
 }
 function getDelay(){
-    //display online users for long time
-   return time() - 40000000;
-    // return time() - 35;
+    global $data;
+	if($data['online_forever'] ==1){
+	//display online users for long time
+		return time() - 40000000;
+	}else{
+		return time() - 35;
+	}
+    
 }
 function getMinutes($t){
 	return $t / 60;

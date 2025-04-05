@@ -730,17 +730,13 @@ if($section === "websocket" && boomAllow(100)) {
     // CSRF token validation (make sure it's included in the form)
     if (isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
         // Check for required POST parameters
-        if (isset($_POST["set_websocket_path"], $_POST["set_websocket_port"], $_POST["set_websocket_mode"], $_POST["set_websocket_protocol"], $_POST["set_istyping_mode"])) {
+        if (isset($_POST["set_websocket_path"], $_POST["set_websocket_port"], $_POST["set_websocket_mode"], $_POST["set_websocket_protocol"])) {
             // Validate inputs
             $websocket_path = filter_var($_POST["set_websocket_path"], FILTER_SANITIZE_URL);
             $websocket_port = filter_var($_POST["set_websocket_port"], FILTER_VALIDATE_INT);
-            $websocket_mode = in_array($_POST["set_websocket_mode"], ['production', 'development'], true) ? $_POST["set_websocket_mode"] : null;
-            $websocket_protocol = in_array($_POST["set_websocket_protocol"], ['ws', 'wss'], true) ? $_POST["set_websocket_protocol"] : null;
-            $istyping_mode = filter_var($_POST["set_istyping_mode"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            // Validate required fields
-            if (!$websocket_path || !$websocket_port || !$websocket_mode || !$websocket_protocol || is_null($istyping_mode)) {
-                return 99; // Invalid data
-            }
+            $websocket_mode = filter_var($_POST["set_websocket_mode"], FILTER_VALIDATE_INT);
+			$websocket_protocol = in_array($_POST["set_websocket_protocol"], ['https://', 'wss://'], true) ? $_POST["set_websocket_protocol"] : null;
+			$istyping_mode = filter_var($_POST["set_istyping_mode"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
             // Prepare the data query
             $data_query = array(
                 "websocket_path"    => $websocket_path,
@@ -753,6 +749,7 @@ if($section === "websocket" && boomAllow(100)) {
             $update = fu_update_dashboard($data_query);
             // Return success or failure code
             return $update === true ? 1 : 99; // Return success or error
+			
         } else {
             // Missing required POST parameters
             return 99;

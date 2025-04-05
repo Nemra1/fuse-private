@@ -558,6 +558,8 @@ function systemPostChat($room, $content, $custom = array()){
 
 function botPostChat($id, $room, $content, $custom = array()){
     global $mysqli, $data;
+	// Ensure proper MySQL connection character set for UTF-8
+	mysqli_set_charset($mysqli, 'utf8mb4');
     $def = array(
         'type' => 'public__message',
         'color' => '',
@@ -812,7 +814,8 @@ function userPostPrivateFile($content, $target, $file_name, $type) {
     $target = intval($target);
     $user_id = intval($data['user_id']);
     // Sanitize input to prevent XSS
-    $content = htmlspecialchars(trim($content), ENT_QUOTES, 'UTF-8');
+    //$content = htmlspecialchars(trim($content), ENT_QUOTES, 'UTF-8');
+    $content = $content;
     $file_name = htmlspecialchars(trim($file_name), ENT_QUOTES, 'UTF-8');
     $type = htmlspecialchars(trim($type), ENT_QUOTES, 'UTF-8');
     // Get current timestamp

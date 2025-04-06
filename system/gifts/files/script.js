@@ -8,7 +8,6 @@ load_pub_GiftPanel = function(item) {
 		showModal(response.content, 580);
 	});	
 }
-
 showGIFTModal = function(r,s){
     hideAll();
     var gdata = r.gift_data,gift_icon = gdata.gif_file, gift_cost =gdata.gift_cost,gift_url = gdata.gift_url ,gift_title = gdata.gift_title;
@@ -32,39 +31,46 @@ gift_notification = function(r,s){
     showModal(string);
 }
 sendUserGiftSuccessfully = function(item, action) {
-    var gift_alert = $('#gift_alert');
+    // Prevent multiple requests by checking the waitGifts flag
     if (waitGifts === 0) {
-        waitGifts = 1;
+        waitGifts = 1; // Set the flag to prevent multiple simultaneous requests
+        // Send POST request to PHP for sending a gift
         $.post(FU_Ajax_Requests_File(), {
             f: 'gifts',
             s: 'send_gift',
             type: 'p2p',
-            target: $(item).attr('data'),
-            gift_id: action,
-            token: utk,
-        }).done(function(res) {
+            target: $(item).attr('data'),  // Get the target user ID
+            gift_id: action,                // Get the gift ID
+            token: utk,                     // Pass token for validation
+        }).done(function(res){
+            // Handle response based on the status
             if (res.status == 200) {
-                callSaved(system.actionComplete, 1);
-                gift_alert.addClass(res.cl).removeClass('hidden').html(res.msg);
-                showGIFTModal(res, 400);
-                okayPlay();
+                // Gift sent successfully
+				callSaved(res.msg, 1);
+                showGIFTModal(res, 400);  // Show gift modal
+                okayPlay();  // Play a success sound or effect
                 setTimeout(function() {
-                    hideModal();
+                    hideModal();  // Hide modal after 4 seconds
                 }, 4000);
             } else if (res.status == 300) {
-                gift_alert.addClass(res.cl).removeClass('hidden').html(res.msg);
-                //callSaved(system.error, 3);
+                // Not enough credit to send the gift
+				callSaved(res.msg, 3);
+            } else if (res.status == 400) {
+                // Invalid request or error with the target user or gift
+               callSaved(res.msg, 3);  // Show error message
+            } else {
+                // Catch-all for unexpected status codes
+                callSaved(res.msg || "An unexpected error occurred.", 3);
             }
         }).fail(function() {
-            // Handle any errors that occur during the request
-            callSaved(system.error, 3);
+            // Handle any errors that occur during the request (e.g., network failure)
+			callSaved("Network error. Please try again.", 3);
         }).always(function() {
-            // Always reset waitGifts when the request is complete, regardless of success or failure
+            // Reset the waitGifts flag regardless of success or failure
             waitGifts = 0;
         });
     }
 }
-
 loadGiftPanelSuccessfully = function(item) {
 	var target = $(item).attr('data');
 	$.post(FU_Ajax_Requests_File(), {
@@ -73,6 +79,7 @@ loadGiftPanelSuccessfully = function(item) {
 		target: target,
 		token: utk,
 		}, function(response) {
+		$('.close_over').trigger('click');
 		showModal(response.content,580);
 	});
 }
@@ -87,7 +94,6 @@ getGift = function(){
 		$('#proselfgift').html(response.content).attr('value', 1);
 	});	
 }
-
 $(document).ready(function() {
    $(document).on('keyup', '#gift_search_users', function(event) {
     	    var q = $('#gift_search_users').val();

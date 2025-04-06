@@ -119,11 +119,6 @@ define('BOOM_DUSER', $DB_USER);
 define('BOOM_DPASS', $DB_PASS);
 define('BOOM_CRYPT', $encryption);
 define('CSRF_TOKEN', $_SESSION['csrf_token']);
-
-/* function setBoomCookie($i, $p){
-	setcookie(BOOM_PREFIX . "userid","$i",time()+ 31556926, '/');
-	setcookie(BOOM_PREFIX . "utk","$p",time()+ 31556926, '/');
-} */
 function unsetBoomCookie(){
 	setcookie(BOOM_PREFIX . "userid","",time() - 1000, '/');
 	setcookie(BOOM_PREFIX . "utk","",time() - 1000, '/');    

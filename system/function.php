@@ -1782,7 +1782,7 @@ function boomConsole($type, $custom = array()){
     }
 }
 
-function boomHistory($type, $custom = array()){
+function boomHistory($type, $custom = array()) {
     global $mysqli, $data;
     // Default values for the history data
     $def = array(
@@ -1797,26 +1797,40 @@ function boomHistory($type, $custom = array()){
     $c = array_merge($def, $custom);
     // Ensure that a valid target is provided
     if ($c['target'] == 0) {
-        return false; // Return false if no target is provided
+        return false;
     }
-    // Prepare the SQL query to prevent SQL injection
+    // Prepare the SQL query
     $stmt = $mysqli->prepare(
-        "INSERT INTO boom_history (hunter, target, htype, delay, reason, history_date) 
+        "INSERT INTO boom_history 
+        (hunter, target, htype, delay, reason, history_date) 
         VALUES (?, ?, ?, ?, ?, ?)"
     );
-    $history_date = time(); // Get current timestamp
-    // Bind parameters to the prepared statement
-    $stmt->bind_param("iiisii", $c['hunter'], $c['target'], $type, $c['delay'], $c['reason'], $history_date);
-    // Execute the query and check for success
-    if ($stmt->execute()) {
-        $stmt->close(); // Close the prepared statement
-        return true;    // Return true if the insert was successful
-    } else {
-        $stmt->close(); // Close the prepared statement in case of failure
-        return false;   // Return false if the insert failed
+    if (!$stmt) {
+        return false;
     }
+    $history_date = time();    
+    // Modified bind_param - changed htype to 's' (string)
+    $bound = $stmt->bind_param(
+        "iisisi", // Changed third parameter to 's' for string
+        $c['hunter'],
+        $c['target'],
+        $type,       // Now treated as string
+        $c['delay'],
+        $c['reason'],
+        $history_date
+    );
+    if (!$bound) {
+        return false;
+    }
+    
+    $executed = $stmt->execute();
+    if (!$executed) {
+        $stmt->close();
+        return false;
+    }
+    $stmt->close();
+    return true;
 }
-
 function renderReason($t){
 	global $lang;
 	switch($t){
@@ -3930,7 +3944,7 @@ function record_gift($gdata){
         $insert_stmt->execute();
     }
 }
-
+/******************* start ghost function********************/
 // ghost function
 function systemSpamGhost($user, $custom = ''){
 	global $data,$cody;
@@ -3960,20 +3974,13 @@ function userIsGhosted($id){
     }
     return false;
 }
-
-function systemGhost($user, $delay){
+function systemGhost($user, $delay) {
     global $mysqli;
-    // Calculate the ghost end time
-    $ghost_end = max($user['user_ghost'], calMinutesUp($delay));
-    // Prepare the query to update the user ghost status
+    $ghost_end = max($user['user_ghost'], time() + ($delay * 60));
     $stmt = $mysqli->prepare("UPDATE boom_users SET user_ghost = ? WHERE user_id = ?");
-    $stmt->bind_param('ii', $ghost_end, $user['user_id']); // 'i' for integer parameters
-    // Execute the query
-    $stmt->execute();
-    // Optionally update the Redis cache
-    // redisUpdateUser($user['user_id']);
+    $stmt->bind_param("ii", $ghost_end, $user['user_id']);
+    return $stmt->execute() && $stmt->affected_rows > 0;
 }
-
 function systemUnghost($user){
     global $mysqli;
 	$ghost_value = 0;
@@ -3986,7 +3993,6 @@ function systemUnghost($user){
     // Optionally update the Redis cache
     // redisUpdateUser($user['user_id']);
 }
-
 function canGhost(){
 	global $data;
 	if(boomAllow($data['can_ghost'])){
@@ -4020,26 +4026,31 @@ function canGhostUser($user){
 		return true;
 	}
 }
-
-function ghostAccount($id, $delay, $reason = ''){
-	global $mysqli;
-	$user = userDetails($id);
-	if(empty($user)){
-		return 3;
-	}
-	if(!canGhostUser($user)){
-		return 0;
-	}
-	if(isGhosted($user)){
-		return 2;
-	}
-	if(!validGhost($delay)){
-		return 0;
-	}
-	systemGhost($user, $delay);
-	boomHistory('ghost', array('target'=> $user['user_id'], 'delay'=> $delay, 'reason'=> $reason));
-	boomConsole('ghost', array('target'=> $user['user_id'], 'reason'=>$reason, 'delay'=> $delay));
-	return 1;
+function ghostAccount($id, $delay, $reason = '') {
+    global $mysqli, $data;
+    if (!validGhost($delay)) {
+        return ['status' => 0, 'error' => 'Invalid ghost duration'];
+    }
+    $user = userDetails($id);
+    if (empty($user)) {
+        return ['status' => 0, 'error' => 'User not found'];
+    }
+    if (!canGhostUser($user)) {
+        return ['status' => 0, 'error' => 'No permission'];
+    }
+    if (isGhosted($user)) {
+        return ['status' => 0, 'error' => 'Already ghosted'];
+    }
+    if (!systemGhost($user, $delay)) {
+        return ['status' => 0, 'error' => 'Ghost failed'];
+    }
+    boomHistory('ghost', [
+        'target' => $user['user_id'],
+        'delay' => $delay,
+        'reason' => $reason,
+        'hunter' => $data['user_id']
+    ]);
+    return ['status' => 1, 'message' => 'Ghost applied'];
 }
 function unghostAccount($id){
 	global $mysqli;
@@ -4057,24 +4068,31 @@ function unghostAccount($id){
 	boomConsole('unghost', array('target'=> $user['user_id']));
 	return 1;
 }
-
-function muteAccountMain($id, $delay, $reason = ''){
-	global $mysqli;
-	$user = userDetails($id);
-	if(empty($user)){
-		return 3;
-	}
-	if(!canMuteUser($user)){
-		return 0;
-	}
-	if(isMuted($user) || isMainMuted($user)){
-		return 2;
-	}
-	systemMainMute($user, $delay);
-	boomNotify('main_mute', array('target'=> $user['user_id'], 'source'=> 'mute', 'reason'=> $reason, 'delay'=> $delay, 'icon'=> 'action'));
-	boomHistory('main_mute', array('target'=> $user['user_id'], 'delay'=> $delay, 'reason'=> $reason));
-	boomConsole('main_mute', array('target'=> $user['user_id'], 'reason'=>$reason, 'delay'=> $delay));
-	return 1;
+/******************* End ghost function********************/
+function muteAccountMain($id, $delay, $reason = '') {
+    global $mysqli, $data;
+    // 1. Verify user exists
+    $user = userDetails($id);
+    if (!$user) {
+        return ['status' => 0, 'code' => 3, 'error' => 'User not found'];
+    }
+    // 2. Check permissions
+    if (!canMuteUser($user)) {
+        return ['status' => 0, 'code' => 0, 'error' => 'Mute not allowed'];
+    }
+    // 3. Check existing mutes
+    if (isMuted($user) || isMainMuted($user)) {
+        return ['status' => 0, 'code' => 2, 'error' => 'User already muted'];
+    }
+    // 4. Apply mute
+    if (!systemMainMute($user, $delay, $reason)) {
+        return ['status' => 0, 'error' => 'Mute failed'];
+    }
+    // 5. Trigger events
+	boomNotify('main_mute', [ 'target' => $user['user_id'], 'source' => 'mute', 'reason' => $reason, 'delay' => $delay, 'icon' => 'action' ]);
+	boomHistory('main_mute', [ 'target' => $user['user_id'], 'delay' => $delay, 'reason' => $reason ]);
+	boomConsole('main_mute', [ 'target' => $user['user_id'], 'reason' => $reason, 'delay' => $delay ]);
+    return ['status' => 1, 'message' => 'Main chat mute applied'];
 }
 function unmuteAccountMain($id){
 	global $mysqli;
@@ -4093,7 +4111,49 @@ function unmuteAccountMain($id){
 	boomConsole('main_unmute', array('target'=> $user['user_id']));
 	return 1;
 }
-function muteAccountPrivate($id, $delay, $reason = ''){
+function muteAccountPrivate($id, $delay, $reason = '') {
+    global $mysqli, $data, $lang;
+    // 1. Get user details
+    $user = userDetails($id);
+    if (empty($user)) {
+		return [ 'status' => 0, 'code' => 404, 'error' => $lang['user_not_found'] ?? 'User not found' ];
+    }
+    // 2. Permission check
+    if (!canMuteUser($user)) {
+		return [ 'status' => 0, 'code' => 403, 'error' => $lang['no_mute_permission'] ?? 'No mute permission' ];
+    }
+    // 3. Check existing mutes
+    if (isPrivateMuted($user)) {
+		return [ 'status' => 0, 'code' => 409, 'error' => $lang['already_muted'] ?? 'User already muted' ];
+    }
+    // 4. Apply mute
+    $mute_end = time() + ($delay * 60);
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_pmute = ? WHERE user_id = ?");
+    $stmt->bind_param("ii", $mute_end, $user['user_id']);
+    if (!$stmt->execute()) {
+		return [ 'status' => 0, 'code' => 500, 'error' => $lang['db_error'] ?? 'Database operation failed' ];
+    }
+    // 5. Only proceed if update was successful
+    if ($stmt->affected_rows > 0) {
+        // Trigger notifications
+		boomNotify('private_mute', [ 'target' => $user['user_id'], 'source' => 'mute', 'reason' => $reason, 'delay' => $delay, 'icon' => 'action' ]);
+		boomHistory('private_mute', [ 'target' => $user['user_id'], 'delay' => $delay, 'reason' => $reason, 'hunter' => $data['user_id'] ]);
+		boomConsole('private_mute', [ 'target' => $user['user_id'], 'reason' => $reason, 'delay' => $delay ]);
+        // Return success
+        return [
+            'status' => 1,
+            'code' => 200,
+            'message' => $lang['mute_success'] ?? 'Private mute applied',
+			'data' => [ 'user_id' => $user['user_id'], 'mute_until' => date('Y-m-d H:i:s', $mute_end), 'duration' => $delay ]
+        ];
+    }
+    return [
+        'status' => 0,
+        'code' => 500,
+        'error' => $lang['mute_failed'] ?? 'Failed to apply mute'
+    ];
+}
+/* function muteAccountPrivate($id, $delay, $reason = ''){
 	global $mysqli;
 	$user = userDetails($id);
 	if(empty($user)){
@@ -4110,7 +4170,7 @@ function muteAccountPrivate($id, $delay, $reason = ''){
 	boomHistory('private_mute', array('target'=> $user['user_id'], 'delay'=> $delay, 'reason'=> $reason));
 	boomConsole('private_mute', array('target'=> $user['user_id'], 'reason'=>$reason, 'delay'=> $delay));
 	return 1;
-}
+} */
 function unmuteAccountPrivate($id){
 	global $mysqli;
 	$user = userDetails($id);

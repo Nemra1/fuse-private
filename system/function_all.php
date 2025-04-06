@@ -1321,23 +1321,41 @@ function removeIgnore($id){
 	createIgnore();
 	return 1;
 }
-function muteAccount($id, $delay, $reason = ''){
-	 global $mysqli, $data, $lang, $cody;
-	$user = userDetails($id);	
-	if(empty($user)){
-		return 3;
-	}
-	if(!canMuteUser($user)){
-		return 0;
-	}
-	if(isMuted($user) || isRegmute($user)){
-		return 2;
-	}
-	systemMute($user, $delay, $reason);
-	boomNotify('mute', array('target'=> $user['user_id'], 'source'=> 'mute', 'reason'=> $reason, 'delay'=> $delay, 'icon'=> 'action'));
-	boomHistory('mute', array('target'=> $user['user_id'], 'delay'=> $delay, 'reason'=> $reason));
-	boomConsole('mute', array('target'=> $user['user_id'], 'reason'=>$reason, 'delay'=> $delay));
-	return 1;
+function muteAccount($id, $delay, $reason = '') {
+    global $mysqli, $data;
+    $user = userDetails($id);
+    if (empty($user)) {
+        return ['status' => 0, 'error' => 'User not found'];
+    }
+    if (!canMuteUser($user)) {
+        return ['status' => 0, 'error' => 'Not authorized'];
+    }
+    if (isMuted($user) || isRegmute($user)) {
+        return ['status' => 0, 'error' => 'User already muted'];
+    }
+    // Apply mute
+    if (!systemMute($user, $delay, $reason)) {
+        return ['status' => 0, 'error' => 'Mute failed'];
+    }
+    // Trigger events
+    boomNotify('mute', [
+        'target' => $user['user_id'],
+        'source' => 'mute',
+        'reason' => $reason,
+        'delay' => $delay,
+        'icon' => 'action'
+    ]);
+    boomHistory('mute', [
+        'target' => $user['user_id'],
+        'delay' => $delay,
+        'reason' => $reason
+    ]);
+    boomConsole('mute', [
+        'target' => $user['user_id'],
+        'reason' => $reason,
+        'delay' => $delay
+    ]);
+    return ['status' => 1, 'message' => 'User muted successfully'];
 }
 function unmuteAccount($id){
 	global $mysqli, $data, $lang, $cody;
@@ -1358,26 +1376,27 @@ function unmuteAccount($id){
 	boomConsole('unmute', array('target'=> $user['user_id']));
 	return 1;
 }
-function kickAccount($id, $delay, $reason = ''){
-	global $mysqli, $data, $lang, $cody;
-	$user = userDetails($id);
-	if(empty($user)){
-		return 3;
-	}
-	if(!canKickUser($user)){
-		return 0;
-	}
-	if(isKicked($user)){
-		return 2;
-	}
-	if(!validKick($delay)){
-		return 0;
-	}
-	systemKick($user, $delay, $reason);
-	boomConsole('kick', array('target'=> $user['user_id'], 'reason'=>$reason, 'delay'=> $delay));
-	boomHistory('kick', array('target'=> $user['user_id'], 'delay'=> $delay, 'reason'=> $reason));
-	return 1;
+function kickAccount($id, $delay, $reason = '') {
+    global $mysqli, $data;
+    $user = userDetails($id);
+    if (empty($user)) {
+        return ['status' => 0, 'error' => 'User not found'];
+    }
+    if (!canKickUser($user)) {
+        return ['status' => 0, 'error' => 'No kick permission'];
+    }
+    if (isKicked($user)) {
+        return ['status' => 0, 'error' => 'User already kicked'];
+    }
+    if (!systemKick($user, $delay, $reason)) {
+        return ['status' => 0, 'error' => 'Kick failed'];
+    }
+    // Log actions
+	boomHistory('kick', [ 'target' => $user['user_id'], 'delay' => $delay, 'reason' => $reason, 'hunter' => $data['user_id'] ]);
+	boomConsole('kick', [ 'target' => $user['user_id'], 'reason' => $reason, 'delay' => $delay ]);
+    return ['status' => 1, 'message' => 'User kicked successfully'];
 }
+
 function unkickAccount($id){
 	global $mysqli, $data, $cody;
 	$user = userDetails($id);
@@ -1545,13 +1564,47 @@ function systemUnmute($user){
 	clearNotifyAction($user['user_id'], 'mute');
 	$mysqli->query("UPDATE boom_users SET user_mute = 0, mute_msg = '', user_regmute = 0 WHERE user_id = '{$user['user_id']}'");
 }
-function systemMainMute($user, $delay){
-	global $mysqli;
-	$mute_end = max($user['user_mmute'], calMinutesUp($delay));
-	$mysqli->query("UPDATE boom_users SET user_mmute = '$mute_end' WHERE user_id = '{$user['user_id']}'");
-	clearNotifyAction($user['user_id'], 'mute');
-	muteLog($user);
-	//redisUpdateUser($user['user_id']);
+function systemMainMute($user, $delay, $reason = '') {
+    global $mysqli;
+    // 1. Validate inputs
+    if (!isset($user['user_id']) || !is_numeric($user['user_id'])) {
+        error_log("Invalid user data for mute: " . print_r($user, true));
+        return false;
+    }
+    if (!is_numeric($delay) || $delay <= 0) {
+        error_log("Invalid mute delay: $delay");
+        return false;
+    }
+    // 2. Calculate mute expiration
+    $new_mute_end = time() + ($delay * 60);
+    $mute_end = max($user['user_mmute'] ?? 0, $new_mute_end);
+    // 3. Use prepared statement for security
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_mmute = ? WHERE user_id = ?");
+    if (!$stmt) {
+        error_log("Prepare failed: " . $mysqli->error);
+        return false;
+    }
+    $stmt->bind_param("ii", $mute_end, $user['user_id']);
+    $executed = $stmt->execute();
+    if (!$executed) {
+        error_log("Mute update failed: " . $stmt->error);
+        $stmt->close();
+        return false;
+    }
+    $affected = $stmt->affected_rows;
+    $stmt->close();
+    // 4. Only proceed with cleanup if update was successful
+    if ($affected > 0) {
+        clearNotifyAction($user['user_id'], 'mute');
+        muteLog($user, $delay, $reason);
+        // Optional Redis update if enabled
+        if (function_exists('redisUpdateUser')) {
+            //redisUpdateUser($user['user_id']);
+        }
+        
+        return true;
+    }
+    return false;
 }
 function systemMainUnmute($user){
 	global $mysqli;
@@ -1559,12 +1612,12 @@ function systemMainUnmute($user){
 	$mysqli->query("UPDATE boom_users SET user_mmute = 0 WHERE user_id = '{$user['user_id']}'");
 	//redisUpdateUser($user['user_id']);
 }
-function systemPrivateMute($user, $delay){
-	global $mysqli;
-	$mute_end = max($user['user_mmute'], calMinutesUp($delay));
-	$mysqli->query("UPDATE boom_users SET user_pmute = '$mute_end' WHERE user_id = '{$user['user_id']}'");
-	clearNotifyAction($user['user_id'], 'mute');
-	//redisUpdateUser($user['user_id']);
+function systemPrivateMute($user, $delay) {
+    global $mysqli;
+    $mute_end = max($user['user_mmute'] ?? 0, time() + ($delay * 60));
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_pmute = ? WHERE user_id = ?");
+    $stmt->bind_param("ii", $mute_end, $user['user_id']);
+    return $stmt->execute() && $stmt->affected_rows > 0;
 }
 function systemPrivateUnmute($user){
 	global $mysqli;
@@ -1572,11 +1625,16 @@ function systemPrivateUnmute($user){
 	$mysqli->query("UPDATE boom_users SET user_pmute = 0 WHERE user_id = '{$user['user_id']}'");
 	//redisUpdateUser($user['user_id']);
 }
-function systemKick($user, $delay, $reason = ''){
-	global $mysqli;
-	$this_delay = max($user['user_kick'], calMinutesUp($delay));
-	$mysqli->query("UPDATE boom_users SET user_kick = '$this_delay', kick_msg = '$reason', user_action = user_action + 1 WHERE user_id = '{$user['user_id']}'");
-	kickLog($user);
+function systemKick($user, $delay, $reason = '') {
+    global $mysqli;
+    $kick_end = max($user['user_kick'] ?? 0, time() + ($delay * 60));
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_kick = ?, kick_msg = ? WHERE user_id = ?");
+    $stmt->bind_param("isi", $kick_end, $reason, $user['user_id']);
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        kickLog($user);
+        return true;
+    }
+    return false;
 }
 function systemUnkick($user){
 	global $mysqli;
@@ -1694,20 +1752,7 @@ function userRoomDetails($id, $room = ''){
 	}
 	return [];
 }
-/*function userRoomDetails($id){
-	global $mysqli, $data;
-	$user = array();
-	$getuser = $mysqli->query("SELECT *,
-	(SELECT room_rank FROM boom_room_staff WHERE room_staff = '$id' AND room_id = '{$data['user_roomid']}') as room_ranking,
-	(SELECT count(*) FROM boom_room_action WHERE action_muted > 0 AND action_user = '$id' AND action_room = '{$data['user_roomid']}') as is_muted,
-	(SELECT count(*) FROM boom_room_action WHERE action_blocked > 0 AND action_user = '$id' AND action_room = '{$data['user_roomid']}') as is_blocked
-	FROM boom_users WHERE user_id = '$id'");
-	if($getuser->num_rows > 0){
-		$user = $getuser->fetch_assoc();
-		$user['room_ranking'] = boomNull($user['room_ranking']);
-	}
-	return $user;
-}*/
+
 function blockRoom($id, $delay, $reason = ''){
 	global $mysqli, $data;
 	$user = userRoomDetails($id);
@@ -1806,24 +1851,7 @@ function unmuteRoom($id){
 		return 1;
 	}
 }
-/*
-function unmuteRoom($id){
-	global $mysqli, $data;
-	$user = userRoomDetails($id);
-	if(empty($user)){
-		return 3;
-	}
-	if(!canRoomAction($user, 4, 2)){
-		return 0;
-	}
-	else{
-		$mysqli->query("UPDATE boom_users SET room_mute = 0 WHERE user_id = '$id' AND user_roomid = '{$data['user_roomid']}'");
-		$mysqli->query("DELETE FROM boom_room_action WHERE action_room = '{$data['user_roomid']}' AND action_user = '$id' AND action_muted = '1' AND action_blocked = '0'");
-		$mysqli->query("UPDATE boom_room_action SET action_muted = '0' WHERE action_room = '{$data['user_roomid']}' AND action_user = '$id' AND action_muted > 0");
-		boomConsole('room_unmute', array('target'=> $user['user_id']));
-		return 1;
-	}
-}*/
+
 function removeRoomStaff($target){
 	global $mysqli, $data, $lang;
 	$user = userRoomDetails($target);

@@ -818,5 +818,14 @@ $lang['store_buy'] = 'buying';
 $lang['store_music_panel'] = 'Profile music';
 $lang['store_css_panel'] = 'Profile style';
 $lang['store_reset'] = 'Reset';
+// These keys should exist in your language file:
+$lang['missing_params'] = 'Missing required parameters';
+$lang['invalid_duration'] = 'Invalid mute duration';
+$lang['user_not_found'] = 'User not found';
+$lang['no_permission'] = 'No permission';
+$lang['already_muted'] = 'Already muted';
+$lang['system_error'] = 'System error';
+$lang['action_complete'] = 'Action completed';
+$lang['action_failed'] = 'Action failed';
 
 ?>

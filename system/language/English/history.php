@@ -1,16 +1,19 @@
 <?php
-$hlang['flood_mute'] = 'Flood mute';
-$hlang['word_mute'] = 'Word mute';
-$hlang['word_kick'] = 'Word kick';
-$hlang['spam_mute'] = 'Spam mute';
-$hlang['spam_ghost'] = 'Spam ghost';
-$hlang['spam_ban'] = 'Spam ban';
-$hlang['mute'] = 'Mute';
-$hlang['ban'] = 'Ban';
-$hlang['kick'] = 'Kick';
-$hlang['flood_kick'] = 'Flood kick';
-$hlang['vpn_kick'] = 'VPN kick';
-$hlang['main_mute'] = 'Main mute';
-$hlang['private_mute'] = 'Private mute';
-$hlang['ghost'] = 'Ghost';
+$hlang = [
+    'flood_mute'   => '🌊 %hunter% flood-muted %target% for %delay% | %reason%',
+    'word_mute'    => '📝 %hunter% word-muted %target% for %delay% | Word: %content%',
+    'word_kick'    => '🚫 %hunter% kicked %target% | Forbidden word: %content%',
+    'spam_mute'    => '🔁 %hunter% spam-muted %target% for %delay%',
+    'spam_ghost'   => '👻 %hunter% ghosted %target% for spamming',
+    'spam_ban'     => '⛔ %hunter% spam-banned %target%',
+    'mute'         => '🔇 %hunter% muted %target% for %delay% | %reason%',
+    'ban'          => '🚷 %hunter% banned %target% | %reason%',
+    'kick'         => '👢 %hunter% kicked %target% | %reason%',
+    'flood_kick'   => '💦 %hunter% flood-kicked %target%',
+    'vpn_kick'     => '🛡️ %hunter% VPN-kicked %target%',
+    'main_mute'    => '💬 %hunter% muted %target% in main chat for %delay%',
+    'private_mute' => '🤫 %hunter% muted %target% in private chat for %delay%',
+    'ghost'        => '👤 %hunter% ghosted %target%',
+    'warning'      => '⚠️ %hunter% warned %target%: %reason%'
+];
 ?>

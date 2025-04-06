@@ -215,6 +215,7 @@ $(document).ready(function(){
 		button.prop('disabled', true); // Disable the button
 		var tabValue = selected_tab.val(); 
 		if (tabValue === "gold_tab" || tabValue === "rank_tab" || tabValue === "premium_tab") {
+			console.log(tabValue);
 			buy_pack(tabValue);
 		} else if(tabValue === "frame_tab") {
 			buy_frame();

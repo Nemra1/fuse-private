@@ -14,14 +14,31 @@ if (isset($_POST["remove_history"]) && is_numeric($_POST["remove_history"]) && i
     exit;
 }
 
-function renderHistoryText($history) {
-    global $mysqli, $data, $lang, $hlang, $cody;
-    $ctext = $hlang[$history["htype"]];
-    $ctext = str_replace("%hunter%", $history["user_name"], $ctext);
-    $ctext = str_replace("%delay%", boomRenderMinutes($history["delay"]), $ctext);
-    return $ctext;
+function renderHistoryText(array $history, array $hlang = []) {
+    // Input validation
+    if (empty($history['htype'])) return '❌ Invalid entry';
+    
+    // Get template or default
+    $actionType = $history['htype'];
+    $ctext = $hlang[$actionType] ?? '⚡ %hunter% %action% %target%';
+    
+    // Prepare replacements
+    $replacements = [
+        '%hunter%' => $history['user_name'] ?? $history['hunter_name'] ?? '🤖 System',
+        '%target%' => $history['target_name'] ?? 'User#' . ($history['target'] ?? '?'),
+        '%delay%' => !empty($history['delay']) ? boomRenderMinutes($history['delay']) : '',
+        '%reason%' => !empty($history['reason']) ? $history['reason'] : 'No reason given',
+        '%content%' => $history['content'] ?? '',
+        '%action%' => str_replace('_', ' ', $actionType)
+    ];
+    
+    // Clean empty segments
+    $result = str_replace(array_keys($replacements), array_values($replacements), $ctext);
+    $result = preg_replace('/\s*\|\s*$/', '', $result); // Remove trailing pipe
+    $result = preg_replace('/\s*\|\s*(No reason given)/', '', $result); // Remove default reason
+    
+    return $result;
 }
-
 function userHistory() {
     global $mysqli, $data, $lang, $hlang, $cody;
     // Sanitize the 'get_history' parameter and ensure it is a valid integer
@@ -51,28 +68,61 @@ function userHistory() {
 
 function removeHistory() {
     global $mysqli, $data, $lang, $hlang, $cody;
-    // Sanitize inputs for 'remove_history' and 'target'
-    $id = (int)$_POST["remove_history"];
-    $target = (int)$_POST["target"];
-    // Fetch user details (ensure they are valid)
-    $user = userDetails($target);
+    // 1. Strict input validation
+    if (!isset($_POST['remove_history'], $_POST['target']) || 
+        !is_numeric($_POST['remove_history']) || 
+        !is_numeric($_POST['target'])) {
+        return fu_json_results(['error' => $lang['invalid_input'] ?? 'Invalid input parameters']);
+    }
+    $id = (int)$_POST['remove_history'];
+    $target = (int)$_POST['target'];
+    // 2. Verify target user exists with cached result
+    static $userCache = [];
+    if (!isset($userCache[$target])) {
+        $userCache[$target] = userDetails($target);
+    }
+    $user = $userCache[$target];
     if (empty($user)) {
-        return json_encode(['error' => 'Target user not found']);
+        return fu_json_results(['error' => $lang['user_not_exist'] ?? 'Target user not found']);
     }
-    // Check permissions: user must have the ability to manage history
-    if (!boomAllow($cody["can_manage_history"])) {
-        return json_encode(['error' => 'You do not have permission to manage history']);
+    // 3. Permission check with explicit error logging
+    if (!boomAllow($cody['can_manage_history'])) {
+        error_log("History removal unauthorized attempt by user: " . $data['user_id']);
+        return fu_json_results(['error' => $lang['no_permission'] ?? 'Permission denied']);
     }
-    // Use prepared statement to prevent SQL injection
-    $stmt = $mysqli->prepare("DELETE FROM boom_history WHERE id = ? AND target = ?");
-    $stmt->bind_param("ii", $id, $user["user_id"]);
-    $stmt->execute();
-    if ($stmt->affected_rows > 0) {
+    // 4. Database operation with transaction
+    $mysqli->begin_transaction();
+    try {
+        $stmt = $mysqli->prepare("DELETE FROM boom_history WHERE id = ? AND target = ?");
+        if (!$stmt) {
+            throw new Exception('Prepare failed: ' . $mysqli->error);
+        }
+        $stmt->bind_param("ii", $id, $user['user_id']);
+        if (!$stmt->execute()) {
+            throw new Exception('Execute failed: ' . $stmt->error);
+        }
+        $affected = $stmt->affected_rows;
         $stmt->close();
-        return json_encode(['success' => 'History record has been deleted successfully']);
-    } else {
-        $stmt->close();
-        return json_encode(['error' => 'Failed to delete the history record']);
+        $mysqli->commit();
+        // 5. Return standardized result
+        if ($affected > 0) {
+            return fu_json_results([
+                'status' => 1,
+                'message' => $lang['history_deleted'] ?? 'Record deleted'
+            ]);
+        } else {
+            return fu_json_results([
+                'status' => 0,
+                'error' => $lang['history_not_found'] ?? 'Record not found'
+            ]);
+        }
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        error_log("History removal error: " . $e->getMessage());
+        return fu_json_results([
+            'status' => 0,
+            'error' => $lang['system_error'] ?? 'Operation failed'
+        ]);
     }
 }
 ?>

@@ -77,15 +77,25 @@ if ($f == 'action') {
 				die();
 		}
 	}
-	if($s == 'kick') {
-		// Handle kick requests
-		if (isset($_POST['kick'], $_POST['reason'], $_POST['delay'])) {
-			$target = escape($_POST['kick']);
-			$reason = escape($_POST['reason']);
-			$delay = escape($_POST['delay']);
-			echo kickAccount($target, $delay, $reason);
+	if ($s == 'kick') {
+		// Validate required parameters
+		if (!isset($_POST['kick'], $_POST['reason'], $_POST['delay'])) {
+			echo fu_json_results(['status' => 0, 'error' => 'Missing parameters']);
 			die();
 		}
+		// Process and validate inputs
+		$target = (int)$_POST['kick'];
+		$reason = escape($_POST['reason']);
+		$delay = (int)$_POST['delay'];
+		if (!validKick($delay)) {
+			echo fu_json_results(['status' => 0, 'error' => 'Invalid kick duration']);
+			die();
+		}
+		// Process kick
+		$result = kickAccount($target, $delay, $reason);
+		// Return JSON response
+		echo is_array($result) ? fu_json_results($result) : $result;
+		die();
 	}
 	if($s == 'room_mute') {
 		// Handle room mute requests
@@ -107,44 +117,90 @@ if ($f == 'action') {
 			die();
 		}	
 	}
-	if($s == 'mute') {
-		// Handle mute requests
-		if (isset($_POST['mute'], $_POST['reason'], $_POST['delay'])) {
-			$target = escape($_POST['mute']);
-			$reason = escape($_POST['reason']);
-			$delay = escape($_POST['delay']);
-			echo muteAccount($target, $delay, $reason);
+	if ($s == 'mute') {
+		// Validate required parameters
+		if (!isset($_POST['mute'], $_POST['reason'], $_POST['delay'])) {
+			echo fu_json_results(['status' => 0, 'error' => 'Missing parameters']);
 			die();
-		}		
+		}
+		// Sanitize inputs
+		$target = (int)$_POST['mute']; // Force integer for user ID
+		$reason = escape($_POST['reason']);
+		$delay = (int)$_POST['delay']; // Ensure numeric delay
+		// Validate delay range (example: 1 min to 1440 mins/24h)
+		if ($delay < 1 || $delay > 1440) {
+			echo fu_json_results(['status' => 0, 'error' => 'Invalid mute duration']);
+			die();
+		}
+		$result = muteAccount($target, $delay, $reason);
+		echo fu_json_results($result);
+		die();
 	}
-	if($s == 'main_mute') {
-		// Handle main mute requests
-		if (isset($_POST['main_mute'], $_POST['reason'], $_POST['delay'])) {
-			$target = escape($_POST['main_mute']);
-			$reason = escape($_POST['reason']);
-			$delay = escape($_POST['delay']);
-			echo muteAccountMain($target, $delay, $reason);
+	if ($s == 'main_mute') {
+		// Validate required parameters
+		$required = ['main_mute', 'reason', 'delay'];
+		foreach ($required as $param) {
+			if (!isset($_POST[$param])) {
+				echo fu_json_results(['status' => 0, 'error' => "Missing $param"]);
+				die();
+			}
+		}
+		// Sanitize inputs
+		$target = (int)$_POST['main_mute'];
+		$reason = escape($_POST['reason']);
+		$delay = (int)$_POST['delay'];
+		// Validate delay range (1 min to 30 days)
+		if ($delay < 1 || $delay > 43200) {
+			echo fu_json_results(['status' => 0, 'error' => 'Invalid mute duration (1-43200 mins)']);
 			die();
-		}	
+		}
+		// Process mute
+		$result = muteAccountMain($target, $delay, $reason);
+		// Return JSON response
+		echo is_array($result) ? fu_json_results($result) : $result;
+		die();
 	}
-	if($s == 'private_mute') {
-		if (isset($_POST['private_mute'], $_POST['reason'], $_POST['delay'])) {
-			$target = escape($_POST['private_mute']);
-			$reason = escape($_POST['reason']);
-			$delay = escape($_POST['delay']);
-			echo muteAccountPrivate($target, $delay, $reason);
-			die();
-		}		
+	if ($s == 'private_mute') {
+		// Validate required parameters
+		if (!isset($_POST['private_mute'], $_POST['reason'], $_POST['delay'])) {
+			echo fu_json_results([
+				'status' => 0,
+				'code' => 400,
+				'error' => $lang['missing_params'] ?? 'Missing required parameters'
+			]);
+			exit;
+		}
+		// Process inputs
+		$target = (int)$_POST['private_mute'];
+		$reason = escape($_POST['reason']);
+		$delay = min((int)$_POST['delay'], 43200); // Max 30 days
+		// Validate delay
+		if ($delay < 1) {
+			echo fu_json_results([
+				'status' => 0,
+				'code' => 400,
+				'error' => $lang['invalid_duration'] ?? 'Duration must be at least 1 minute'
+			]);
+			exit;
+		}
+		// Process mute and return JSON response
+		$result = muteAccountPrivate($target, $delay, $reason);
+		echo fu_json_results($result);
+		exit;
 	}
-	if($s == 'ghost') {	
-		// Handle ghost requests
-		if(isset($_POST['ghost'], $_POST['reason'], $_POST['delay'])){
-			$target = escape($_POST['ghost'], true);
-			$reason = escape($_POST['reason']);
-			$delay = escape($_POST['delay'], true);
-			echo ghostAccount($target, $delay, $reason);
-			die();
-		}	
+	if ($s == 'ghost') {
+		if (!isset($_POST['ghost'], $_POST['reason'], $_POST['delay'])) {
+			echo fu_json_results(['status' => 0, 'error' => 'Missing parameters']);
+			exit;
+		}
+		$result = ghostAccount(
+			(int)$_POST['ghost'],
+			(int)$_POST['delay'],
+			escape($_POST['reason'])
+		);
+		
+		echo is_array($result) ? fu_json_results($result) : $result;
+		exit;
 	}
 	if($s == 'ban') {	
 		// Handle ban requests

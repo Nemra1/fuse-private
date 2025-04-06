@@ -301,7 +301,7 @@ function buy_rank($pack_id){
 	$pack_info =  FU_store_marketById($pack_id);
 	$sup_end = Fu_premiumNewTime($pack_info['rank_end'], $data);
 	if (!empty($pack_info)) {
-	     $pack_price = $pack_info['p_amounts'];
+	     $pack_price = $pack_info['price'];
         $pack_name = $pack_info['pack_name'];
         $p_amounts = $pack_info['p_amounts'];
         $rank = $pack_info['user_rank'];
@@ -313,8 +313,8 @@ function buy_rank($pack_id){
                 "time" => time(),
                 "pack_name" => $pack_name,
                 "alert" => ' Your Gold needs to be charged..😒😒',
+                "status" => 150,
             ];
-             $array_data['status'] = 150;
         } else {
                 $local_trans = generateRandomString(6);
                 // Record the transaction
@@ -330,14 +330,14 @@ function buy_rank($pack_id){
                 ];
                 $insert_transaction = $db->insert('payments', $trans_data);		
 				if ($insert_transaction) {
-                    $array_data['status'] = 200;
                     $array_data['message'] = [
                         "pack_price" => $pack_price,
                         "pack_id" => $pack_id,
                         "buyer" => $data['user_name'],
                         "time" => time(),
                         "pack_name" => $pack_name,
-                        "alert" => 'Upgrade completed successfully'
+                        "alert" => 'Upgrade completed successfully',
+                        "status" => 200,
                     ];
 
                     $array_data['user_gold'] = $data['user_gold'] - $p_amounts;
@@ -350,7 +350,6 @@ function buy_rank($pack_id){
 						$mysqli->query("UPDATE boom_users SET room_mute = '0', user_private = 1, user_mute = 0, user_regmute = 0 WHERE user_id = '" . $sender_id . "'");
 						$mysqli->query("DELETE FROM boom_room_action WHERE action_user = '" . $sender_id . "'");
 						$mysqli->query("DELETE FROM boom_ignore WHERE ignored = '" . $sender_id . "'");
-					
 					}
 					boomConsole("change_rank", ["target" => $data["user_id"], "rank" => $rank]);
 					$mysqli->query("UPDATE `boom_store` SET `sell_counter` = sell_counter + 1 WHERE `id` = '$pack_id'");
@@ -732,11 +731,6 @@ if ($s == 'add_pack' && boomLogged() === true) {
 
     exit();
 }
-
-
-
-
-
   if ($s == 'edit_pack' && boomLogged() === true) {
         $pack_id = escape($_POST['pack_id']);
 
@@ -769,85 +763,74 @@ if ($s == 'store_panel' && boomLogged() === true) {
         exit();
     }  
 if ($s == 'buy_pack' && boomLogged() === true) {
-    header('Content-type: application/json');
-    $pack_id = sanitizeOutput(trim($_POST['id']));
-    $array_data = ['query' => '', 'message' => '', 'status' => 400]; // Default status
-
-    // Check if pack ID is provided
+    $array_data = ['query' => '', 'message' => '', 'status' => 400];
+    // Only users above guest rank can buy
+    if ($data['user_rank'] <= 0) {
+        $array_data['message'] = 'Guest Levels not allowed to Use the Store.';
+        echo fu_json_results($array_data);
+        exit();
+    }
+    $pack_id = sanitizeOutput(trim($_POST['id'] ?? ''));
     if (empty($pack_id)) {
         $array_data['message'] = 'Pack ID is empty.';
-    } else {
-        // Fetch pack info based on the provided pack ID
-        $pack_info = FU_store_marketById($pack_id);
-
-        // Check if pack info exists and has a valid 'type'
-        if (!empty($pack_info) && isset($pack_info['type'])) {
-            $pack_type = $pack_info['type'];
-
-            // Check if user already has this rank
-            if ((int)$data['user_rank'] === (int)$pack_info['user_rank']) {
-                $array_data['message'] = 'You are already at this rank.';
-                $array_data['status'] = 403; // Forbidden
-            } else {
-                // Handle rank pack type
-                if ($pack_type === "rank") {
-                    $array_data['type'] = 'rank';
-
-                    // Check if user is at a higher rank
-                    if (in_array($data['user_rank'], [100, 90, 80, 70])) {
-                        $array_data['message'] = 'You are at a higher level than the chosen rank.';
-                        $array_data['status'] = 403; // Forbidden
-                    } else {
-                        // Proceed to buy rank if valid
-                        $buy_result = buy_rank($pack_id);
-                        if (!empty($buy_result) && isset($buy_result['message'])) {
-                            $array_data['query'] = $buy_result;
-                            $array_data['status'] = 200;
-                            $array_data['message'] = $buy_result['message']['alert'] ?? 'Rank purchased successfully.';
-                        } else {
-                            $array_data['message'] = 'Failed to purchase rank.';
-                            $array_data['status'] = 500; // Server error
-                        }
-                    }
-                } elseif ($pack_type === "gold") {
-					// Handle gold pack type
-					$array_data['type'] = 'gold';
-					$buy_result = buy_gold_pack($pack_id);
-					if (!empty($buy_result) && isset($buy_result['message'])) {
-						$array_data['query'] = $buy_result;
-						$array_data['message'] = $buy_result['message']['alert'];
-						$array_data['status'] = $buy_result['status'];
-					} else {
-						$array_data['message'] = 'Failed to purchase gold pack.';
-						$array_data['status'] = 500;
-					}
-            } elseif ($pack_type === "premium") {
-					// Check if user is at a higher rank
-                    if (in_array($data['user_rank'], [0])) {
-                        $array_data['message'] = 'You are at a higher level than the chosen rank.';
-                        $array_data['status'] = 403; // Forbidden
-                    } else {
-                        // Proceed to buy rank if valid
-                        $buy_result = buy_premium_pack($pack_id);
-                        if (!empty($buy_result) && isset($buy_result['message'])) {
-                            $array_data['query'] = $buy_result;
-                            $array_data['status'] = $buy_result['message']['status'];
-                            $array_data['message'] = $buy_result['message']['alert'] ?? ' purchased successfully.';
-                        } else {
-                            $array_data['message'] = 'Failed to purchase rank.';
-                            $array_data['status'] = $buy_result['message']['status']; // Server error
-                        }
-                    }
-			
-			}
-         }
-        } else {
-            $array_data['message'] = 'Pack information not found or invalid.';
-        }
+        echo fu_json_results($array_data);
+        exit();
     }
-
-    // Send the response
-    echo json_encode($array_data);
+    $pack_info = FU_store_marketById($pack_id);
+    if (empty($pack_info) || !isset($pack_info['type'])) {
+        $array_data['message'] = 'Invalid pack information.';
+        echo fu_json_results($array_data);
+        exit();
+    }
+    $pack_type = $pack_info['type'];
+    if ($pack_type === 'rank') {
+        if ((int)$data['user_rank'] === (int)$pack_info['user_rank']) {
+            $array_data['message'] = 'You are already at this rank.';
+            $array_data['status'] = 403;
+        } elseif (in_array((int)$data['user_rank'], [100, 90, 80, 70])) {
+            $array_data['message'] = 'You are at a higher level than the chosen rank.';
+            $array_data['status'] = 403;
+        } else {
+            $buy_result = buy_rank($pack_id);
+            if (!empty($buy_result) && isset($buy_result['message'])) {
+                $query = $buy_result['message'];
+                $array_data['status'] =  $query['status'] ?? 200;
+                $array_data['message'] = $query['alert'] ?? 'Rank purchased successfully.';
+            } else {
+                $array_data['message'] = 'Failed to purchase rank.';
+                $array_data['status'] = 500;
+            }
+        }
+    } elseif ($pack_type === 'gold') {
+        $array_data['type'] = 'gold';
+        $buy_result = buy_gold_pack($pack_id);
+        if (!empty($buy_result) && isset($buy_result['message'])) {
+            $query = 				$buy_result['message'];
+            $array_data['message'] = $query['alert'] ?? 'Gold pack purchased successfully.';
+            $array_data['status'] = $query['status'] ?? 200;
+        } else {
+            $array_data['message'] = 'Failed to purchase gold pack.';
+            $array_data['status'] = 500;
+        }
+    } elseif ($pack_type === 'premium') {
+        if (in_array((int)$data['user_rank'], [0])) {
+            $array_data['message'] = 'Guest Levels not allowed to Use the Store.';
+            $array_data['status'] = 403;
+        } else {
+            $buy_result = buy_premium_pack($pack_id);
+            if (!empty($buy_result) && isset($buy_result['message'])) {
+                 $query = 					$buy_result['message'];
+                $array_data['status'] = 	$query['status'] ?? 200;
+                $array_data['message'] = 	$query['alert'] ?? 'Premium pack purchased successfully.';
+            } else {
+                $array_data['message'] = 'Failed to purchase premium pack.';
+                $array_data['status'] = $query['status'] ?? 500;
+            }
+        }
+    } else {
+        $array_data['message'] = 'Invalid pack type.';
+    }
+    echo fu_json_results($array_data);
     exit();
 }
 
@@ -926,20 +909,16 @@ if ($s == 'get_frames' && boomLogged() === true) {
         'html' => '',
         'frames_data' => []
     ];
-
     // Get frames HTML and data
     $frames_html = list_frames();
     $jsonFilePath = 'system/store/frames/frames.json';
-
     if ($frames_html) {
         $array_data['status'] = 200;
         $array_data['message'] = 'Frames Loaded successfully.';
         $array_data['html'] = $frames_html;
-
         // Get fresh frames data (no need to re-check JSON existence)
         $jsonData = file_get_contents($jsonFilePath);
         $imageDataArray = json_decode($jsonData, true);
-
         if (json_last_error() === JSON_ERROR_NONE && is_array($imageDataArray)) {
             foreach ($imageDataArray as $image) {
                 $array_data['frames_data'][] = [
@@ -958,7 +937,6 @@ if ($s == 'get_frames' && boomLogged() === true) {
     exit();
 }
 
-
 if ($s == 'get_wings' && boomLogged() === true) {
     // Initialize response array
     $array_data = [
@@ -967,23 +945,18 @@ if ($s == 'get_wings' && boomLogged() === true) {
         'html' => '',  
         'wings_data' => []  
     ];
-
     // Path to wings JSON
     $jsonFilePath = 'system/store/wings/wings.json';
-
     // Generate HTML and check if JSON exists
     $wings_html = list_and_pair_wings();
-
     if ($wings_html) {
         $array_data['status'] = 200;
         $array_data['message'] = 'Wings Loaded successfully.';
         $array_data['html'] = $wings_html;
-
         // Ensure wings.json exists before reading
         if (file_exists($jsonFilePath)) {
             $jsonData = file_get_contents($jsonFilePath);
             $wingsDataArray = json_decode($jsonData, true);
-
             if (json_last_error() === JSON_ERROR_NONE && is_array($wingsDataArray)) {
                 foreach ($wingsDataArray as $wing) {
                     $array_data['wings_data'][] = [
@@ -999,13 +972,10 @@ if ($s == 'get_wings' && boomLogged() === true) {
             $array_data['message'] = 'Wings JSON file not found.';
         }
     }
-
     header("Content-Type: application/json");
     echo json_encode($array_data);
     exit();
 }
-
-
 if ($s == 'buy_frame' && boomLogged() === true) {
     header("Content-type: application/json");
 		if (!canPhotoFrame()) {
@@ -1014,7 +984,6 @@ if ($s == 'buy_frame' && boomLogged() === true) {
 			echo json_encode($array_data);
 			exit();
 		}	
-
     // Get pack ID, extension, and amount from POST request
     $pack_id = escape($_POST['fid']);
     $ext = strtolower(escape($_POST['ext'])); // Ensure extension is lowercase
@@ -1028,12 +997,10 @@ if ($s == 'buy_frame' && boomLogged() === true) {
         echo json_encode($array_data);
         exit();
     }
-
     // Construct the file path and sanitize
     $frame = basename($pack_id) . '.' . $ext; // Use basename to prevent directory traversal
     $webPath = 'system/store/frames/';
     $imageUrl = $webPath . $frame;
-
     // Check if the image exists in the directory
     if (!file_exists($webPath . $frame)) {
         $array_data['message'] = 'Image file not found.';
@@ -1044,7 +1011,6 @@ if ($s == 'buy_frame' && boomLogged() === true) {
     // Default message to the image URL
     $array_data['imageUrl'] = $imageUrl; 
     $my_gold = $data['user_gold']; // User's current gold balance
-
     // Price manipulation check
     if ($ant < 50) {
         $array_data['message'] = 'Price manipulation detected.';
@@ -1080,7 +1046,6 @@ if ($s == 'buy_frame' && boomLogged() === true) {
 			boomNotify('remove_gold', array('target'=> $data['user_id'], 'custom'=> $content,"icon" => 'gold'));
 		}
     }
-
     // Return response as JSON
     echo json_encode($array_data);
     exit();

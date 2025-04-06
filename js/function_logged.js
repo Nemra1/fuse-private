@@ -57,9 +57,9 @@ $(document).ready(function(){
 	});
 	/*browser security*/
 	if (typeof console !== 'undefined') {
-		console.log = function() {};  // Disable console.log
-		console.debug = function() {};  // Disable console.debug
-		console.warn = function() {};  // Disable console.warn
+		//console.log = function() {};  // Disable console.log
+		//console.debug = function() {};  // Disable console.debug
+		//console.warn = function() {};  // Disable console.warn
 	}
 	document.addEventListener('contextmenu', function(e) {
 		//e.preventDefault(); // Disables right-click context menu
@@ -1850,47 +1850,81 @@ actionHistory = function(id){
 			}
 	});
 }
-removeHistory = function(target, id){
-	$.post('system/action/history.php', {
-		remove_history: id,
-		target: target,
-		token: utk,
-		}, function(response) {
-			if(response == 1){
-				$('.hist'+id).remove();
-			}
-			else {
-				callSaved(system.error, 3);
-			}
-	});
-}
-kickUser = function(target){
-	$.post(FU_Ajax_Requests_File(), {
-		f:'action',
-		s:'kick',				
-		kick: target,
-		delay: $('#kick_delay').val(),
-		reason: $('#kick_reason').val(),
-		token: utk,
-		}, function(response) {
-			if(response == 0){
-				callSaved(system.cannotUser, 3);
-			}
-			else if(response == 1){
-				callSaved(system.actionComplete, 1);
-			}
-			else if (response == 2){
-				callSaved(system.alreadyAction, 3);
-			}
-			else if (response == 3){
-				callSaved(system.noUser, 3);
-			}
-			else {
-				callSaved(system.error, 3);
-			}
-			hideOver();
-	});
-}
+removeHistory = function(target, id) {
+    // Show loading indicator on the specific history item
+    $('#hist'+id).addClass('processing');
+    $.ajax({
+        url: 'system/action/history.php',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            remove_history: id,
+            target: target,
+            token: utk
+        },
+        success: function(response) {
+            // Handle both legacy (response == 1) and JSON responses
+            if (response === 1 || (response.status && response.status === 1)) {
+                // Success - remove the element with animation
+                $('.hist'+id).fadeOut(300, function() {
+                    $(this).remove();
+                });
+                // Show success message if available
+                if (response.message) {
+                    callSaved(response.message, 1);
+                }
+            } 
+            else {
+                // Error handling
+                const errorMsg = response.error || 
+                                response.message || 
+                                system.error;
+                callSaved(errorMsg, 3);
+                // Reset processing state
+                $('.hist'+id).removeClass('processing');
+            }
+        },
+        error: function(xhr) {
+            // Network/server error handling
+            callSaved(system.connection_error || 'Connection failed', 3);
+            $('.hist'+id).removeClass('processing');
+            console.error('Remove history failed:', xhr.responseText);
+        }
+    });
+};
+kickUser = function(target) {
+    const delay = $('#kick_delay').val();
+    const reason = $('#kick_reason').val().trim();
+    if (!target || !delay || !reason) {
+        callSaved('Please fill all fields', 3);
+        return;
+    }
+    $.ajax({
+        url: FU_Ajax_Requests_File(),
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            f: 'action',
+            s: 'kick',
+            kick: target,
+            delay: delay,
+            reason: reason,
+            token: utk
+        },
+        success: function(response) {
+            if (response.status === 1) {
+                callSaved(response.message, 1);
+                userReload(); // Update UI
+            } else {
+                callSaved(response.error, 3);
+            }
+        },
+        error: function() {
+            callSaved('Connection failed', 3);
+        },
+        complete: hideOver
+    });
+};
 warnUser = function(target){
 	$.post(FU_Ajax_Requests_File(), {
 		f:'action',
@@ -1934,33 +1968,54 @@ banUser = function(target){
 			hideOver();
 	});
 }
-muteUser = function(target){
-	$.post(FU_Ajax_Requests_File(), {
-		f:'action',
-		s:'mute',				
-		mute: target,
-		delay: $('#mute_delay').val(),
-		reason: $('#mute_reason').val(),
-		token: utk,
-		}, function(response) {
-			if(response == 0){
-				callSaved(system.cannotUser, 3);
-			}
-			else if(response == 1){
-				callSaved(system.actionComplete, 1);
-			}
-			else if (response == 2){
-				callSaved(system.alreadyAction, 3);
-			}
-			else if (response == 3){
-				callSaved(system.noUser, 3);
-			}
-			else {
-				callSaved(system.error, 3);
-			}
-			hideOver();
-	});
-}
+muteUser = function(target) {
+    // Validate inputs before sending
+    const delay = $('#mute_delay').val();
+    const reason = $('#mute_reason').val().trim();
+    if (!target || !delay) {
+        callSaved(system.missingFields, 3);
+        return;
+    }
+    $.post(FU_Ajax_Requests_File(), {
+        f: 'action',
+        s: 'mute',
+        mute: target,
+        delay: delay,
+        reason: reason,
+        token: utk
+    })
+    .done(function(response) {
+        // Handle both numeric (legacy) and JSON responses
+        if (typeof response === 'object') {
+            // New JSON response format
+            if (response.status === 1) {
+                callSaved(response.message || system.actionComplete, 1);
+                userReload(); // Optional: refresh UI
+            } else {
+                callSaved(response.error || system.error, 3);
+            }
+        } 
+        // Legacy numeric response handling
+        else if (response == 0) {
+            callSaved(system.cannotUser, 3);
+        } else if (response == 1) {
+            callSaved(system.actionComplete, 1);
+        } else if (response == 2) {
+            callSaved(system.alreadyAction, 3);
+        } else if (response == 3) {
+            callSaved(system.noUser, 3);
+        } else {
+            callSaved(system.error, 3);
+        }
+    })
+    .fail(function(xhr) {
+        callSaved(system.connectionError, 3);
+        console.error("Mute failed:", xhr.responseText);
+    })
+    .always(function() {
+        hideOver();
+    });
+};
 eraseAccount = function(target){
 	$.post('system/box/delete_account.php', {
 		account: target,
@@ -2055,55 +2110,6 @@ listAction = function(target, act){
 		});
 	}
 }
-
-/*
-listAction = function(target, act){
-	closeTrigger();
-	if(act == 'ban'){
-		banBox(target);
-	}
-	else if(act == 'kick'){
-		kickBox(target);
-	}
-	else if(act == 'mute'){
-		muteBox(target);
-	}else if(act == 'main_mute'){
-		mainMuteBox(target);
-	}else if(act == 'private_mute'){
-		privateMuteBox(target);
-	}else if(act == 'ghost'){
-		ghostBox(target);
-	}
-	else if(act == 'change_rank'){
-		adminGetRank(target);
-	}
-	else if(act == 'delete_account'){
-		eraseAccount(target);
-	}
-	else {
-		$.post('system/action/action.php', {
-			take_action: act,
-			target: target,
-			token: utk,
-			}, function(response) {
-				if(response == 0){
-					callSaved(system.cannotUser, 3);
-				}
-				else if(response == 1){
-					hideOver();
-					callSaved(system.actionComplete, 1);
-					processAction(act);
-				}
-				else if(response == 2){
-					callSaved(system.alreadyAction, 3);
-				}
-				else {
-					callSaved(system.error, 3);
-				}
-		});
-	}
-}
-*/
 uploadIcon = function(target, type){
 	var upIcon = $(target).attr('data');
 	if(type == 2){
@@ -2670,31 +2676,86 @@ ghostBox = function(id){
 			}
 	});
 }
-ghostUser = function(target){
-	$.post(FU_Ajax_Requests_File(), {
-		f:'action',
-		s:'ghost',
-		ghost: target,
-		delay: $('#ghost_delay').val(),
-		reason: $('#ghost_reason').val(),
-		token:utk,
-		}, function(response) {
-			//actionResponse(response);
-			hideOver();
-	});
-}
-mainMuteUser = function(target){
-	$.post(FU_Ajax_Requests_File(), {
-		f:'action',
-		s:'main_mute',
-		main_mute: target,
-		delay: $('#mute_delay').val(),
-		reason: $('#mute_reason').val(),
-		token:utk,
-		}, function(response) {
-			//actionResponse(response);
-			hideOver();
-	});
+ghostUser = function(target) {
+    const delay = $('#ghost_delay').val();
+    const reason = $('#ghost_reason').val().trim();
+    if (!target || !delay || !reason) {
+        callSaved('Please fill all fields', 3);
+        return;
+    }
+    $.ajax({
+        url: FU_Ajax_Requests_File(),
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            f: 'action',
+            s: 'ghost',
+            ghost: target,
+            delay: delay,
+            reason: reason,
+            token: utk
+        },
+        success: function(response) {
+            if (response.status === 1) {
+                callSaved(response.message, 1);
+            } else {
+                callSaved(response.error, 3);
+            }
+        },
+        error: function() {
+            callSaved('Connection failed', 3);
+        },
+        complete: hideOver
+    });
+};
+mainMuteUser = function(target) {
+    // Validate inputs
+    const delay = $('#mute_delay').val();
+    const reason = $('#mute_reason').val().trim();
+    if (!target || !delay) {
+        callSaved(system.missing_fields || 'Missing required fields', 3);
+        return;
+    }    
+    $.ajax({
+        url: FU_Ajax_Requests_File(),
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            f: 'action',
+            s: 'main_mute',
+            main_mute: target,
+            delay: delay,
+            reason: reason,
+            token: utk
+        },
+        success: function(response) {
+            // Handle both legacy and JSON responses
+            if (response === 1 || (response.status && response.status === 1)) {
+                callSaved(response.message || system.action_success || 'Mute applied', 1);
+                hideOver();
+            } else {
+                const errorMsg = response.error || 
+                               getErrorByCode(response.code) || 
+                               system.error;
+                callSaved(errorMsg, 3);
+            }
+        },
+        error: function() {
+            callSaved(system.connection_error || 'Connection failed', 3);
+        },
+        complete: function() {
+            hideOver();
+        }
+    });
+};
+// Helper function for legacy code responses
+function getErrorByCode(code) {
+    const errors = {
+        0: system.cannotUser || 'Cannot mute user',
+        2: system.alreadyAction || 'Already muted',
+        3: system.noUser || 'User not found'
+    };
+    return errors[code];
 }
 mainMuteBox = function(id){
 	$.post('system/box/mute_main.php', {
@@ -2709,19 +2770,38 @@ mainMuteBox = function(id){
 			}
 	});
 }
-privateMuteUser = function(target){
-	$.post(FU_Ajax_Requests_File(), {
-		f:'action',
-		s:'private_mute',
-		private_mute: target,
-		delay: $('#mute_delay').val(),
-		reason: $('#mute_reason').val(),
-			token:utk,
-		}, function(response) {
-			//actionResponse(response);
-			hideOver();
-	});
-}
+privateMuteUser = function(target) {
+    $.ajax({
+        url: FU_Ajax_Requests_File(),
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            f: 'action',
+            s: 'private_mute',
+            private_mute: target,
+            delay: $('#mute_delay').val(),
+            reason: $('#mute_reason').val(),
+            token: utk
+        },
+        success: function(response) {
+            if (response.status === 1) {
+                callSaved(response.message, 1);
+                // Update UI with mute info
+                if (response.data) {
+                    $('#user_' + target + '_mute_status').text(
+                        'Muted until: ' + response.data.mute_until
+                    );
+                }
+            } else {
+                callSaved(response.error || system.error, 3);
+            }
+        },
+        error: function() {
+            callSaved(system.connection_error, 3);
+        },
+        complete: hideOver
+    });
+};
 privateMuteBox = function(id){
 	$.post('system/box/mute_private.php', {
 		mute: id,

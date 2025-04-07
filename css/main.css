@@ -644,7 +644,7 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 .ucount { border-radius: 50px; padding: 2px 9px; font-size: 11px; }
 
 /* responsive menu page */
-#side_menu { position:fixed; left:0; top:0; height:100%; width:220px; background:#fff; display:none; overflow-y:auto; z-index:3; padding-top:50px; }
+#side_menu { position:fixed; left:0; top:0; height:100%; width:220px; background:#fff; display:none; overflow-y:auto; z-index:40; padding-top:50px; }
 
 /* opaque color */
 .offline:hover { opacity:1; }

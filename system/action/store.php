@@ -836,31 +836,23 @@ if ($s == 'buy_pack' && boomLogged() === true) {
 
 if ($s == 'delete_pack' && boomLogged() === true) {
     header("Content-type: application/json");
-
     // Get pack ID from POST request
     $pack_id = escape($_POST['pack_id']);
-
     // Validate that the pack_id is not empty and is numeric
     if (!empty($pack_id) && is_numeric($pack_id) && $pack_id > 0) {
-
         // Check if the pack with the provided ID exists
         $existingPack = FU_store_marketById($pack_id); // Assuming this function retrieves pack data by ID
-
         if ($existingPack) {
             // Pack exists, get the image path
             $imagePath = BOOM_PATH . '/' . $existingPack['image'];
-
             // Define the default image path (adjust this according to your setup)
             $defaultImage = 'upload/store/default_pack.png'; 
-
             // Check if the image is NOT the default image before deleting
             if (!empty($existingPack['image']) && $existingPack['image'] !== $defaultImage && file_exists($imagePath)) {
                 unlink($imagePath); // Deletes the image file from the server
             }
-
             // Proceed to delete the pack from the database
             $deleteQuery = $mysqli->query("DELETE FROM `boom_store` WHERE `id` = '$pack_id'");
-
             if ($deleteQuery) {
                 $array_data['status'] = 200; // Success
                 $array_data['message'] = 'Pack deleted successfully.';
@@ -879,7 +871,6 @@ if ($s == 'delete_pack' && boomLogged() === true) {
         $array_data['status'] = 400;
         $array_data['message'] = 'Invalid or missing pack ID.';
     }
-
     // Return response as JSON
     echo json_encode($array_data);
     exit();

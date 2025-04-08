@@ -131,9 +131,8 @@ if ($f == "action_member") {
                 $data_array['status'] = 402; // Payment Required: Insufficient gold
             }
             
-            header("Content-type: application/json");
-            echo json_encode($data_array);
-            exit();
+            echo fu_json_results($data_array);
+            exit();			
         }
           
     }
@@ -146,18 +145,15 @@ if ($f == "action_member") {
         if($query){
            $res['status'] = 200;
         }
-        header("Content-type: application/json");
-         echo json_encode($res);
-        exit(); 
+		echo fu_json_results($res);
+		exit(); 
     }
     
 if ($s == "start_dj") {
     $media_type = escape($_POST['media_type']);
     $media_url = escape($_POST['media_url']);
-    
     // Initialize response array
     $res = array('status' => 400, 'msg' => 'Something went wrong');
-    
     // Handle different media types
     if ($media_type == "youtube") {
         $res['mtype'] = 'youtube';
@@ -175,15 +171,12 @@ if ($s == "start_dj") {
         $res['mtype'] = 'live';
         $res['media_id'] = 'Broadcast_'.getRandomNumber();
     }
-
-
     // Check if media_id is valid
     if (empty($res['media_id'])) {
         $res['msg'] = 'Invalid media URL or media type';
-        echo json_encode($res);
-        exit();
+		echo fu_json_results($res);
+		exit(); 
     }
-
     // Directly fetch the DJ from the database
     $db->where("dj_id", $data['user_id']);
     $db->where("room_id", $data['user_roomid']);
@@ -198,9 +191,7 @@ if ($s == "start_dj") {
             "mediatype" => $res['mtype'],
             "mediaurl" => $res['media_id'],
         );
-        
         $insert_dj = $db->insert('dj', $broadcast_data);
-        
         if ($insert_dj) {
             $res['status'] = 200;
             $res['msg'] = 'Broadcast started successfully';
@@ -225,15 +216,34 @@ if ($s == "start_dj") {
             $res['msg'] = 'Failed to update broadcast';
         }
     }
-    
     // Return the response as JSON
-    header("Content-type: application/json");
-    echo json_encode($res);
+	echo fu_json_results($res);
     exit(); 
 }
-
-
     if ($s == "end_dj") {
+		// Retrieve the rise_id from the POST data, default to 0 if not provided
+		$rise_id = !empty($_POST['with_rise_id']) ? escape($_POST['with_rise_id']) : 0; 
+
+		// If rise_id is empty or invalid, set it to 0 (though this is redundant in this case)
+		if (empty($rise_id)) {
+			$rise_id = 0;
+		}
+
+		$res['rise_id'] = $rise_id;
+		if($res['rise_id']>0){
+			$rise_info =fuse_user_data($res['rise_id']);
+			$r_info = $rise_info;
+			$res['content'] = 'Please start Your broadcast '.$r_info['user_name'];
+			systemPostChat($r_info['user_roomid'], $res['content'], array('type'=> 'system__action'));
+			//Give dj acsses to this user
+			if(!makeDj($r_info['user_id'])){
+				echo makeDj($r_info['user_id']);
+			}
+			//set other user OnAir acsses status
+			echo addOnair($r_info['user_id']);
+			//disable dj for current dj
+			echo setOffair($data);
+		}
         // Prepare the data for updating the end_time
         $update_data = array(
             "end_time" => time(),
@@ -245,7 +255,6 @@ if ($s == "start_dj") {
         // Target the current DJ by user ID and room ID
         $db->where("dj_id", $data['user_id']);
         $db->where("room_id", $data['user_roomid']);
-    
         // Attempt to update the end_time
         if ($db->update('dj', $update_data)) {
             $res['status'] = 200;
@@ -257,8 +266,7 @@ if ($s == "start_dj") {
         }
     
         // Return the response as JSON
-        header("Content-type: application/json");
-        echo json_encode($res);
+       	 echo fu_json_results($res);
         exit(); 
     }
 
@@ -302,9 +310,8 @@ if ($s == "start_dj") {
         }
     
         // Send the response
-        header("Content-type: application/json");
-        echo json_encode($res);
-        exit();
+		 echo fu_json_results($res);
+		 exit();
     }
    if ($s == "user_onair") {
      	$onair = escape($_POST['user_onair'], true);
@@ -313,27 +320,66 @@ if ($s == "start_dj") {
     		$res['msg'] = 'You need to be a DJ first to be on air.';
     	}
     if(isOnAir($data)){
+		$c_time = time();
         $mysqli->query("UPDATE boom_users SET user_onair = '0' WHERE user_id = '{$data['user_id']}'");
-        //redisUpdateUser($user['user_id']);
-        $res['status'] = 100;
-        $res['msg'] = 'User off Air';
+        // Prepare the data for updating the end_time
+        $update_data = array(
+            "end_time" => time(),
+            "status" => 'ended', // Optionally update the status to reflect the end of the broadcast
+            "raised_hand_user_ids" => 'null',
+            "mediaurl" => '',
+            "start_time" => 0,
+        );
+        // Target the current DJ by user ID and room ID
+        $db->where("dj_id", $data['user_id']);
+        $db->where("room_id", $data['user_roomid']);
+        // Attempt to update the end_time
+        if ($db->update('dj', $update_data)) {
+			//redisUpdateUser($user['user_id']);
+			$res['status'] = 100;
+			$res['msg'] = 'User off Air';
+		}
     }else {
     	$mysqli->query("UPDATE boom_users SET user_onair = '1' WHERE user_id = '{$data['user_id']}'");
     	//redisUpdateUser($user['user_id']);
     	$res['status'] = 200;
     	$res['msg'] = 'User OnAir';
     }       
-       
-        header("Content-type: application/json");
-         echo json_encode($res);
-        exit(); 
+       echo fu_json_results($res);
     }
-    if ($s == "sharebox") {
+	if ($s == "accept_hand_raise") {
+		$res['user_id'] = escape($_POST['user_id']);
+		$res['current_dj_id'] = $data['user_id'];
+		// Shutdown current air first
+		$res['setOffair'] = setOffair($data);
+		if ($res['setOffair'] !== true && $res['setOffair'] !== 1) {
+			$res['error'] = 'Failed to set off air.';
+			echo fu_json_results($res);
+			exit();
+		}
+		// Check if the user who raised hand is DJ
+		$res['makeDj'] = makeDj($res['user_id']);
+		if ($res['makeDj'] !== true && $res['makeDj'] !== 1) {
+			$res['error'] = 'Failed to make user DJ.';
+			echo fu_json_results($res);
+			exit();
+		}
+		// Set raised user on air
+		$res['addOnair'] = addOnair($res['user_id']);
+		if ($res['addOnair'] !== true && $res['addOnair'] !== 1) {
+			$res['error'] = 'Failed to add user on air.';
+			echo fu_json_results($res);
+			exit();
+		}
+		// If all operations succeeded
+		echo fu_json_results($res);
+		exit();
+	}
+    if($s == "sharebox") {
         $html  = '';
          $html .= boomTemplate('box/share', $data);
           $res['html']   = $html;
-         header("Content-type: application/json");
-        echo json_encode($res);
+        echo fu_json_results($res);
         exit();
 
     }

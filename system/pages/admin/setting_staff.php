@@ -167,7 +167,7 @@ if (!boomAllow(100)) {
 					<button  data="staff_limitation" type="button" class="save_admin reg_button theme_btn"><i class="ri-save-3-fill"></i> <?php echo $lang['save']; ?></button>
 				</div>
 			</div>
-			<div id="staff_security" class="hide_zone tab_zone" style="display: none;">
+			<div id="staff_security" class="hide_zone tab_zone">
 				<div class="form_content">
 					<div class="setting_element">
 						<p class="label"><?php echo $lang['can_vip']; ?></p>
@@ -206,31 +206,31 @@ if (!boomAllow(100)) {
 			</div>
 			<div id="staff_system" class="hide_zone tab_zone" style="display: none;">
 				<div class="form_content">
-					<div class="setting_element"  style="display: none;">
+					<div class="setting_element">
 						<p class="label"><?php echo $lang['can_news']; ?></p>
 						<select id="set_can_news">
 							<?php echo listRankSuper($data['can_news']); ?>
 						</select>
 					</div>
-					<div class="setting_element"  style="display: none;">
+					<div class="setting_element">
 						<p class="label"><?php echo $lang['can_mcontact']; ?></p>
 						<select id="set_can_mcontact">
 							<?php echo listRankSuper($data['can_mcontact']); ?>
 						</select>
 					</div>
-					<div class="setting_element"  style="display: none;">
+					<div class="setting_element">
 						<p class="label"><?php echo $lang['can_mip']; ?></p>
 						<select id="set_can_mip">
 							<?php echo listRankSuper($data['can_mip']); ?>
 						</select>
 					</div>
-					<div class="setting_element"  style="display: none;">
+					<div class="setting_element">
 						<p class="label"><?php echo $lang['can_mplay']; ?></p>
 						<select id="set_can_mplay">
 							<?php echo listRankSuper($data['can_mplay']); ?>
 						</select>
 					</div>
-					<div class="setting_element"  style="display: none;">
+					<div class="setting_element">
 						<p class="label"><?php echo $lang['can_mlogs']; ?></p>
 						<select id="set_can_mlogs">
 							<?php echo listRankSuper($data['can_mlogs']); ?>

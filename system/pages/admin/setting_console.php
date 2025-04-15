@@ -1,12 +1,9 @@
 <?php
 
 require __DIR__ . "../../../config_session.php";
-
-
-if (!boomAllow($cody["can_view_console"])) {
-    exit;
+if(!canManageConsole()){
+	die();
 }
-
 echo elementTitle($lang["system_logs"]);
 ?>
 

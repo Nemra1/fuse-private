@@ -213,6 +213,12 @@ if (!boomAllow(90)) {
                             <?php echo listRank($data["can_frame"], 0);?>
 							</select>
 						</div>
+						<div class="setting_element">
+							<p class="label"> Allow Use Store<span class="badge">New</span></p>
+							<select id="set_allow_store">
+                            <?php echo listRank($data["can_store"], 0);?>
+							</select>
+						</div>
 					</div>
 					<button data="limitation" type="button" class="save_admin reg_button theme_btn"><i class="ri-save-line"></i> <?php echo $lang["save"]; ?></button>
 				</div>

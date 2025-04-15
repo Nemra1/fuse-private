@@ -346,16 +346,18 @@ function userDetails($user_id) {
 function userNameDetails($name){
     global $mysqli;
     $user = [];
+	$user_info =[];
     // Use prepared statement to prevent SQL injection
-    $stmt = $mysqli->prepare("SELECT user_id, user_name, user_email, user_avatar FROM boom_users WHERE user_name = ?");
+    $stmt = $mysqli->prepare("SELECT user_id, user_name, user_email, user_tumb FROM boom_users WHERE user_name = ?");
     $stmt->bind_param('s', $name); // Bind the parameter to avoid SQL injection
     $stmt->execute();
     $result = $stmt->get_result();
     if($result->num_rows > 0){
         $user = $result->fetch_assoc();
+		$user_info = fuse_user_data($user['user_id']);
     }
     $stmt->close(); // Always close the prepared statement
-    return $user;
+    return $user_info;
 }
 
 function ownAvatar($i){
@@ -1357,7 +1359,7 @@ function createLog($data, $post, $ignore = ''){
 	$report = 0;
 	$delete = 0;
 	$frame = $level = $border = $wing1 = $wing2 = $av_style ='';
-
+	$chat_style ='';
 	$m = 0;
 	if(isIgnored($ignore, $post['user_id'])){
 		return false;
@@ -1395,20 +1397,31 @@ function createLog($data, $post, $ignore = ''){
 	if($m > 0){
 		$log_options = '<div class="cclear" onclick="logMenu(this, ' . $post['post_id'] . ',' . $delete . ',' . $report . ');"><i class="ri-more-2-line i_btm"></i></div>';
 	}
-
-	return  '<li id="log' . $post['post_id'] . '" data="' . $post['post_id'] . '" class="ch_logs ' . $post['type'] . '">
-				<div class="'.$av_style.'  avtrig chat_avatar" onclick="avMenu(this,'.$post['user_id'].',\''.$post['user_name'].'\','.$post['user_rank'].','.$post['user_bot'].',\''.$post['country'].'\',\''.$post['user_cover'].'\',\''.$post['user_age'].'\',\''.userGender($post['user_sex']).'\');">
-					<img class="'. $border .' cavatar avav ' . avGender($post['user_sex']) . ' ' . ownAvatar($post['user_id']) . '" src="' . myAvatar($post['user_tumb']) . '" />
-					'. $frame .$level.'
-				</div>
-				<div class="my_text">
+	//if chat line style inline in same avatar line
+	if($data['chat_display']==1){
+	$chat_style = '<div class="my_text">
+					<div class="btable">
+							<div class="cname">' . chatRank($post) . '<span class="username ' . myColorFont($post) . '">'.$wing1.' ' . $post['user_name'] . ''.$wing2.'</span> :<div class="chat_message ' . $post['tcolor'] . '">' . processChatMsg($post) . '</div></div>
+							<div class="cdate">' . chatDate($post['post_date']) . '</div>
+							' . $log_options . '
+					</div>
+				</div>';		
+	}else if($data['chat_display']==2){
+	 $chat_style = '<div class="my_text">
 					<div class="btable">
 							<div class="cname">' . chatRank($post) . '<span class="username ' . myColorFont($post) . '">'.$wing1.' ' . $post['user_name'] . ''.$wing2.'</span></div>
 							<div class="cdate">' . chatDate($post['post_date']) . '</div>
 							' . $log_options . '
 					</div>
 					<div class="chat_message ' . $post['tcolor'] . '">' . processChatMsg($post) . '</div>
+				</div>';		
+	}
+	return  '<li id="log' . $post['post_id'] . '" data="' . $post['post_id'] . '" class="ch_logs ' . $post['type'] . '">
+				<div class="'.$av_style.'  avtrig chat_avatar" onclick="avMenu(this,'.$post['user_id'].',\''.$post['user_name'].'\','.$post['user_rank'].','.$post['user_bot'].',\''.$post['country'].'\',\''.$post['user_cover'].'\',\''.$post['user_age'].'\',\''.userGender($post['user_sex']).'\');">
+					<img class="'. $border .' cavatar avav ' . avGender($post['user_sex']) . ' ' . ownAvatar($post['user_id']) . '" src="' . myAvatar($post['user_tumb']) . '" />
+					'. $frame .$level.'
 				</div>
+				'.$chat_style.'
 			</li>';
 }
 function privateLog($post, $hunter){
@@ -2634,7 +2647,14 @@ function listRankStaff($current){
 	$rank .= '<option value="100" ' . selCurrent($current, 100) . '>' . rankTitle(100) . '</option>';
 	return $rank;
 }
-
+function listRankSuper($current){
+	global $data;
+	$rank = '';
+	$rank .= '<option value="80" ' . selCurrent($current, 80) . '>' . rankTitle(80) . '</option>';
+	$rank .= '<option value="90" ' . selCurrent($current, 90) . '>' . rankTitle(90) . '</option>';
+	$rank .= '<option value="100" ' . selCurrent($current, 100) . '>' . rankTitle(100) . '</option>';
+	return $rank;
+}
 function changeRank($current){
 	global $data, $cody;
 	$rank = '';
@@ -3040,7 +3060,24 @@ function canModifyPassword($user){
 		return true;
 	}
 }
-
+function canManageConsole(){
+	global $data;
+	if(boomAllow($data['can_mlogs'])){
+		return true;
+	}
+}
+function canManageIp(){
+	global $setting;
+	if(boomAllow($setting['can_mip'])){
+		return true;
+	}
+}
+function canManagePlay(){
+	global $data;
+	if(boomAllow($data['can_mip'])){
+		return true;
+	}
+}
 function canUserHistory($user){
 	global $data, $cody;
 	if(!empty($user) && canEditUser($user, $cody['can_view_history'], 1)){
@@ -3240,6 +3277,12 @@ function canClearRoom(){
 function canViewGold(){
 	global $data;
 	if(useGold() && boomAllow($data['can_vgold'])){
+		return true;
+	}
+}
+function canStore(){
+	global $data;
+	if(boomAllow($data['can_store'])){
 		return true;
 	}
 }
@@ -4388,7 +4431,6 @@ function pinnedRoom($room){
 /*last active dj */
 function checkAndUpdateBroadcaster($room_id, $user_id, $timeout_duration = 10) {
     global $db; // Assuming $db is your database connection
-
     // Fetch the active broadcaster in the room
     $db->where('room_id', $room_id);
     $db->where('status', 'active');
@@ -4398,10 +4440,13 @@ function checkAndUpdateBroadcaster($room_id, $user_id, $timeout_duration = 10) {
         $user = userDetails($current_broadcaster['dj_id']);
         
         // Decode the raised_hand_user_ids JSON
-        $raised_hand_user_ids = json_decode($current_broadcaster['raised_hand_user_ids'], true);
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($raised_hand_user_ids)) {
-            $raised_hand_user_ids = array(); // Set to empty array if JSON is invalid or not an array
-        }
+		$raised_hand_user_ids = $current_broadcaster['raised_hand_user_ids'] ?? '';
+		// Decode JSON string safely
+		if (!empty($raised_hand_user_ids)) {
+			$raised_hand_user_ids = json_decode($raised_hand_user_ids, true);
+		} else {
+			$raised_hand_user_ids = []; // Set to empty array if JSON string is empty or null
+		}
 
         if ($current_broadcaster['dj_id'] == $user_id) {
             // If the current broadcaster is the same DJ, update the start_time

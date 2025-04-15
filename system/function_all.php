@@ -2563,8 +2563,6 @@ function checkFlood() {
     return false; // No flood detected
 }
 
-
-
 function boomUseSocial(){
 	global $data;
 	if($data['facebook_login'] == 1 || $data['google_login'] == 1 || $data['twitter_login'] == 1){

@@ -536,6 +536,7 @@ saveSettings = function(source){
 			set_allow_mood: $('#set_allow_mood').val(),
 			set_allow_gift: $('#set_allow_gift').val(),
 			set_allow_frame: $('#set_allow_frame').val(),
+			set_allow_store: $('#set_allow_store').val(),
 			token: utk,
 			}, function(response) {
 				if(response == 1){
@@ -572,7 +573,6 @@ saveSettings = function(source){
 		set_can_vother: $('#set_can_vother').val(),
 		set_can_vname: $('#set_can_vname').val(),
 		set_can_vhistory: $('#set_can_vhistory').val(),
-		set_can_news: $('#set_can_news').val(),
 		set_can_rank: $('#set_can_rank').val(),
 		set_can_inv: $('#set_can_inv').val(),
 		set_can_cuser: $('#set_can_cuser').val(),
@@ -583,6 +583,7 @@ saveSettings = function(source){
 		set_can_mroom: $('#set_can_mroom').val(),
 		set_can_mfilter: $('#set_can_mfilter').val(),
 		set_can_dj: $('#set_can_dj').val(),
+		set_can_news: $('#set_can_news').val(),
 		set_can_mip: $('#set_can_mip').val(),
 		set_can_mlogs: $('#set_can_mlogs').val(),
 		set_can_mplay: $('#set_can_mplay').val(),
@@ -649,6 +650,7 @@ saveSettings = function(source){
 			set_max_offcount: $('#set_max_offcount').val(),
 			set_speed: $('#set_speed').val(),
 			set_allow_logs: $('#set_allow_logs').val(),
+			set_chat_display: $('#set_chat_display').val(),
 			token: utk,
 			}, function(response) {
 				if(response == 1){

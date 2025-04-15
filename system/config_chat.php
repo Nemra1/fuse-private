@@ -54,7 +54,7 @@ $ident = escape($_COOKIE[BOOM_PREFIX . 'userid']);
 // Define the query and parameters
 $query = "
     SELECT 
-        s.system_id, s.default_theme, s.site_description, s.domain, s.guest_talk, s.allow_logs, s.allow_private, s.use_wings, 
+        s.system_id, s.default_theme, s.site_description, s.domain, s.guest_talk, s.allow_logs, s.allow_private, s.use_wings,s.chat_display, 
         s.allow_main, s.bbfv, s.can_raction, s.use_vpn, s.language, s.timezone, s.speed, s.gender_ico, s.act_delay, 
         s.bot_delay, s.allow_bot, s.can_ghost, s.can_vghost, s.use_gold,s.allow_gold,s.use_frame,s.use_level,s.gold_delay,s.gold_base,s.can_gold,
         u.user_id, u.user_name, u.user_join, u.join_msg, u.last_action, u.user_language, u.user_timezone, 

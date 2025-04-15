@@ -492,6 +492,7 @@ if ($section == "chat" && boomAllow(90)) {
         $max_offcount = escape($_POST["set_max_offcount"]);
         $speed = escape($_POST["set_speed"]);
         $allow_logs = escape($_POST["set_allow_logs"]);
+        $chat_display = escape($_POST["set_chat_display"]);
         // Prepare data for update
         $data_query = array(
             "gender_ico" => $gender_ico,
@@ -501,6 +502,7 @@ if ($section == "chat" && boomAllow(90)) {
             "speed" => $speed,
             "max_offcount" => $max_offcount,
             "allow_logs" => $allow_logs,
+            "chat_display" => $chat_display,
         );
         // Perform the update
         $update = fu_update_dashboard($data_query);

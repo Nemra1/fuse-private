@@ -375,11 +375,6 @@ if ($section == "limitation" && boomAllow(90)) {
             "can_gift" => escape($_POST["set_allow_gift"]),
             "can_frame" => escape($_POST["set_allow_frame"]),
             "can_store" => escape($_POST["set_allow_store"]),
-            "can_dj" => escape($_POST["set_can_dj"]),
-            "can_news" => escape($_POST["set_can_news"]),
-            "can_mcontact" => escape($_POST["set_can_mcontact"]),
-            "can_mip" => escape($_POST["set_can_mip"]),
-            "can_mplay" => escape($_POST["set_can_mplay"]),
         );
         // Perform the update
         $update = fu_update_dashboard($data_query);
@@ -424,6 +419,12 @@ if ($section == "staff_limitation" && boomAllow(100)) {
             "can_modvpn" => escape($_POST["set_can_modvpn"]),
             "can_flood" => escape($_POST["set_can_flood"]),
             "can_warn" => escape($_POST["set_can_warn"]),
+			"can_dj" => escape($_POST["set_can_dj"]),
+			"can_news" => escape($_POST["set_can_news"]),
+            "can_mcontact" => escape($_POST["set_can_mcontact"]),	
+            "can_mip" => escape($_POST["set_can_mip"]),
+            "can_mplay" => escape($_POST["set_can_mplay"]),			
+			
         );
         // Perform the update
         $update = fu_update_dashboard($data_query);

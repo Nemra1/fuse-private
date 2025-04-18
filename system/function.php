@@ -2148,7 +2148,7 @@ function isOwner($user){
 	}
 }
 function isStaff($rank){
-	if($rank >= 8){
+	if($rank >= 70){
 		return true;
 	}
 }

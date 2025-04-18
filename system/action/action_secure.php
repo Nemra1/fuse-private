@@ -4,23 +4,23 @@
 require __DIR__ . "./../config_session.php";
 
 if (isset($_POST["actual_pass"]) && isset($_POST["new_pass"]) && isset($_POST["repeat_pass"]) && isset($_POST["change_password"])) {
-    echo changemypassword();
+    echo changeMyPassword();
     exit;
 }
 if (isset($_POST["save_email"]) && isset($_POST["email"]) && isset($_POST["password"])) {
-    echo changemyemail();
+    echo changeMyEmail();
     exit;
 }
 if (isset($_POST["delete_account_password"]) && isset($_POST["delete_my_account"])) {
-    echo deletemyaccount();
+    echo deleteMyAccount();
     exit;
 }
 if (isset($_POST["cancel_delete_account"])) {
-    echo canceldelete();
+    echo cancelDelete();
     exit;
 }
 if (isset($_POST["secure_name"]) && isset($_POST["secure_password"]) && isset($_POST["secure_email"])) {
-    echo accountsecurity();
+    echo accountSecurity();
     exit;
 }
 

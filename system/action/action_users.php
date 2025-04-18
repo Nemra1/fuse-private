@@ -36,62 +36,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['target'], $_POST['set
 }
 // Handle other requests
 if (isset($_POST["change_rank"]) && isset($_POST["target"])) {
-    echo boomchangeuserrank();
+    echo boomChangeUserRank();
 } else {
     // Change user color and font
     if (isset($_POST["user_color"]) && isset($_POST["user_font"]) && isset($_POST["user"])) {
-        echo boomchangecolor();
+        echo boomChangeColor();
         exit;
     }
     // Change account status
     if (isset($_POST["account_status"]) && isset($_POST["target"])) {
-        echo boomchangeuserverify();
+        echo boomChangeUserVerify();
     } else {
         // Delete user account
         if (isset($_POST["delete_user_account"])) {
-            echo boomdeleteaccount();
+            echo boomDeleteAccount();
             exit;
         }
         // Update user email
         if (isset($_POST["set_user_email"]) && isset($_POST["set_user_id"])) {
-            echo staffuseremail();
+            echo staffUserEmail();
             exit;
         }
         // Update user about section
         if (isset($_POST["set_user_about"]) && isset($_POST["target_about"])) {
-            echo staffuserabout();
+            echo staffUserAbout();
             exit;
         }
         // Change user password
         if (isset($_POST["target_id"]) && isset($_POST["user_new_password"])) {
-            echo staffchangepassword();
+            echo staffChangePassword();
             exit;
         }
         // Change user mood
         if (isset($_POST["target_id"]) && isset($_POST["user_new_mood"])) {
-            echo staffchangemood();
+            echo staffChangeMood();
             exit;
         }
         // Change username
         if (isset($_POST["target_id"]) && isset($_POST["user_new_name"])) {
-            echo staffchangeusername();
+            echo staffChangeUsername();
             exit;
         }
         // Create new user
         if (isset($_POST["create_user"]) && isset($_POST["create_name"]) && isset($_POST["create_password"]) && isset($_POST["create_email"]) && isset($_POST["create_age"]) && isset($_POST["create_gender"])) {
-            echo staffcreateuser();
+            echo staffCreateUser();
             exit;
         }
     }
 }
 // Update user location settings
 if (isset($_POST["user_language"]) && isset($_POST["user_country"]) && isset($_POST["user_timezone"])) {
-    echo setuserlocation();
+    echo setUserLocation();
     exit;
 }
 
 exit;
-
+function staffChangePassword() {
+	 global $mysqli,$data;
+    // Sanitize inputs
+    $pass = escape($_POST["user_new_password"]);
+    $target = escape($_POST["target_id"]);
+    // Fetch user details
+    $user = userDetails($target);
+    if (!$user) {
+        return -1; // User not found
+    }
+    // Permission check
+    if (!canModifyPassword($user)) {
+        return 0; // No permission
+    }
+    // Validate password
+    if (!boomValidPassword($pass)) {
+        return 2; // Invalid password
+    }
+    // Hash the password using PASSWORD_BCRYPT
+    $new_pass = password_hash($pass, PASSWORD_BCRYPT);
+    // Update database using prepared statement
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_password = ? WHERE user_id = ?");
+    if (!$stmt) {
+        error_log("Prepare failed: " . $mysqli->error);
+        return -1; // Database error
+    }
+    $stmt->bind_param("si", $new_pass, $user["user_id"]);
+    if (!$stmt->execute()) {
+        error_log("Execute failed: " . $stmt->error);
+        return -1; // Database error
+    }
+    // Log the action
+    boomConsole("pass_user", ["target" => $user["user_id"], "custom" => $user["user_name"]]);
+    return 1; // Success
+}
+/* function staffChangePassword(){
+    global $mysqli,$data;
+    $pass = escape($_POST["user_new_password"]);
+    $target = escape($_POST["target_id"]);
+    $user = userDetails($target);
+    if (!canModifyPassword($user)) {
+        return 0;
+    }
+    if (!boomValidPassword($pass)) {
+        return 2;
+    }
+    $new_pass = encrypt($pass);
+    $mysqli->query("UPDATE boom_users SET user_password = '" . $new_pass . "' WHERE user_id = '" . $user["user_id"] . "'");
+    boomConsole("pass_user", ["target" => $user["user_id"], "custom" => $user["user_name"]]);
+    return 1;
+} */
 function setUserLocation() {
     global $mysqli, $data, $cody;
     // 1. Validate and sanitize inputs

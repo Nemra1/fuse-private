@@ -817,6 +817,17 @@ $lang['store_buy'] = 'شراء';
 $lang['store_music_panel'] = 'موسيقى الملف الشخصي';
 $lang['store_css_panel'] = 'نمط الملف الشخصي';
 $lang['store_reset'] = 'اعادة ظبط';
+$lang['system'] = 'نظام';
+// These keys should exist in your language file:
+$lang['missing_params'] = 'المعلمات المطلوبة مفقودة';
+$lang['invalid_duration'] = 'مدة الكتم غير صالحة';
+$lang['user_not_found'] = 'لم يتم العثور على المستخدم';
+$lang['no_permission'] = 'لا توجد صلاحية';
+$lang['already_muted'] = 'تم كتمه بالفعل';
+$lang['system_error'] = 'خطأ في النظام';
+$lang['action_complete'] = 'اكتملت العملية';
+$lang['action_failed'] = 'فشلت العملية';
+$lang['member_notfound'] = 'لم يتم العثور على المستخدم';
 
 
 ?>

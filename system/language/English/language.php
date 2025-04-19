@@ -827,5 +827,6 @@ $lang['already_muted'] = 'Already muted';
 $lang['system_error'] = 'System error';
 $lang['action_complete'] = 'Action completed';
 $lang['action_failed'] = 'Action failed';
+$lang['member_notfound'] = 'User Not found';
 
 ?>

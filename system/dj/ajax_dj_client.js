@@ -14,7 +14,6 @@ function Fuse_broadcast_client(data) {
         if (!bviewer_vElement.find('.media-container').length) {
             let otherElm1 = '';
             let otherElm2 = '';
-
             // Determine elements based on the user's role
             if (user_id !== dj_data.dj_id) {
                 otherElm1 = `
@@ -184,14 +183,14 @@ function outputRaisedHands(users) {
     // Function to handle live media
     function handleLiveMedia(mediaUrl, $liveIframe) {
             // Append the Jitsi API script dynamically
-            $.getScript('https://videoserver.radiodiensten.nl/external_api.js')
+            $.getScript('https://jitsi.riot.im/external_api.js')
                 .done(function(script, textStatus) {
                     console.log('Jitsi API script loaded successfully.');
 
                     // Check if Jitsi iframe already exists
                     if ($('#liveIframe iframe').length === 0) {
                         // Initialize Jitsi only if the iframe doesn't exist
-                  const domain = 'videoserver.radiodiensten.nl';
+                  const domain = 'jitsi.riot.im';
                    const options = {
                             roomName: mediaUrl,
                             userInfo: {

@@ -61,6 +61,10 @@ if(!isOnAir($data)){
 
 	</div>
 </div>
+<div id="dj_admin_confirmation_modal" title="Confirm Action" style="display:none;">
+    <p>If you accept the hand raise for this user, your DJ will be off.</p>
+</div>
+
 <script>
 selectIt();
 $('#mediaType').selectBoxIt(); 

@@ -1,4 +1,4 @@
-
+let riseHandcount = 0; // Default role
 openOnair = function() {
     $.post('system/box/onair.php', {}, function(response) {
         showEmptyModal(response, 360);
@@ -45,12 +45,23 @@ start_dj = function(media_type, media_url) {
     });
 
 }
-end_dj = function(end) {
+function end_dj(end, rise_id) {
+    // If rise_id is empty or not provided, default to 0
+    rise_id = rise_id || 0;
+    // Check if rise_id is valid (non-zero), or handle end broadcast normally if no rise_id
+    if (rise_id !== 0) {
+        console.log("Ending DJ session for hand raise with user ID: " + rise_id);
+    } else {
+        console.log("Ending DJ session normally without a hand raise.");
+    }
+    var end_dj_with_rise_id = rise_id;
+    // Send the end DJ request (with or without rise_id)
     $.post(FU_Ajax_Requests_File(), {
         f: 'action_member',
         s: 'end_dj',
         token: utk,
         end: end,
+        with_rise_id: end_dj_with_rise_id,
     }, function(res) {
         if (res.status == 200) {
             $('#mediaUrl').val('');
@@ -58,10 +69,11 @@ end_dj = function(end) {
         } else {
             callSaved(res.msg, 3);
         }
-
     });
     console.clear();
 }
+
+
 broadcast_box = function(elm) {
     $.post('system/dj/admin_broadcast.php', {
         user_onair: $('#set_user_onair').val(),
@@ -162,7 +174,112 @@ function validateMediaUrl(is_live) {
     // Add functionality to start broadcasting
     return true;
 }
+// Function to output the raised hands data
+function outputRaisedHands(users) {
+    var container = $('#raised-hands-container');
+    var riseHandcount = $('.riseHandcount'); // Make sure this exists
+    container.empty();
 
+    if (users.length === 0) {
+        container.append('<p>No users have raised their hands.</p>');
+        riseHandcount.html('').hide();
+    } else {
+        $.each(users, function(index, user) {
+            var userItem = $('<div>', {
+                class: 'ulist_item'
+            });
+            var userAvatar = $('<div>', {
+                class: 'ulist_avatar'
+            }).append($('<img>', {
+                src: user.avatar,
+                alt: $('<div>').text(user.username).html() + "'s avatar"
+            }));
+            var userName = $('<div>', {
+                class: 'ulist_name'
+            }).append($('<p>', {
+                class: 'username bgrad19',
+                text: user.username
+            }));
+            var userOption = $('<div>', {
+                class: 'ulist_option'
+            });
+            // Accept Hand Icon
+            var acceptBtn = $('<i>', {
+                class: 'ri-hand i_btm accept-btn',
+                title: 'Accept Hand Raise'
+            }).on('click', function () {
+                dj_acceptHandRise(this, user.user_id);
+            });
+            // Remove Hand Icon
+            var removeBtn = $('<i>', {
+                class: 'ri-close-circle-line i_btm remove-btn',
+                title: 'Remove Hand Raise'
+            }).on('click', function () {
+                dj_removeHandRise(this, user.user_id);
+            });
+            userOption.append(acceptBtn, removeBtn);
+            userItem.append(userAvatar, userName, userOption);
+            container.append(userItem);
+        });
+        riseHandcount.html(users.length).show();
+    }
+}
+function dj_acceptHandRise(button, userId) {
+    // Set rise_id to 0 if it is empty or does not exist
+    userId = userId || 0;
+    // Disable the button to prevent multiple clicks
+    $(button).prop('disabled', true).css('opacity', '0.5');
+    // Check if rise_id (userId) is valid (non-zero)
+    if (!userId) {
+        callSaved("Error: Invalid User ID.", 3);
+        $(button).prop('disabled', false).css('opacity', '1');
+        return; // Exit the function if the ID is invalid
+    }
+    // Show confirmation dialog
+    $("#dj_admin_confirmation_modal").dialog({
+        resizable: false,
+        height: "auto",
+        width: 400,
+        modal: true,
+        buttons: {
+            "Confirm": function() {
+                // On Confirm, proceed with the action
+                $(this).dialog("close"); // Close the modal
+                // Call your function to accept the hand raise (e.g., sending a request)
+                handleAcceptHandRise("yes", userId); // Pass "yes" to handleAcceptHandRise
+            },
+            "Cancel": function() {
+                // On Cancel, just close the modal
+                $(this).dialog("close");
+                // Re-enable the button in case user canceled the action
+                $(button).prop('disabled', false).css('opacity', '1');
+            }
+        }
+    });
+}
+
+function handleAcceptHandRise(end_dj_withid, userId) {
+    // Set rise_id to 0 if it is empty or does not exist
+    userId = userId || 0;
+    // Check if rise_id (userId) is valid (non-zero)
+    if (!userId) {
+        callSaved("Error: Invalid User ID.", 3);
+        return; // Exit the function if the ID is invalid
+    }
+    if (end_dj_withid === "yes") {
+        // End the DJ session for the hand raise
+        end_dj("end", userId); // Pass rise_id to end the broadcast with user ID
+    } else {
+        // End the DJ session normally without a rise_id (without user hand raise)
+        end_dj("end", 0); // Pass 0 to end the broadcast normally
+    }
+    // Your logic for handling the accepted hand raise (e.g., making the user DJ)
+    callSaved("User ID " + userId + " accepted hand raise.",1);
+}
+
+function broadcaster_admin_side(data){
+	console.log(data);
+}
 $(document).ready(function() {
     var is_live = $('#is_livestream').val();
     // Listen for changes in the media URL input field
@@ -197,14 +314,14 @@ $(document).ready(function() {
                     start_dj(mediaType, mediaUrl);
                 }
             }else if (is_live === '1') {
-                alert('is live');
+                callSaved("is live.", 3);
                 start_dj("live", "null");
             }
         });
 
 
     $(document).on('click', '#end_broadcast', function() {
-        end_dj("end");
+          end_dj("end", 0); // Pass 0 to end the broadcast normally
     });
 
     initializeDialog();

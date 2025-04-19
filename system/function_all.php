@@ -2253,6 +2253,31 @@ function isMusic($ext){
 		return true;
 	}
 }
+function isVideo($ext) {
+    // Ensure the file extension is lowercase
+    $ext = strtolower($ext);
+    // Supported video MIME types
+    $video_mime_types = array(
+        'video/mp4',      // MP4 video
+        'video/quicktime',// MOV video
+        'video/x-msvideo',// AVI video
+        'video/x-matroska',// MKV video
+        'video/webm',     // WebM video
+        'video/ogg',      // OGG video
+        'video/3gpp',     // 3GP video
+        'video/x-flv'     // FLV video
+    );
+    // Supported video file extensions
+    $video_extensions = array(
+        'mp4', 'mov', 'avi', 'mkv', 'webm', 'ogg', 'ogv', '3gp', 'flv'
+    );
+    // Check if the uploaded file's MIME type and extension match the allowed video types
+    if (in_array($_FILES["file"]["type"], $video_mime_types) && in_array($ext, $video_extensions)) {
+        return true;
+    }
+
+    return false;
+}
 function isCoverImage($ext){
 	$ext = strtolower($ext);
 	$img = array( 'image/gif', 'image/jpeg', 'image/jpg', 'image/pjpeg', 'image/x-png', 'image/png', 'image/JPG', 'image/webp' );

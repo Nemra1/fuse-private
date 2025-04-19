@@ -1401,7 +1401,7 @@ function createLog($data, $post, $ignore = ''){
 	if($data['chat_display']==1){
 	$chat_style = '<div class="my_text">
 					<div class="btable">
-							<div class="cname">' . chatRank($post) . '<span class="username ' . myColorFont($post) . '">'.$wing1.' ' . $post['user_name'] . ''.$wing2.'</span> :<div class="chat_message ' . $post['tcolor'] . '">' . processChatMsg($post) . '</div></div>
+							<div class="cname">' . chatRank($post) . '<span class="username ' . myColorFont($post) . '">'.$wing1.' ' . $post['user_name'] . ''.$wing2.'</span>: <div class="chat_message ' . $post['tcolor'] . '">' . processChatMsg($post) . '</div></div>
 							<div class="cdate">' . chatDate($post['post_date']) . '</div>
 							' . $log_options . '
 					</div>
@@ -2148,7 +2148,7 @@ function isOwner($user){
 	}
 }
 function isStaff($rank){
-	if($rank >= 70){
+	if($rank >= 80){
 		return true;
 	}
 }

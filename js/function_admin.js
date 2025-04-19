@@ -1263,11 +1263,15 @@ adminRoomIcon = function(id){
 				type: 'post',
 				success: function(response){
 					if(response.code == 1){
-						callSaved(system.wrongFile, 3);
+						callSaved(response.msg, 3);
 					}
 					else if(response.code == 5){
 						$('.ricon_current').attr('src', response.data);
 						$('#ricon'+id).attr('src', response.data);
+					}else if(response.code == 6){
+						$('.ricon_current').attr('src', response.data);
+						$('#ricon'+id).attr('src', response.data);
+							callSaved(response.msg, 3);
 					}
 					else {
 						callSaved(system.error, 3);
@@ -1304,9 +1308,10 @@ addDj = function(){
 			}
 			else if(response.code == 2){
 				callSaved(system.cannotUser, 3);
-			}
-			else if(response.code == 4){
+			}else if(response.code == 4){
 				callSaved(system.alreadyAction, 3);
+			}else if(response.code == 3){
+				callSaved(response.msg, 3);
 			}
 			else {
 			    callSaved(system.error, 3);

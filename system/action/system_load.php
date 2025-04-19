@@ -26,51 +26,25 @@ if (isset($_POST['page'])) {
 }
 
 function boomGeo(){
-    global $mysqli, $data;
+    global $mysqli,$data;
     if (checkGeo()) {
-        // Securely require required files
         require BOOM_PATH . "/system/location/country_list.php";
         require BOOM_PATH . "/system/element/timezone.php";
-        // Fetch IP address securely
         $ip = getIp();
         $country = "ZZ";
         $tzone = $data["user_timezone"];
-        // Fetch geolocation data with proper URL encoding
-        $loc = doCurl("http://www.geoplugin.net/php.gp?ip=" . urlencode($ip));
-        // Decode JSON response and validate it
-        $res = json_decode($loc, true);
-        if ($res !== null && isset($res["geoplugin_countryCode"]) && array_key_exists($res["geoplugin_countryCode"], $country_list)) {
+        $loc = doCurl("http://www.geoplugin.net/php.gp?ip=" . $ip);
+        $res = unserialize($loc);
+        if (isset($res["geoplugin_countryCode"]) && array_key_exists($res["geoplugin_countryCode"], $country_list)) {
             $country = escape($res["geoplugin_countryCode"]);
         }
         if (isset($res["geoplugin_timezone"]) && in_array($res["geoplugin_timezone"], $timezone)) {
             $tzone = escape($res["geoplugin_timezone"]);
         }
-        // Secure SQL query to update user info
-        $user_id = intval($data["user_id"]); // Ensure user ID is an integer
-        $ip = escape($ip); // Secure IP address
-        $country = escape($country); // Secure country code
-        $tzone = escape($tzone); // Secure timezone
-        // Prepare the query with parameterized statements (to prevent SQL injection)
-        $query = "UPDATE boom_users SET user_ip = ?, country = ?, user_timezone = ? WHERE user_id = ?";
-        $stmt = $mysqli->prepare($query);
-        // Check if prepare() was successful
-        if ($stmt === false) {
-            // Log error and return failure
-            error_log("Error preparing SQL statement: " . $mysqli->error);
-            return 0;
-        }
-        // Bind the parameters and execute the query
-        $stmt->bind_param("sssi", $ip, $country, $tzone, $user_id);
-        if ($stmt->execute()) {
-            //redisUpdateUser($data['user_id']);
-            return 1;
-        } else {
-            // Log error and handle failure
-            error_log("Error executing SQL statement: " . $stmt->error);
-            return 0;
-        }
+        $mysqli->query("UPDATE boom_users SET user_ip = '" . $ip . "', country = '" . $country . "', user_timezone = '" . $tzone . "' WHERE user_id = '" . $data["user_id"] . "'");
+        //redisUpdateUser($data['user_id']);
+        return 1;
     }
-
     return 0;
 }
 

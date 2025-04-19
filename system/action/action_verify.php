@@ -12,7 +12,7 @@ if (isset($_POST["send_verification"]) && isset($_POST["verify"]) && boomAllow(1
     exit;
 }
 if (isset($_POST["valid_code"]) && isset($_POST["verify_code"])) {
-    echo checkcode();
+    echo checkCode();
 }
 
 function checkCode()

@@ -1,12 +1,12 @@
 <?php
 /**
-* Codychat
+* FuseChat
 *
-* @package Codychat
-* @author www.boomcoding.com
+* @package FuseChat
+* @author www.nemra-1.com
 * @copyright 2020
 * @terms any use of this script without a legal license is prohibited
-* all the content of Codychat is the propriety of BoomCoding and Cannot be 
+* all the content of FuseChat is the propriety of FuseChat and Cannot be 
 * used for another project.
 */
 require_once("./../config_session.php");

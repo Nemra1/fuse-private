@@ -7,7 +7,7 @@ function addUserDj(){
     $target = escape($_POST['add_dj']);
     $user = userNameDetails($target);
     if(empty($user)){
-        return boomCode(3);
+        return boomCode(3,['msg'=> $lang['user_not_found']]);
     }
     if(userDj($user)){
         return boomCode(4);

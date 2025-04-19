@@ -1207,8 +1207,8 @@ if ($s == 'buy_wings' && boomLogged() === true) {
             echo json_encode(['status' => 'error', 'message' => 'Only MP3 files are allowed']);
             die();
         }
-        // Validate file size (max 10MB)
-        if ($file['size'] > 10 * 1024 * 1024) {
+        // Validate file size (max 20MB)
+        if ($file['size'] > 20 * 1024 * 1024) {
             echo json_encode(['status' => 'error', 'message' => 'File size must be less than 10MB']);
             die();
         }

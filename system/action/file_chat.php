@@ -1,8 +1,8 @@
 <?php
 /**
- * Codychat File Upload Handler
+ * FuseChat File Upload Handler
  *
- * @package Codychat
+ * @package FuseChat
  * @subpackage FileUpload
  * @license Proprietary
  * @version 2020
@@ -46,6 +46,10 @@ if (isset($_FILES['file'])) {
         case isMusic($extension):
             handleMusicUpload($sourcePath, $file_url, $origin);
             break;
+        //add in next update    
+        //case isVideo($extension):
+        //   handleVideoUpload($sourcePath, $file_url, $origin);
+       //     break;
 
         default:
             echo 1;

@@ -36,7 +36,7 @@
 	.room_t { max-width:60%; }
 	.modal_left, .modal_right { width:100%; float:none; padding:15px; }
 	.profile_avatar { width:100px; height:100px; }
-	.avatar_profile { width:100px; height:100px; }
+	.avatar_profile { width:96px; height:95px; }
 	.pro_name { font-size:18px; }
 	.pro_name_icon { width:14px; height:14px; display:block; }
 	.avatar_spin { width:100px; height:100px; }

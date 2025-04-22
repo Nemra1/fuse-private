@@ -3330,6 +3330,27 @@ function userSeen($name){
 	}
 	return str_replace(array('%userseen%', '%seentime%', '%seenroom%'), array('<b>' . $user['user_name'] . '</b>', '<b>' . displayDate($user['last_action']) . '</b>', '<b>' . $seen['room_name'] . '</b>'), $lang['seen']);
 }
+
+function guest_room_list($type){
+    global $db, $data, $lang;
+	$res = array();
+	$rooms = $db->get('rooms');
+	$room_list = '';
+	if($db->count > 0){
+		 foreach ($rooms as $room){
+		switch($type){
+			case 'list':
+				$room_list .= boomTemplate('element/room_item_guest', $room);
+				break;
+			case 'box':
+				$room_list .= boomTemplate('element/room_item_guest', $room);
+				break;
+				
+		}			
+		}	   
+	}
+	 return $room_list;	
+}
 function getRoomList($type){
 	global $mysqli, $data, $lang;
 	$check_action = getDelay();

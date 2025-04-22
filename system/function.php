@@ -2482,17 +2482,17 @@ function rankIcon($rank){
 		case 1:
 			return 'user.svg';
 		case 50:
-			return 'vip_elite.png';
+			return 'vip_elite.gif';
 		case 51:
-			return 'vip_prime.png';
+			return 'vip_prime.gif';
 		case 52:
-			return 'vip_supreme.png';
+			return 'vip_supreme.gif';
 		case 60:
-			return 'premium_elite.png';
+			return 'premium_elite.gif';
 		case 61:
-			return 'premium_prime.png';
+			return 'premium_prime.gif';
 		case 62:
-			return 'premium_supreme.png';
+			return 'premium_supreme.gif';
 		case 69:
 			return 'bot.svg';
 		case 70:
@@ -3331,15 +3331,9 @@ function blackNotify(){
             updateNotify($id);
 	    } else {
 	         boomNotify("profile_visit", array("hunter" => $data['user_id'], "target" => $user["user_id"], "custom" => $template));   
-	    }
-//boomNotify("profile_visit", array("hunter" => $data['user_id'], "target" => $user["user_id"], "custom" => $template));   	
-		
+	    }		
 	}
 }
-
-
-
-
 /*fake users*/
 function get_fake_users(){
     global $db, $data, $lang;

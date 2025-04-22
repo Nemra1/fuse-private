@@ -197,7 +197,7 @@ function downloadBridgeAvatar($user, $url, $prefix){
     // Escape URL for security
     $url = bridgeEscape($url);
     // Ensure the user has a default avatar or the avatar needs to be updated
-    if ($user['user_tumb'] == 'default_avatar.png' || stripos($user['user_tumb'], $prefix) !== false) {
+    if ($user['user_tumb'] == 'default_avatar.svg' || stripos($user['user_tumb'], $prefix) !== false) {
         // Generate a unique avatar filename
         $img = $prefix . '_' . md5(time() . $user['user_id']) . '.jpg';
         $path = BOOM_PATH . '/avatar/' . $img;

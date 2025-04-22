@@ -419,9 +419,8 @@ function userPostChat($content, $custom = array()){
     // Merge custom data with defaults
     $c = array_merge($def, $data, $custom);
     // Check if the user is ghosted
-    if(isGhosted($data)){
-        $ghosted = 1;
-    }
+	$ghosted = isGhosted($data) ? 1 : 0;
+
     // Handle runtime user experience points
     if(useLevel()){
         $mysqli->query("UPDATE boom_users SET user_exp = user_exp + 1 WHERE user_id = '{$data['user_id']}'");
@@ -1498,7 +1497,6 @@ function createUserlist($list) {
     if (!isVisible($list)) {
         return false;
     }
-
     $icons = [
         'rank' => getRankIcon($list, 'list_rank'),
         'mute' => getMutedIcon($list, 'list_mute'),
@@ -1710,7 +1708,7 @@ function isBot($user){
 	}
 }
 function systemBot($user){
-	if($user == 9){
+	if($user == 99){
 		return true;
 	}
 }
@@ -1917,20 +1915,19 @@ function userUnkick($user){
 function checkMute($data) {
     // Initialize the mute flags as an associative array
     $muteFlags = [
+        'isPrivateMuted' => false,        // Whether the user is muted
         'isMuted' => false,        // Whether the user is muted
-        'canPrivate' => true,      // Whether the user can send private messages
         'isMainMuted' => false,    // Whether the user is muted in the main room
         'isRoomMuted' => false     // Whether the user is muted in the room
     ];
+    if (!canPrivate($data)) {
+        $muteFlags['isPrivateMuted'] = true; // User cannot send private messages
+    }	
     // Check if the user is globally muted
     if (isMuted($data)) {
         $muteFlags['isMuted'] = true;
         $muteFlags['isRoomMuted'] = true; // Assuming room mute is also part of global mute
-    }
-    if (!canPrivate()) {
-        $muteFlags['canPrivate'] = false; // User cannot send private messages
-    }
-	
+    }	
     // Check if the user is muted in the main room
     if (isMainMuted($data) || isRoomMuted($data) || !canMain()) {
         $muteFlags['isMainMuted'] = true;
@@ -1969,12 +1966,7 @@ function isMainMuted($user){
 		return true;
 	}
 }
-//private muted
-function isPrivateMuted($user){
-	if($user['user_pmute'] > time()){
-		return true;
-	}
-}
+
 function isGuestMuted($user){
 	global $data;
 	if($user['user_rank'] == 0 && $data['guest_talk'] == 0){
@@ -2490,17 +2482,17 @@ function rankIcon($rank){
 		case 1:
 			return 'user.svg';
 		case 50:
-			return 'vip_elite.gif';
+			return 'vip_elite.png';
 		case 51:
-			return 'vip_prime.gif';
+			return 'vip_prime.png';
 		case 52:
-			return 'vip_supreme.gif';
+			return 'vip_supreme.png';
 		case 60:
-			return 'premium_elite.gif';
+			return 'premium_elite.png';
 		case 61:
-			return 'premium_prime.gif';
+			return 'premium_prime.png';
 		case 62:
-			return 'premium_supreme.gif';
+			return 'premium_supreme.png';
 		case 69:
 			return 'bot.svg';
 		case 70:
@@ -2815,12 +2807,7 @@ function canEditRoom(){
 	}
 }
 
-function canPrivate(){
-	global $cody, $data;
-	if(boomAllow($data['allow_private']) && !isPrivateMuted($data)){
-		return true;
-	}
-}
+
 function userCanPrivate($user){
 	global $cody, $data;
 	if(userBoomAllow($user, $data['allow_private']) && !isPrivateMuted($user)){
@@ -3441,7 +3428,7 @@ function bot_data($bot_id,$group_id){
 	$user_info['bot_reply'] 		= $bot_data['reply'];
 	$user_info['bot_type'] 			= $bot_data['fuse_bot_type'];
 	$user_info['user_id'] 			= $user_data['user_id'];
-	 return $user_info;
+	return $user_info;
 }
 //update single bot data
 
@@ -4154,6 +4141,32 @@ function unmuteAccountMain($id){
 	boomConsole('main_unmute', array('target'=> $user['user_id']));
 	return 1;
 }
+/******************* start private Mute function********************/
+function systemPrivateMute($user, $delay) {
+    global $mysqli;
+    $mute_end = max($user['user_pmute'] ?? 0, time() + ($delay * 60));
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_pmute = ? WHERE user_id = ?");
+    $stmt->bind_param("ii", $mute_end, $user['user_id']);
+    return $stmt->execute() && $stmt->affected_rows > 0;
+}
+function systemPrivateUnmute($user){
+	global $mysqli;
+	clearNotifyAction($user['user_id'], 'mute');
+	$mysqli->query("UPDATE boom_users SET user_pmute = 0 WHERE user_id = '{$user['user_id']}'");
+	//redisUpdateUser($user['user_id']);
+}
+//private muted
+function isPrivateMuted($user){
+	if($user['user_pmute'] > time()){
+		return true;
+	}
+}
+function canPrivate(){
+	global $cody, $data;
+	if(boomAllow($data['allow_private']) && !isPrivateMuted($data)){
+		return true;
+	}
+}
 function muteAccountPrivate($id, $delay, $reason = '') {
     global $mysqli, $data, $lang;
     // 1. Get user details
@@ -4196,24 +4209,7 @@ function muteAccountPrivate($id, $delay, $reason = '') {
         'error' => $lang['mute_failed'] ?? 'Failed to apply mute'
     ];
 }
-/* function muteAccountPrivate($id, $delay, $reason = ''){
-	global $mysqli;
-	$user = userDetails($id);
-	if(empty($user)){
-		return 3;
-	}
-	if(!canMuteUser($user)){
-		return 0;
-	}
-	if(isMuted($user) || isPrivateMuted($user)){
-		return 2;
-	}
-	systemPrivateMute($user, $delay);
-	boomNotify('private_mute', array('target'=> $user['user_id'], 'source'=> 'mute', 'reason'=> $reason, 'delay'=> $delay, 'icon'=> 'action'));
-	boomHistory('private_mute', array('target'=> $user['user_id'], 'delay'=> $delay, 'reason'=> $reason));
-	boomConsole('private_mute', array('target'=> $user['user_id'], 'reason'=>$reason, 'delay'=> $delay));
-	return 1;
-} */
+
 function unmuteAccountPrivate($id){
 	global $mysqli;
 	$user = userDetails($id);
@@ -4231,6 +4227,18 @@ function unmuteAccountPrivate($id){
 	boomConsole('private_unmute', array('target'=> $user['user_id']));
 	return 1;
 }
+function privateMuted(){
+	global $data;
+	if(isMuted($data) || !inChat($data) || !canPrivate()){
+		return true;
+	}
+}
+function privateBlocked(){
+	if(privateMuted() || checkFlood()){
+		return true;
+	}
+}
+/******************* end private Mute function********************/
 // like profile actions
 function useLike(){
 	global $data;

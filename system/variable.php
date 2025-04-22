@@ -71,8 +71,8 @@ $cody['can_clear_room'] = 100;		// rank required to have /clear room ability
 $cody['can_ghost'] = 100; 			// rank required to make user ghost room ability
 $cody['can_vghost'] = 100;           // rank required to view ghost
 $cody['use_like'] = 1;              // system profile likes // add in admin panel (done)
-$cody['dev_mode'] = 1;              // in case you would to enable development mode and file changes
-$cody['secure_header'] = 1;         // enable hard secure mode for site header
+$cody['dev_mode'] = 0;              // in case you would to enable development mode and file changes
+$cody['secure_header'] = 0;         // enable hard secure mode for site header
 $cody['can_raction'] = 100;
 /* system log messages */
 

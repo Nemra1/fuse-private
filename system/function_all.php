@@ -1130,7 +1130,7 @@ function resetAvatar($u){
 	else {
 		switch($u['user_rank']){
 			case 0:
-				$av = 'default_guest.png';
+				$av = 'default_guest.svg';
 				break;
 			default:
 				$av = genderAvatar($u['user_sex']);
@@ -1142,11 +1142,11 @@ function resetAvatar($u){
 function genderAvatar($s){
 	switch($s){
 		case 1:
-			return 'default_male.png';
+			return 'default_male.svg';
 		case 2:
-			return 'default_female.png';
+			return 'default_female.svg';
 		default:
-			return 'default_avatar.png';
+			return 'default_avatar.svg';
 	}
 }
 function resetCover($u){
@@ -1612,19 +1612,7 @@ function systemMainUnmute($user){
 	$mysqli->query("UPDATE boom_users SET user_mmute = 0 WHERE user_id = '{$user['user_id']}'");
 	//redisUpdateUser($user['user_id']);
 }
-function systemPrivateMute($user, $delay) {
-    global $mysqli;
-    $mute_end = max($user['user_mmute'] ?? 0, time() + ($delay * 60));
-    $stmt = $mysqli->prepare("UPDATE boom_users SET user_pmute = ? WHERE user_id = ?");
-    $stmt->bind_param("ii", $mute_end, $user['user_id']);
-    return $stmt->execute() && $stmt->affected_rows > 0;
-}
-function systemPrivateUnmute($user){
-	global $mysqli;
-	clearNotifyAction($user['user_id'], 'mute');
-	$mysqli->query("UPDATE boom_users SET user_pmute = 0 WHERE user_id = '{$user['user_id']}'");
-	//redisUpdateUser($user['user_id']);
-}
+
 function systemKick($user, $delay, $reason = '') {
     global $mysqli;
     $kick_end = max($user['user_kick'] ?? 0, time() + ($delay * 60));
@@ -2646,7 +2634,7 @@ function boomInsertUser($pro, $type = 0){
 		'age' => 0,
 		'ip' => '0.0.0.0',
 		'language' => $data['language'],
-		'avatar' => 'default_avatar.png',
+		'avatar' => 'default_avatar.svg',
 		'color' => 'user',
 		'rank' => 1,
 		'verified' => 0,
@@ -4024,7 +4012,7 @@ function FU_store_market($type) {
                 'p_amounts' => $row['p_amounts'],
                 'verified_badge' => $row['verified_badge'],
                 'discount' => $row['discount'],
-                'image' => $row['image'] ?: 'upload/store/default_avatar.png', // Ensure no NULL value
+                'image' => $row['image'] ?: 'upload/store/default_avatar.svg', // Ensure no NULL value
                 'color' => $row['color'],
                 'description' => $row['description'],
                 'status' => $row['status'],

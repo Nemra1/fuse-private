@@ -13,7 +13,6 @@ var roomStaff = 0;
 var waitReply = 0;
 var pWait = 0;
 var errPost = 0;
-
 var fload = 0;
 var lastPost = 0;
 var cAction = 0;
@@ -30,6 +29,20 @@ var curWarn = '';
 var curDj = '';
 var roomRank = 0;
 var is_gift = 0;
+// files functions 
+var mupload;
+var pupload;
+var waitUpload = 0;
+var nLoadMore = 0;
+waitNews = 0;
+var repNews = 0;
+var wallUpload = 0;
+var wp = 0;
+var wr = 0;
+var wLoadMore = 0;
+var curDel = 1000;
+var addons = '';
+focused = true;
 var PageTitleNotification = {
     On: function() {
         $('#siteicon').attr('href', 'default_images/icon2.png' + bbfv);
@@ -38,7 +51,6 @@ var PageTitleNotification = {
         $('#siteicon').attr('href', 'default_images/icon.png' + bbfv);
     }
 }
-focused = true;
 window.onfocus = function() {
     focused = true;
     PageTitleNotification.Off();
@@ -46,7 +58,6 @@ window.onfocus = function() {
 window.onblur = function() {
     focused = false;
 }
-
 var OneSignal = window.OneSignal || [];
 OneSignal.push(function() {
 	if(allow_OneSignal){
@@ -67,7 +78,6 @@ OneSignal.push(function() {
 		});		
 	}
 });
-
 function saveUserIdToDatabase(userId) {
     $.post('system/action/action_profile.php', {
         userId: userId,
@@ -77,8 +87,6 @@ function saveUserIdToDatabase(userId) {
     }, function(response) {});
 
 }
-
-
 chatReload = function() {
     var cPosted = Date.now();
     var priv = $('#get_private').attr('value');
@@ -271,7 +279,7 @@ chatReload = function() {
 						// Call checkRm with a default mute flags object if rm doesn't exist
 						checkRm({
 							isMuted: false,
-							canPrivate: true,
+							isPrivateMuted: false,
 							isMainMuted: false,
 							isRoomMuted: false
 						});
@@ -313,7 +321,6 @@ chatReload = function() {
         }
     });
 }
-
 tabNotify = function() {
     if (focused == false) {
         PageTitleNotification.On();
@@ -325,55 +332,7 @@ grantRoom = function() {
 ungrantRoom = function() {
     $('.room_granted').addClass('nogranted');
 }
-/*
-checkRm = function(rmval){
-	if(rmval != curRm){
-		if(rmval == 1){
-			roomBlock();
-		}
-		else if(rmval == 2){
-			fullBlock();
-		}
-		else {
-			unblockAll();
-		}
-		curRm = rmval;
-	}
-}*/
-function checkRm(muteFlags) {
-    // Check if the user is muted
-    if (muteFlags.isMuted) {
-        mainLock();
-    } else {
-        mainUnlock();
-    }
-    // Check if the user can send private messages
-    if (!muteFlags.canPrivate) {
-        privateLock(1);
-    } else if (muteFlags.isRoomMuted) {
-        privateLock(0);
-    } else {
-        privateUnlock();
-    }
-    // Check if the user is muted in the main room
-    if (muteFlags.isMainMuted) {
-		mainLock();
-        postLock();
-    } else {
-        postUnlock();
-		mainUnlock();
-    }	
-}
-mainLock = function() {
-    $('#content, #submit_button, #chat_file').prop('disabled', true);
-    if ($('#chat_file').length) {
-        $("#chat_file")[0].setAttribute("onchange", "doNothing()");
-    }
-    $('#container_input, #main_load').addClass('hidden');
-    $('#main_disabled').removeClass('hidden');
-    hideEmoticon();
-    closeChatSub();
-}
+
 mainUnlock = function() {
     $('#content, #submit_button, #chat_file').prop('disabled', false);
     if ($('#chat_file').length) {
@@ -434,7 +393,6 @@ manageOthers = function() {
 ignored = function(id) {
     return ignoreList.has(id);
 }
-
 innactiveControl = function(cPost) {
     inactiveStart = 2;
     inMaxStaff = 2;
@@ -475,11 +433,15 @@ isInnactive = function() {
         logOut();
     }
 }
-roomBlock = function() {
+mainLock = function() {
     $('#content, #submit_button, #chat_file').prop('disabled', true);
     if ($('#chat_file').length) {
         $("#chat_file")[0].setAttribute("onchange", "doNothing()");
     }
+    $('#container_input, #main_load').addClass('hidden');
+    $('#main_disabled').removeClass('hidden');
+    hideEmoticon();
+    closeChatSub();
 }
 fullBlock = function() {
     $('#content, #submit_button, #chat_file, #private_send, #private_file, #message_content').prop('disabled', true);
@@ -500,14 +462,31 @@ unblockAll = function() {
         $("#private_file")[0].setAttribute("onchange", "uploadPrivate()");
     }
 }
-
-
 doNothing = function() {
     event.preventDefault();
 }
 noAction = function() {
     errPost++;
 }
+/*canPrivate :  true isMainMuted :  false isMuted :  true isRoomMuted :  true*/
+function checkRm(muteFlags) {
+    // Check if the user is muted
+	if(muteFlags.isMainMuted || muteFlags.isRoomMuted) {
+		mainLock();
+		fullBlock();
+		postLock();
+	}else{
+		mainUnlock();
+		unblockAll();		
+		postUnlock();		
+	}
+	if(muteFlags.isPrivateMuted) {
+		privateLock(1);
+	}else{
+		privateUnlock();
+	}	
+}
+
 chatRightIt = function(data) {
     $('#chat_right_data').html(data);
 }
@@ -548,7 +527,6 @@ userReload = function(type) {
         });
     }
 }
-
 openStatusList = function() {
     var stList = $('#status_list').html();
     showModal(stList, 320);
@@ -791,7 +769,6 @@ getRoomList = function() {
         chatRightIt(response);
     });
 }
-
 openRoomRank = function(u) {
     $.post('system/box/edit_room_rank.php', {
         target: u,
@@ -804,9 +781,6 @@ openRoomRank = function(u) {
         }
     });
 }
-// files functions 
-var mupload;
-var pupload;
 uploadChatFile = function() {
     if ($('#chat_file').val() === '') {
         return;
@@ -814,8 +788,6 @@ uploadChatFile = function() {
         uploadChat($("#chat_file").prop("files")[0]);
     }
 }
-
-var waitUpload = 0;
 uploadChat = function(f) {
     var filez = ($("#chat_file")[0].files[0].size / 1024 / 1024).toFixed(2);
     if (filez > fmw) {
@@ -866,9 +838,6 @@ uploadChat = function(f) {
         }
     }
 }
-
-// up functions controller
-
 startMainUp = function() {
     upMainStatus(0);
     $('#main_progress').show();
@@ -901,7 +870,6 @@ resetPrivateUp = function() {
     uploadStatus('private_file', 1);
     waitUpload = 0;
 }
-
 uploadPrivateFile = function() {
     if ($('#private_file').val() === '') {
         return;
@@ -964,7 +932,6 @@ uploadPrivate = function(f) {
         }
     }
 }
-
 getRoomSetting = function() {
     $.post('system/box/room_setting.php', {
         token: utk,
@@ -1057,7 +1024,6 @@ getNews = function() {
         $('#news_notify, #bottom_news_notify').hide();
     });
 }
-var nLoadMore = 0;
 moreNews = function() {
     var lastNews = $('#container_news').children().last().attr('data');
     wLoadMore = 1;
@@ -1076,7 +1042,6 @@ moreNews = function() {
         wLoadMore = 0;
     });
 }
-waitNews = 0;
 sendNews = function() {
     if (waitNews == 0) {
         var myNews = $('#news_data').val();
@@ -1109,7 +1074,6 @@ sendNews = function() {
         return false;
     }
 }
-var repNews = 0;
 newsReply = function(id, item) {
     var content = $(item).val();
     var replyTo = id;
@@ -1326,7 +1290,6 @@ removeFile = function(target) {
         token: utk,
     }, function(response) {});
 }
-var wallUpload = 0;
 uploadWall = function() {
     var file_data = $("#wall_file").prop("files")[0];
     var filez = ($("#wall_file")[0].files[0].size / 1024 / 1024).toFixed(2);
@@ -1367,7 +1330,6 @@ uploadWall = function() {
         }
     }
 }
-var wp = 0;
 postWall = function() {
     if (wp == 0) {
         var mypost = $('#friend_post').val();
@@ -1402,7 +1364,6 @@ postWall = function() {
         return false;
     }
 }
-var wr = 0;
 postReply = function(id, item) {
     var content = $(item).val();
     var replyTo = id;
@@ -1604,7 +1565,6 @@ viewWallLikes = function(t) {
         }
     });
 }
-
 deleteReply = function(t) {
     $.ajax({
         url: "system/action/action_wall.php",
@@ -1663,7 +1623,6 @@ likeIt = function(id, type) {
         }
     });
 }
-var wLoadMore = 0;
 moreWall = function(d) {
     var actual = parseInt($(d).attr("data-current"));
     var maxCount = parseInt($(d).attr("data-total"));
@@ -1793,7 +1752,6 @@ openReport = function(i, t) {
         }
     });
 }
-var curDel = 1000;
 deleteLog = function(item) {
     var id = $(item).attr('data');
     var delTime = Math.round(new Date() / 1000);
@@ -1867,91 +1825,76 @@ resetRoom = function(troom, nroom) {
     docTitle = nroom;  // Set docTitle to the new room name
     moreMain = 1;  // Flag for additional main features
     hideModal();  // Close any open modals
-    
     // If screen width is less than a certain threshold, toggle the right panel visibility
     if ($(window).width() < rightHide2) {
         toggleRight();  // Collapse or expand the right panel
     } else {
         resetRightPanel();  // Reset the right panel to its default state
     }
-	const $existingTab = $('#roomsTab').find(`#slide_roomid_${user_room}`);
-    // Check if the room already exists in the tab list to prevent duplicates
-	console.log($existingTab.length);
-    if ($existingTab.length === 0) {
-		$('#roomsTab .nav-link').removeClass('active');
-        // If not, add it as a new tab with the room name and a close button
-        $('#roomsTab').append(`
-            <li class="nav-item slide switch_room" data-roomid="${user_room}" id="slide_roomid_${user_room}">
-                <div class="nav-link active" href="#room_${user_room}">
-                    <span class="text-hidden title-room" onclick="switchRoom(${user_room}, 0, 0);">${nroom}</span>
-                    <span class="close" onclick="exitRoom(${user_room})"><i class="ri-close-circle-line"></i></span>
-                </div>
-            </li>
-        `);
-        adjustHeight();  // Adjust room tab container height
-    } else {
-        // If it already exists, remove 'active' from all tabs
-        $('#roomsTab .nav-link').removeClass('active');
-        // Make sure the current tab is active
-        $existingTab.find('.nav-link').addClass('active');
-		if(user_room== troom){
-			$existingTab.find('.nav-link').addClass('active');
-		}
-    }
 
     // Reload the user list if the user container is visible
     if ($('#container_user:visible').length) {
         userReload(1); 
     }
-
-    // Save the room in localStorage
-    let savedRooms = JSON.parse(localStorage.getItem('saved_rooms')) || [];
-
-    // Check if the room is already saved
-    const existingRoom = savedRooms.find(room => room.roomId === troom);
-    if (!existingRoom) {
-		console.log(existingRoom);
-        // Add the new room to the array if it doesn't already exist
-        savedRooms.push({ roomId: troom, roomName: nroom, rcaction: 0 });
-        localStorage.setItem('saved_rooms', JSON.stringify(savedRooms));  // Save the updated array to localStorage
-    }
-
     // Reset video chat container, clear its content, and hide it
     $('.video_chat_container').html('').hide();
     fuse_loader("#global_chat", "hide");
 }
-
+function record_room({ roomId, roomName, password, rank }) {
+    // Validate input
+    if (!roomId || typeof roomName !== 'string' || typeof password !== 'number' || typeof rank !== 'number') return;
+    // Initialize room name if empty
+    const nroom = roomName || docTitle;
+    // Check if the room already exists in the tab list
+    const $existingTab = $('#roomsTab').find(`#slide_roomid_${roomId}`);
+    if (!$existingTab.length) {
+        $('#roomsTab .nav-link').removeClass('active');
+        $('#roomsTab').append(`
+            <li class="nav-item slide switch_room" data-roomid="${roomId}" id="slide_roomid_${roomId}">
+                <div class="nav-link active" href="#room_${roomId}">
+                    <span class="text-hidden title-room" onclick="switchRoom(${roomId}, ${password}, ${rank});">${nroom} ${password ? '[🔒]' : '[🧿]'}</span>
+                    <span class="close" onclick="exitRoom(${roomId})"><i class="ri-close-circle-line"></i></span>
+                </div>
+            </li>
+        `);
+        adjustHeight();
+    } else {
+        $('#roomsTab .nav-link').removeClass('active');
+        $existingTab.find('.nav-link').addClass('active');
+    }
+    // Save the room in localStorage
+    try {
+        let savedRooms = JSON.parse(localStorage.getItem('saved_rooms')) || [];
+        if (!savedRooms.find(room => room.roomId === roomId)) {
+            savedRooms.push({ roomId, roomName: nroom, password, rank });
+            localStorage.setItem('saved_rooms', JSON.stringify(savedRooms));
+        }
+    } catch (error) {
+        console.error('Failed to save room:', error);
+    }
+}
 // Function to load the saved rooms from localStorage when the page loads
 function loadSavedRooms() {
     const savedRooms = JSON.parse(localStorage.getItem('saved_rooms')) || [];
-    // Get the roomsTab element to append saved rooms
     const $roomsTab = $('#roomsTab');
-    
-    // Loop through each saved room and add it as HTML
-    savedRooms.forEach(function(room) {
-        // Check if the room is already in the tab list (to avoid duplicates)
-        if ($roomsTab.find(`#slide_roomid_${room.roomId}`).length === 0) {
-            // Add 'active' class if the current room matches user_room
+    savedRooms.forEach(room => {
+        if (!$roomsTab.find(`#slide_roomid_${room.roomId}`).length) {
             const isActive = room.roomId === user_room ? 'active' : '';
-            const roomHTML = `
-                <li class="nav-item slide switch_room" data-roomid="${room.roomId}"  id="slide_roomid_${room.roomId}">
+            $roomsTab.append(`
+                <li class="nav-item slide switch_room" data-roomid="${room.roomId}" id="slide_roomid_${room.roomId}">
                     <div class="nav-link ${isActive}" id="room_${room.roomId}">
-                        <span class="text-hidden title-room" onclick="switchRoom(${room.roomId}, 0, 0);">${room.roomName}</span>
+                        <span class="text-hidden title-room" onclick="switchRoom(${room.roomId}, ${room.password}, ${room.rank});">${room.roomName}</span>
                         <span class="close" onclick="exitRoom(${room.roomId})"><i class="ri-close-circle-line"></i></span>
                     </div>
                 </li>
-            `;
-            // Append the new room tab HTML to the room tabs list
-            $roomsTab.append(roomHTML);
+            `);
         }
     });
-    
-    // Ensure the active class is applied to the correct room
+
     if (user_room) {
         $roomsTab.find(`#room_${user_room}`).addClass('active');
     }
 }
-
 // Function to check for notifications for rooms in savedRooms
 function checkForNotifications(rooms) {
     let savedRooms = JSON.parse(localStorage.getItem('saved_rooms')) || [];
@@ -2089,7 +2032,6 @@ showPrivEmoticon = function() {
         $('#emo_item_priv').attr('value', 1);
     }
 }
-
 hideEmoticon = function() {
     $('#main_emoticon').hide();
 }
@@ -2142,7 +2084,7 @@ processChatCommand = function(message) {
                     actualTopic = response.data;
                     scrollIt(fload);
                 } else if (code == 100) {
-                    checkRm(2);
+                   checkRm({ isMuted: true, canPrivate: false, isMainMuted: true, isRoomMuted: true });
                 } else if (code == 200) {
                     callSaved(system.invalidCommand, 3);
                 } else if (code == 300) {
@@ -2166,25 +2108,25 @@ processChatCommand = function(message) {
         }
     });
 }
-processChatPost = function(message) {
-    $.post('system/action/chat_process.php', {
-        content: message,
-        snum: snum,
-        token: utk,
-    }, function(response) {
-        if (response == '') {
-		} else if (response == 100) {
-            checkRm(2);
-        } else {
-            $('#name').val('');
-            $("#show_chat ul").append(response);
-            scrollIt(0);
-        }
-        waitReply = 0;
-    });
+processChatPost = function(message){
+	$.post('system/action/chat_process.php', {
+		content: message,
+		snum: snum,
+		token: utk,
+		}, function(response) {
+			if(response == ''){
+			}else if (response == 100){
+				checkRm({ isMuted: true, isPrivateMuted: false, isMainMuted: true, isRoomMuted: true });
+			}else{
+				$('#name').val('');
+				$("#show_chat ul").append(response);
+				scrollIt(0);
+			}
+			waitReply = 0;
+	});
 }
 
-// fuse update 3.7
+// fuse update 4.1
 getRoomInfo = function(data) {
     var room_name = data.room_name;
     $('.glob_rname').text(room_name);
@@ -2211,122 +2153,239 @@ searchUser = function() {
         });
     }, 1500);
 }
+previewText = function() {
+        var c = $('.color_choices').attr('data');
+        var b = $('#boldit').val();
+        var f = $('#fontit').val();
+        $('#preview_text').removeClass();
+        $('#preview_text').addClass(c + ' ' + b + ' ' + f);
+}
+getPrivate = function() {
+        $.post('system/box/private_notify.php', {
+            token: utk,
+        }, function(response) {
+            showEmptyModal(response, 400);
+        });
+}
+clearPrivateList = function() {
+        $.post('system/action/action_chat.php', {
+            clear_private: 1,
+            token: utk,
+        }, function(response) {
+            hideModal();
+        });
+    }
+confirmClearPrivate = function() {
+        hideAll();
+        $.post('system/box/private_delete.php', {
+            target: $('#get_private').attr('value'),
+            token: utk,
+        }, function(response) {
+            overModal(response);
+        });
+    }
+clearPrivate = function(u) {
+        hideOver();
+        $.post('system/action/action_chat.php', {
+            del_private: 1,
+            target: u,
+            token: utk,
+        }, function(response) {
+            if (response == 0) {
+                callSaved(system.cannotUser, 3);
+            } else if (response == 1) {
+                callSaved(system.actionComplete, 1);
+                resetPrivateBox();
+            } else {
+                callSaved(system.error, 3);
+            }
+        });
+    }
+resetPrivateBox = function() {
+        $("#private_content ul").html('');
+        $('#message_content').focus();
+        scrollPriv(1);
+    }
+openSocketMonitor = function(elm) {
+        $.post('system/box/socket_monitor.php', {
+            token: utk,
+        }, function(res) {
+            $(elm).html(res)
+        });
+}
+ // Function to initialize the dialog
+initializeMonitor = function() {
+        $("#SocketMonitor_container").dialog({
+            draggable: true,
+            resizable: true,
+            modal: false, // Non-modal dialog
+            autoOpen: false, // Prevent auto-open on page load
+            width: $(window).width() <= 600 ? '100%' : 'auto',
+            open: function(event, ui) {
+                openSocketMonitor(this); // Call the onOpen function when the dialog opens
+                $(this).dialog("option", "title", "Socket Monitor"); // Update the dialog title
+            },
+            buttons: {
+                "Close": function() {
+                    $(this).dialog("close");
+                },
+                "Clear": function() {
+                    $('#SocketMonitor_wrap_stream').html('');
+                },
+            }
+        });
+        $("#openSocketMonitor").click(function() {
+            $("#SocketMonitor_container").dialog("open");
+        });
+    }
+openAbout = function() {
+        $.post('system/box/about.php', {
+            token: utk,
+        }, function(res) {
+            overModal(res)
+        });
+
+    }
+getLeaderboard = function() {
+        $.post('system/store/leaderboard.php', {
+            token: utk,
+        }, function(res) {
+            overModal(res)
+        });
+}
 adjustHeight();
 adjustSide();
-
-
 // document load start -----------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------
 
 $(document).ready(function() {
-	$(document).on('change', '#usearch_type, #usearch_order', function() {
+$(document).on('change', '#usearch_type, #usearch_order', function() {
 		var evSearchVal = $(this).val();
 		searchUser();
 	});
-	$(document).on('keyup', '#usearch_input', function() {
+$(document).on('keyup', '#usearch_input', function() {
 		searchUser();
 	});
-
-    $(document).click(function() {
+$(document).click(function() {
         resetChatActivity();
     });
-    $(document).keydown(function() {
+$(document).keydown(function() {
         resetChatActivity();
     });
-
-    $('#content, #submit_button').prop('disabled', false);
-
-    $('#container_show_chat').on('click', '#show_chat .username', function() {
-        emoticon('content', $(this).text());
-    });
-
-    $(document).on('click', '.ch_logs .emocc', function() {
+$('#content, #submit_button').prop('disabled', false);
+$('#container_show_chat').on('click', '#show_chat .username', function() {
+    emoticon('content', $(this).text());
+});
+$(document).on('click', '.ch_logs .emocc', function() {
         var copyEmo = $(this).attr('data');
         emoticon('content', ':' + copyEmo + ':');
     });
-
-    $(document).on('click', '.private_logs .emocc', function() {
+$(document).on('click', '.private_logs .emocc', function() {
         var copyEmo = $(this).attr('data');
         emoticon('message_content', ':' + copyEmo + ':');
     });
-
-    adjustPanelWidth();
-    userlist = setInterval(userReload, 30000);
-    friendlis = setInterval(myFriends, 30000);
-    chatLog = setInterval(chatReload, speed);
-    addBalance = setInterval(chatActivity, 60000);
-    clearOtherLogs = setInterval(manageOthers, 30000);
-    reportRefresh = setInterval(loadReport, 6000);
-    runLog = setInterval(logPending, 3000);
-    chatReload();
-    userReload();
-    adjustHeight();
-    chatActivity();
-    checkSubItem();
-    checkPrivSubItem();
-    manageOthers();
-    logPending();
-	loadSavedRooms();
-    $('#main_input').submit(function(event) {
-        event.preventDefault(); // Prevent default form submission
-        var message = $('#content').val().trim(); // Trim the message to remove unnecessary spaces
-        if (message === '') {
-            return false; // Do nothing if the message is empty
+adjustPanelWidth();
+userlist = setInterval(userReload, 30000);
+friendlis = setInterval(myFriends, 30000);
+chatLog = setInterval(chatReload, speed);
+addBalance = setInterval(chatActivity, 60000);
+clearOtherLogs = setInterval(manageOthers, 30000);
+reportRefresh = setInterval(loadReport, 6000);
+runLog = setInterval(logPending, 3000);
+chatReload();
+userReload();
+adjustHeight();
+chatActivity();
+checkSubItem();
+checkPrivSubItem();
+manageOthers();
+logPending();
+loadSavedRooms();
+$(document).ready(function () {
+    let lastSubmitTime = 0, isProcessing = false, rAFId = null, isTyping = false, typingTimeout = null;
+    const lagThreshold = 100;
+    // Handle form submission
+    $('#main_input').off('submit').on('submit', function (event) {
+        const currentTime = performance.now();
+        if (lastSubmitTime > 0 && currentTime - lastSubmitTime > lagThreshold) {
+            console.warn(`Lag detected: ${(currentTime - lastSubmitTime).toFixed(2)}ms`);
         }
-        if (/^\s+$/.test(message)) {
-            chatInput(); // Call chatInput if the message only contains spaces
-            return false;
-        }
-        chatInput(); // Process the chat input
+        lastSubmitTime = currentTime;
+        if (isProcessing) return console.log('Skipping submission: Already processing.'), false;
+        isProcessing = true;
+        event.preventDefault();
+        const message = $('#content').val().trim();
+        if (!message || /^\s+$/.test(message)) return console.log('Invalid message.'), isProcessing = false, false;
+        chatInput();
         if (waitReply === 0) {
             waitReply = 1;
             if (message.startsWith('/')) {
+                console.log('Processing command:', message);
+                console.time('processChatCommand');
                 processChatCommand(message);
+                console.timeEnd('processChatCommand');
             } else {
+                console.log('Processing post:', message);
+                console.time('processChatPost');
                 processChatPost(message);
+                console.timeEnd('processChatPost');
             }
+            console.log(`Processed in ${(performance.now() - currentTime).toFixed(2)}ms`);
         } else {
-            return false; // Prevent form submission if still waiting for a reply
+            console.log('Still waiting for a reply.');
         }
-        return false; // Prevent form submission
+        setTimeout(() => isProcessing = false, 300);
+        return false;
     });
-
-
-    $(document).on('click', '.avitem', function() {
+    // Smooth scrolling animation
+    function startAnimation() {
+        if (!isTyping && !rAFId) {
+            rAFId = requestAnimationFrame(() => {
+                startAnimation();
+            });
+        }
+    }
+    function stopAnimation() {
+        if (rAFId) cancelAnimationFrame(rAFId), rAFId = null;
+    }
+    // Detect typing activity
+    $('#content').on('input', function () {
+        if (!isTyping) isTyping = true, stopAnimation();
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => isTyping = false, 500);
+    });
+    startAnimation(); // Start smooth scrolling
+});
+$(document).on('click', '.avitem', function() {
         resetAvMenu();
-    });
-
-    $(document).on('click', '.closesmilies', function() {
-        $('#main_emoticon').toggle();
-    });
-    $(document).on('click', '.closesmilies_priv', function() {
+});
+$(document).on('click', '.closesmilies', function() {
+  $('#main_emoticon').toggle();
+});
+$(document).on('click', '.closesmilies_priv', function() {
         $('#private_emoticon').toggle();
     });
-
-    $(document).on('click', '#content, #submit_button', function() {
+$(document).on('click', '#content, #submit_button', function() {
         hideEmoticon();
         closeChatSub();
         resetAvMenu();
         resetLogMenu();
     });
-    $(document).on('click', '#message_content, #private_send', function() {
+$(document).on('click', '#message_content, #private_send', function() {
         hidePrivEmoticon();
         closePrivSub();
     });
-
-    $(document).on('click', '.sub_options', function() {
+$(document).on('click', '.sub_options', function() {
         closeChatSub();
     });
-    $(document).on('click', '.psub_options', function() {
+$(document).on('click', '.psub_options', function() {
         closePrivSub();
     });
-
-    $(document).on('click', '.panel_option', function() {
+$(document).on('click', '.panel_option', function() {
         $('.panel_option').removeClass('panel_selected');
         $(this).addClass('panel_selected');
     });
-
-    $(document).on('click', '.emo_menu_item', function() {
+$(document).on('click', '.emo_menu_item', function() {
         var thisEmo = $(this).attr('data');
         var emoSelect = $(this);
         $.post('system/action/emoticon.php', {
@@ -2339,8 +2398,7 @@ $(document).ready(function() {
             emoSelect.addClass('dark_selected');
         });
     });
-
-    $(document).on('click', '.emo_menu_item_priv', function() {
+$(document).on('click', '.emo_menu_item_priv', function() {
         var thisEmo = $(this).attr('data');
         var emoSelect = $(this);
         $.post('system/action/emoticon.php', {
@@ -2353,16 +2411,14 @@ $(document).ready(function() {
             emoSelect.addClass('dark_selected');
         });
     });
-
-    $(document).on('click', '#private_close', function() {
+$(document).on('click', '#private_close', function() {
         $('#private_content ul').html(largeSpinner);
         $('#get_private').attr('value', 0);
         $('#private_name').text('');
         $('#private_box').toggle();
         lastPriv = 0;
-    });
-
-    $(document).on('click', '.gprivate', function() {
+});
+$(document).on('click', '.gprivate', function() {
         morePriv = 0; // Reset more private messages flag
         // Retrieve attributes from the clicked element
         var thisPrivate = $(this).attr('data');
@@ -2379,9 +2435,7 @@ $(document).ready(function() {
         privReload = 1;
         lastPriv = 0;
     });
-
-
-    $(document).on('click', '.delete_private', function() {
+$(document).on('click', '.delete_private', function() {
         var toDelete = $(this).attr('data');
         var toClear = $(this);
         $.post('system/action/action_chat.php', {
@@ -2395,30 +2449,26 @@ $(document).ready(function() {
             }
         });
     });
-    $('#private_input').submit(function(event) {
+$('#private_input').submit(function(event) {
         event.preventDefault(); // Prevent default form submission
-
         var target = $('#get_private').attr('value');
         var message = $('#message_content').val().trim(); // Trim the message to remove unnecessary spaces
-
         if (message === '') {
             pWait = 0;
             return false; // Do nothing if the message is empty
         }
-
         if (pWait === 0) {
             pWait = 1;
-
             $.post('system/action/private_process.php', {
                 target: target,
                 content: message,
                 token: utk,
             }, function(response) {
-                if (response == 20) {
+                if (response.code == 20) {
                     $('#message_content').focus();
                     callSaved(system.cannotContact, 3);
-                } else if (response == 100) {
-                    checkRm(2);
+                } else if (response.code == 100) {
+                    checkRm({ isMuted: false, isPrivateMuted: true, isMainMuted: false, isRoomMuted: false});
                 } else {
                     $('#message_content').focus();
                     $("#private_content ul").append(response);
@@ -2432,15 +2482,11 @@ $(document).ready(function() {
 
         return false;
     });
-
-
-    $(document).on('click', '#save_room', function() {
+$(document).on('click', '#save_room', function() {
         saveRoom();
     });
-
-    $('body').css('overflow', 'hidden');
-
-    $(function() {
+$('body').css('overflow', 'hidden');
+$(function() {
         if ($(window).width() > 1024) {
             $("#private_box").draggable({
                 handle: "#private_top",
@@ -2448,8 +2494,7 @@ $(document).ready(function() {
             });
         }
     });
-
-    $('#show_chat ul').scroll(function() {
+$('#show_chat ul').scroll(function() {
         var s = $('#show_chat ul').scrollTop();
         var c = $('#show_chat ul').innerHeight();
         var d = $('#show_chat ul')[0].scrollHeight;
@@ -2460,8 +2505,7 @@ $(document).ready(function() {
         }
 
     });
-
-    $('#private_content').scroll(function() {
+$('#private_content').scroll(function() {
         var s = $('#private_content').scrollTop();
         var c = $('#private_content').innerHeight();
         var d = $('#private_content')[0].scrollHeight;
@@ -2472,9 +2516,8 @@ $(document).ready(function() {
         }
 
     });
-
-    var waitScroll = 0;
-    $('#show_chat ul').scroll(function() {
+var waitScroll = 0;
+$('#show_chat ul').scroll(function() {
         if (moreMain == 1 && $('#show_chat ul .ch_logs').length != 0) {
             var pos = $('#show_chat ul').scrollTop();
             if (pos == 0) {
@@ -2512,9 +2555,8 @@ $(document).ready(function() {
             }
         }
     });
-
-    var waitpScroll = 0;
-    $('#private_content').scroll(function() {
+var waitpScroll = 0;
+$('#private_content').scroll(function() {
         if (morePriv == 1) {
             var pos = $('#private_content').scrollTop();
             if (pos == 0) {
@@ -2553,16 +2595,7 @@ $(document).ready(function() {
             }
         }
     });
-
-    previewText = function() {
-        var c = $('.color_choices').attr('data');
-        var b = $('#boldit').val();
-        var f = $('#fontit').val();
-        $('#preview_text').removeClass();
-        $('#preview_text').addClass(c + ' ' + b + ' ' + f);
-    }
-
-    $(document).on('click', '.user_choice', function() {
+$(document).on('click', '.user_choice', function() {
         var curColor = $(this).attr('data');
         if ($('.color_choices').attr('data') == curColor) {
             $('.bccheck').remove();
@@ -2574,31 +2607,25 @@ $(document).ready(function() {
         }
         previewText();
     });
-
-    $(document).on('change', '#boldit', function() {
+$(document).on('change', '#boldit', function() {
         previewText();
     });
-
-    $(document).on('change', '#fontit', function() {
+$(document).on('change', '#fontit', function() {
         previewText();
     });
-
-    $(document).on('click', '.more_left', function() {
+$(document).on('click', '.more_left', function() {
         $('#more_menu_list').toggle();
         closeLeft();
     });
-
-    $(document).on('keydown', function(event) {
+$(document).on('keydown', function(event) {
         if (event.which === 13 && event.ctrlKey && event.altKey) {
             getMonitor();
         }
     });
-
-    $(document).on('click', '#back_home', function() {
+$(document).on('click', '#back_home', function() {
         backHome();
     });
-
-    $(document).on('click', '.menu_header', function() {
+$(document).on('click', '.menu_header', function() {
         if ($('.menu_drop:visible').length) {
             $(".menu_drop").fadeOut(100);
         } else {
@@ -2606,122 +2633,19 @@ $(document).ready(function() {
         }
         $("#wrap_options").fadeOut(100);
     });
-
-    $(document).on('click', '.other_panels, .addon_button, .head_li, #content', function() {
+$(document).on('click', '.other_panels, .addon_button, .head_li, #content', function() {
         $(".menu_drop, #wrap_options").fadeOut(100);
     });
-
-    var addons = '';
-
-    getPrivate = function() {
-        $.post('system/box/private_notify.php', {
-            token: utk,
-        }, function(response) {
-            showEmptyModal(response, 400);
-        });
-    }
-
-    clearPrivateList = function() {
-        $.post('system/action/action_chat.php', {
-            clear_private: 1,
-            token: utk,
-        }, function(response) {
-            hideModal();
-        });
-    }
-
-    confirmClearPrivate = function() {
-        hideAll();
-        $.post('system/box/private_delete.php', {
-            target: $('#get_private').attr('value'),
-            token: utk,
-        }, function(response) {
-            overModal(response);
-        });
-    }
-
-    clearPrivate = function(u) {
-        hideOver();
-        $.post('system/action/action_chat.php', {
-            del_private: 1,
-            target: u,
-            token: utk,
-        }, function(response) {
-            if (response == 0) {
-                callSaved(system.cannotUser, 3);
-            } else if (response == 1) {
-                callSaved(system.actionComplete, 1);
-                resetPrivateBox();
-            } else {
-                callSaved(system.error, 3);
-            }
-        });
-    }
-
-    resetPrivateBox = function() {
-        $("#private_content ul").html('');
-        $('#message_content').focus();
-        scrollPriv(1);
-    }
-    openSocketMonitor = function(elm) {
-        $.post('system/box/socket_monitor.php', {
-            token: utk,
-        }, function(res) {
-            $(elm).html(res)
-        });
-    }
-    // Function to initialize the dialog
-    initializeMonitor = function() {
-        $("#SocketMonitor_container").dialog({
-            draggable: true,
-            resizable: true,
-            modal: false, // Non-modal dialog
-            autoOpen: false, // Prevent auto-open on page load
-            width: $(window).width() <= 600 ? '100%' : 'auto',
-            open: function(event, ui) {
-                openSocketMonitor(this); // Call the onOpen function when the dialog opens
-                $(this).dialog("option", "title", "Socket Monitor"); // Update the dialog title
-            },
-            buttons: {
-                "Close": function() {
-                    $(this).dialog("close");
-                },
-                "Clear": function() {
-                    $('#SocketMonitor_wrap_stream').html('');
-                },
-            }
-        });
-        $("#openSocketMonitor").click(function() {
-            $("#SocketMonitor_container").dialog("open");
-        });
-    }
-    if (user_rank == 100) {
-        initializeMonitor();
-    }
-    openAbout = function() {
-        $.post('system/box/about.php', {
-            token: utk,
-        }, function(res) {
-            overModal(res)
-        });
-
-    }
-    getLeaderboard = function() {
-        $.post('system/store/leaderboard.php', {
-            token: utk,
-        }, function(res) {
-            overModal(res)
-        });
-
-    }
-    $(window).resize(function() {
+if(user_rank == 100) {
+  initializeMonitor();
+}
+$(window).resize(function() {
         adjustHeight();
         resizeScroll();
         hidePanel();
         resetAvMenu();
-    });
-
-    $(document).on('change, paste, keyup', '#search_friend', function() {
+});
+$(document).on('change, paste, keyup', '#search_friend', function() {
         var searchFriend = $(this).val().toLowerCase();
         if (searchFriend == '') {
             $("#container_friends .user_item").each(function() {
@@ -2739,7 +2663,7 @@ $(document).ready(function() {
         }
     });
     // Get the text from the element with the class 'copy_gift_code'
-    $(document).on('click', '.ch_logs .copy_gift_code', function() {
+$(document).on('click', '.ch_logs .copy_gift_code', function() {
         // Use jQuery to get the text from the clicked element
         let giftCodeText = $(this).text().trim(); // Trim leading and trailing spaces
         // Regular expression to replace symbols like @, #, $, [], etc. with spaces
@@ -2758,32 +2682,27 @@ $(document).ready(function() {
         // Proceed with cleaned text, which retains the words
         return emoticon('content', cleanedText);
     });
-
-    $(document).on('click', '.post_content .copy_gift_code', function() {
+$(document).on('click', '.post_content .copy_gift_code', function() {
         var copyGift = $(this).attr('data');
         emoticon('content', copyGift);
     });
-    $(document).on('click', '.open_addons', function() {
+$(document).on('click', '.open_addons', function() {
         $('#addons_chat_list').toggle();
     });
-
-    $(document).on('click', '.post_menu_item', function() {
+$(document).on('click', '.post_menu_item', function() {
         $(this).parent('.post_menu').hide();
     });
-
-    $('#container_stream').on('click', '#close_stream', function() {
+$('#container_stream').on('click', '#close_stream', function() {
         $("#wrap_stream iframe").attr("src", "");
         $("#container_stream").hide();
     });
-
-    $(function() {
+$(function() {
         $("#container_stream").draggable({
             containment: "document",
             scroll: false
         });
     });
-
-    $(document).on('click', '.boom_youtube', function(event) {
+$(document).on('click', '.boom_youtube', function(event) {
         event.preventDefault();
         if ($(window).height() > 400 && $(window).width() > 400 || streamMobile == 1 && $(window).height() > 400) {
             var streamType = $(this).attr("value");
@@ -2796,21 +2715,20 @@ $(document).ready(function() {
         }
 
     });
-
-    $(document).on('submit', '.friend_reply_form', function() {
+$(document).on('submit', '.friend_reply_form', function() {
         event.preventDefault();
         var item = $(this).children('input');
         var id = $(this).attr('data-id');
         postReply(id, item);
     });
-    $(document).on('submit', '.news_reply_form', function() {
+$(document).on('submit', '.news_reply_form', function() {
         event.preventDefault();
         var item = $(this).children('input');
         var id = $(this).attr('data-id');
         newsReply(id, item);
     });
-    /*iframe api fullscreen*/
-    ! function(e) {
+/*iframe api fullscreen*/
+! function(e) {
         e.extend(e.fn, {
             fullScreenIframe: function() {
                 var n, t = function() {

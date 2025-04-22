@@ -71,6 +71,18 @@ $(document).ready(function(){
 	});
 	
 });
+var waitShare = 0;
+var waitAvatar = 0;
+var waitAdminAvatar = 0;
+var waitGuest = 0;
+var waitCover = 0;
+var adminWaitCover = 0;
+var modalList = [];
+var logList = [];
+var waitSecure = 0;
+var newsWait = 0;
+var waitJoin = 0;
+var waitRoom = 0;
 checkNotification = function(){
 var checkContainer = $('#container_show_chat');
 checkContainer.prepend(`<div id="notificationMessage" class="notification-message extra_model_content"></div>`);
@@ -106,15 +118,6 @@ enableButton.on('click', function() {
     });    
 });    
 }
-previewName = function(c){
-	var n = $('.user_color').attr('data');
-	var f = $('#fontitname').val();
-	$('#preview_name').removeClass();
-	$('#preview_name').addClass(n+' '+f);
-}
-
-var modalList = [];
-var logList = [];
 scanPending = function(v){
 	if('pending' in v){
 		var m = v.pending;
@@ -185,8 +188,12 @@ checkLog = function(){
 		return true;
 	}
 }
-
-var waitAvatar = 0;
+previewName = function(c){
+	var n = $('.user_color').attr('data');
+	var f = $('#fontitname').val();
+	$('#preview_name').removeClass();
+	$('#preview_name').addClass(n+' '+f);
+}
 uploadAvatar = function(){
 	var file_data = $("#avatar_image").prop("files")[0];
 	var filez = ($("#avatar_image")[0].files[0].size / 1024 / 1024).toFixed(2);
@@ -239,7 +246,6 @@ uploadAvatar = function(){
 		}
 	}
 }
-var waitAdminAvatar = 0;
 adminUploadAvatar = function(id){
 	var file_data = $("#admin_avatar_image").prop("files")[0];
 	var filez = ($("#admin_avatar_image")[0].files[0].size / 1024 / 1024).toFixed(2);
@@ -291,7 +297,6 @@ adminUploadAvatar = function(id){
 		}
 	}
 }
-var waitGuest = 0;
 registerGuest = function() {
 	var gname = $('#new_guest_name').val();
 	var gpass = $('#new_guest_password').val();
@@ -371,7 +376,6 @@ registerGuest = function() {
 		}
 	}
 }
-var waitCover = 0;
 uploadCover = function(){
 	var file_data = $("#cover_file").prop("files")[0];
 	var filez = ($("#cover_file")[0].files[0].size / 1024 / 1024).toFixed(2);
@@ -422,7 +426,6 @@ uploadCover = function(){
 		}
 	}
 }
-var adminWaitCover = 0;
 adminUploadCover = function(id){
 	var file_data = $("#admin_cover_file").prop("files")[0];
 	var filez = ($("#admin_cover_file")[0].files[0].size / 1024 / 1024).toFixed(2);
@@ -473,7 +476,6 @@ adminUploadCover = function(id){
 		}
 	}
 }
-var waitSecure = 0;
 secureAccount = function() {
 	var sname = $('#secure_name').val();
 	var spass = $('#secure_password').val();
@@ -629,11 +631,9 @@ editProfile = function(){
 			showEmptyModal(response, 580);
 	});
 }
-
 storeArray = function(key, value) {
 	localStorage.setItem(key, JSON.stringify(value));
 }
-
 getArray = function(key) {
 	var stored = localStorage.getItem(key);
 	if(stored != null) {
@@ -648,7 +648,6 @@ setArray = function(key, value){
 	arr.push(value);
 	storeArray(key, arr);
 }
-
 setUserTheme = function(item){
 	var theme = $(item).val();
 	$.ajax({
@@ -697,7 +696,6 @@ saveUserSound = function(){
 		});
 	}, 500);
 }
-
 systemLoad = function(){
 	$.ajax({
 		url: "system/action/system_load.php",
@@ -1489,7 +1487,6 @@ changeMyUsername = function() {
         }
     });
 }
-
 adminSaveName = function(u){
 	var myNewName = $('#new_user_username').val();
 	$.post('system/action/action_users.php', { 
@@ -1680,7 +1677,6 @@ openShareGold = function(id){
 			}
 	});
 }
-var waitShare = 0;
 shareGold = function(id){
 	if(waitShare == 0){
 		waitShare = 1;
@@ -2127,7 +2123,6 @@ uploadStatus = function(target, type){
 		$("#"+target).prop('disabled', false);
 	}
 }
-
 processAction = function(act){
 	if(act == 'unmute'){
 		$('.im_muted').remove();
@@ -2251,8 +2246,6 @@ betterRank = function(urank){
 		return true;
 	}
 }
-
-var newsWait = 0;
 uploadNews = function(){
 	var file_data = $("#news_file").prop("files")[0];
 	var filez = ($("#news_file")[0].files[0].size / 1024 / 1024).toFixed(2);
@@ -2424,6 +2417,7 @@ accessRoom = function(rt, rank){
 				if(response.code == 10){
 					if(curPage == 'chat'){
 						resetRoom(response.id, response.name);
+						record_room({ roomId: response.id, roomName: response.name, password: 1, rank: rank });
 						hideOver();
 					}
 					else {
@@ -2459,7 +2453,6 @@ accessRoom = function(rt, rank){
 		callSaved(system.accessRequirement, 3);
 	}
 }
-var waitJoin = 0;
 switchRoom = function(room, pass, rank) {
     fuse_loader("#global_chat", "show", "Switch Room");
     if (insideChat()) {
@@ -2470,7 +2463,6 @@ switchRoom = function(room, pass, rank) {
     }
     if (waitJoin == 0) {
         waitJoin = 1;
-        
         if (boomAllow(rank)) {
             if (pass == 1) {
                 $.post('system/box/pass_room.php', {
@@ -2498,6 +2490,7 @@ switchRoom = function(room, pass, rank) {
                         if (response.code == 10) {
                             if (insideChat()) {
                                 resetRoom(response.id, response.name);
+								record_room({ roomId: room, roomName: response.name, password: pass, rank: rank });
                                 clearNotificationCounter(response.id);
                             } else {
                                 location.reload();
@@ -2531,7 +2524,6 @@ switchRoom = function(room, pass, rank) {
         return false;
     }
 };
-
 my_wallet = function(){
 	$.post(FU_Ajax_Requests_File(), { 
 	    f:'wallet',
@@ -2551,7 +2543,6 @@ my_points = function(){
 		$('.modal_top_empty').text('My Rewards');
 	});
 }
-var waitRoom = 0;
 addRoom = function(){
 	var rrname = $('#set_room_name').val();
 	if (/^\s+$/.test(rrname) || rrname == ''){
@@ -2617,7 +2608,6 @@ addRoom = function(){
 		}	
 	}
 }
-
 get_transaction = function(id){
 	$.post(FU_Ajax_Requests_File(), {
 	    f:'wallet',
@@ -2971,7 +2961,6 @@ load_premium = function(u){
 			}
 	});
 }
-
 getChatGround = function(u){
 	$.post('system/box/background_changer.php', {
 		target: u,

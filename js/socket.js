@@ -55,7 +55,7 @@ const FUSE_SOCKET = {
         },
         // Method to notify typing
     notifyTyping: function (user_id) {
-        if (!this.typing) {
+        if (!this.typing && allow_typing ==="1") {
             this.typing = true; // Set typing status
             this.socket.emit('typing', user_id); // Emit typing event
         }
@@ -82,28 +82,28 @@ const FUSE_SOCKET = {
             console.log('Reconnected to the server');
             this.socket.emit('login', this.sendUserUpdate());
         });
-
-        $('#content').on('input', () => {
-          this.notifyTyping(user_id);
-        });
-        // Handle typing indicator from server
-        this.socket.on('userTyping', (data) => {
-            console.log(`${data.username} is typing...`);
-            const typing_temp = `
-                <div onclick="getProfile(${data.user_id});" class="cp_typing_indicator" title="${data.username} is typing...">
-                    <span class="cp_ball cp_ball1"></span>
-                    <span class="cp_ball cp_ball2"></span>
-                    <div class="user_item_avatar"><img class="avav acav avsex nosex " src="${data.avatar}"> </div>
-                    <span class="cp_ball cp_ball3"></span>
-                    <span class="cp_ball cp_ball3"></span>
-                </div>
-            `;
-            $('#typing-indicator').html(typing_temp);
-            setTimeout(() => {
-                $('#typing-indicator').text('');
-            }, 5000);
-        });
-
+         if(allow_typing ==="1") {
+            $('#content').on('input', () => {
+                     this.notifyTyping(user_id);
+            });             
+            // Handle typing indicator from server
+            this.socket.on('userTyping', (data) => {
+                console.log(`${data.username} is typing...`);
+                const typing_temp = `
+                    <div onclick="getProfile(${data.user_id});" class="cp_typing_indicator" title="${data.username} is typing...">
+                        <span class="cp_ball cp_ball1"></span>
+                        <span class="cp_ball cp_ball2"></span>
+                        <div class="user_item_avatar"><img class="avav acav avsex nosex " src="${data.avatar}"> </div>
+                        <span class="cp_ball cp_ball3"></span>
+                        <span class="cp_ball cp_ball3"></span>
+                    </div>
+                `;
+                $('#typing-indicator').html(typing_temp);
+                setTimeout(() => {
+                    $('#typing-indicator').text('');
+                }, 5000);
+            });
+        }
         // Handle message submission
         $('#submit_button').on('click', () => {
             const message = $('#content').val();

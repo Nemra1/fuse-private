@@ -30,7 +30,7 @@
 .alert-success { background-color: #05c505; }
 .alert.success { background-color: #04AA6D; }
 .topic_log { border-radius: 20px 20px 0px 0px; }
-#chat_right_data,#private_content,#main_mob_menu,#global_chat, .extra_model_content,.listing_half_element,.reg_button,.default_btn,#page_global,#av_menu,.reward_bg ,.page_menu_item{
+#chat_right_data,#private_content,#main_mob_menu,#global_chat, .extra_model_content,.listing_half_element,.reg_button,.default_btn,.mod_button,#page_global,#av_menu,.reward_bg ,.page_menu_item,.room_cname{
     font-family: noto kufi arabic, sans-serif, trebuchet ms, lucida grande, lucida sans unicode, arial, helvetica, sans-serif;
 }
 /* The alert message box */ 
@@ -149,15 +149,15 @@ ul.styled-list li:hover { background-color: #e0e0e0; cursor: pointer; }
 .rank_c_image_center_image { max-width: 100%; height: auto; }
 .rank_c_message { margin-top: 10px; text-align: center; font-size: 16px; background: linear-gradient(to right, #ff6a00, #ee0979); color: white; padding: 5px; border-radius: 17px; }
 /*photo frame*/
-.frame_class { left: -2px; position: absolute; top: -3px; border-radius: 0; width: 45px !important; height: 45px !important; }
-.chat_avatar_frame img {width: 40px;height: 40px; }
+.frame_class { left: 0px; position: absolute; top: -3px; border-radius: 0; width: 38px !important; height: 38px !important; right: 0; }
+.chat_avatar_frame img {width: 35px;height: 35px; }
 .user_item_avatar_frame {width: 40px; }
-.user_item_avatar_frame .acav {width: 40px;height: 40px; }
-.ex_levels{position:absolute;right:0;left:0;margin:0 auto;top:34px;width:21px;text-align:center;color:#fff;border-radius:10px;font-size:xx-small;z-index:10}
+.user_item_avatar_frame .acav {width: 37px;height: 37px; }
+.ex_levels { position: absolute; right: 0; left: -4px; margin: 0 auto; top: 33px; width: 21px; text-align: center; color: #fff; border-radius: 10px; font-size: xx-small; z-index: 10; }
 .reachborder-100{border:2px solid #d67701}
 .reach-100{background:#d67701}
 @keyframes pulseGlow{0%{box-shadow:0 0 10px rgba(255,165,0,0.5),0 0 20px rgba(255,165,0,0.5),0 0 30px rgba(255,165,0,0.5),0 0 40px rgba(255,165,0,0.5)}50%{box-shadow:0 0 20px rgba(255,165,0,1),0 0 40px rgba(255,165,0,1),0 0 60px rgba(255,165,0,1),0 0 80px rgba(255,165,0,1)}100%{box-shadow:0 0 10px rgba(255,165,0,0.5),0 0 20px rgba(255,165,0,0.5),0 0 30px rgba(255,165,0,0.5),0 0 40px rgba(255,165,0,0.5)}}
-.glow{animation:pulseGlow 2s infinite}
+/*.glow{animation:pulseGlow 2s infinite}*/
 .reward_bg { color: #fff; padding-bottom: 10px; margin-top: 0; background: #12c2e9; background: -webkit-linear-gradient(to right, #f64f59, #c471ed, #12c2e9); background: linear-gradient(to right, #f64f59, #c471ed, #12c2e9); }
 /*logged as*/
 .return-owner-button{ display: block; background: black; position: relative; }

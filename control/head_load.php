@@ -1,4 +1,7 @@
 <?php
+require_once dirname(__DIR__) . '/vendor/autoload.php';
+use MyChatSocket\WSChatHelper;
+
 if($chat_install != 1){
 	header('location: ./');
 	die();
@@ -92,7 +95,7 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 <link id="gradient_sheet" rel="stylesheet" type="text/css" href="css/colors.css<?php echo $bbfv; ?>" />
 <link id="actual_theme" rel="stylesheet" type="text/css" href="css/themes/<?php echo getTheme(); ?><?php echo $bbfv; ?>" />
 <link rel="stylesheet" type="text/css" href="css/responsive.css<?php echo $bbfv; ?>" />
-<script data-cfasync="false" src="js/jquery-3.6.0.min.js<?php echo $bbfv; ?>"></script>
+<script data-cfasync="false" src="js/jquery-3.7.1.min.js<?php echo $bbfv; ?>"></script>
 <script data-cfasync="false" src="system/language/<?php echo $cur_lang; ?>/language.js<?php echo $bbfv; ?>"></script>
 <script data-cfasync="false" src="js/fancybox/jquery.fancybox.js<?php echo $bbfv; ?>"></script>
 <script data-cfasync="false" src="js/jqueryui/jquery-ui.min.js<?php echo $bbfv; ?>"></script>
@@ -126,6 +129,8 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 		var rtlMode = '<?php echo $brtl; ?>';
 		const csrf_token = '<?php echo CSRF_TOKEN; ?>';
 		const allow_OneSignal =  '<?php echo $data['allow_onesignal']; ?>';
+		const allow_typing =  '<?php echo $data['istyping_mode']; ?>';
+		let current_vmode = null;
 	<?php 
 	if($data['websocket_mode']==1){ ?>
         const s_protocol = '<?php echo $data['websocket_protocol']; ?>';
@@ -142,7 +147,7 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 		var utk = '0';
 		var recapt = <?php echo $data['use_recapt']; ?>;
 		var recaptKey = '<?php echo $data['recapt_key']; ?>';
-		var avatar = 'default_images/avatar/default_avatar.png';
+		var avatar = 'default_images/avatar/default_avatar.svg';
 		var user_rank = 0;
 	</script>
 <?php } ?>

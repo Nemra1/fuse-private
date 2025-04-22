@@ -67,7 +67,7 @@
 					<?php if(boomRecaptcha()){ ?>
 					<div class="wow_form_fields recapcha_div">
 						<!-- Login Form Recaptcha -->
-						<div id="recaptcha_login" class="g-recaptcha" data-sitekey="<?php echo $data['recapt_key']; ?>"></div>
+						<div id="recaptcha_login"></div>
 						<a onclick="resetRecaptcha('login');" class="main">Reset Recaptcha</a>
 						</br>
 					</div>
@@ -166,7 +166,7 @@
 					</div>
 					<?php if(boomRecaptcha()){ ?>
 						<!-- Registration Form Recaptcha -->
-						<div id="recaptcha_register" class="g-recaptcha" data-sitekey="<?php echo $data['recapt_key']; ?>"></div>
+						<div id="recaptcha_register"></div>
 						<a onclick="resetRecaptcha('register');" class="main" >Reset Recaptcha</a>
 						</br>
 					<?php } ?>

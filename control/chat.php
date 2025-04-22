@@ -28,7 +28,7 @@ $set_user = setUserRoom();
     	</div>
     </div>
     <?php } ?>
- 	<?php if(useStore()){ ?>
+ 	<?php if(useStore() && canStore($data)){ ?>
     <div title="buy Gold" class="head_option" onclick="load_StorePanel(this);">
     	<div class="btable">
     		<div class="bcell_mid"><i class="ri-app-store-line  i_btm"></i></div>
@@ -147,7 +147,7 @@ $set_user = setUserRoom();
 					<?php echo $lang['my_profile']; ?>
 				</div>
 			</div>
-			
+			<?php if(canStore($data)){ ?>
 			<div class="fmenu_item" onclick="load_premium();">
 				<div class="fmenu_icon">
 					<i class="ri-bard-line menuo"></i>
@@ -156,6 +156,7 @@ $set_user = setUserRoom();
 					<?php echo $lang['store_premium_panel'];?>
 				</div>
 			</div>
+			<?php } ?>
 			<?php if(useLobby()){ ?>
 			<div id="back_home" class="fmenu_item">
 				<div class="fmenu_icon">

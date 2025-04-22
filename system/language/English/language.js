@@ -57,4 +57,5 @@ var system = {
 	reportLimit: "You have reached your report limit",
 	send_gift: "Send Gift",
 	gift: "Gift",
+	isMuted: "You have been Muted",
 };

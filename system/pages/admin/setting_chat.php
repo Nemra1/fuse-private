@@ -63,8 +63,8 @@ echo elementTitle($lang["chat_settings"]);
             <div class="setting_element">
                 <p class="label"><?php echo htmlspecialchars('Chat Line Style', ENT_QUOTES, 'UTF-8'); ?> :<span class="badge">New</span></p>
 					<select id="set_chat_display">
-                    <option value="1" >inline</option>
-					<option value="2">Underline</option>
+                    <option value="1" <?php if($data["chat_display"]==1){ echo 'selected';};?>>inline</option>
+					<option value="2" <?php if($data["chat_display"]==2){ echo 'selected';};?>>Underline</option>
 					</select>				
             </div>
         </div>

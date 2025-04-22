@@ -31,7 +31,7 @@ $statuses['cover'] = !is_writable(dirname(BOOM_PATH . "/cover")) ? $icons['bad']
 $statuses['database'] = !is_writable(BOOM_PATH . "/system/database.php") ? $icons['bad'] : $icons['good'];
 $statuses['upload'] = !is_writable(dirname(BOOM_PATH . "/upload")) ? $icons['bad'] : $icons['good'];
 $statuses['gd'] = !extension_loaded("gd") && !function_exists("gd_info") ? $icons['bad'] : $icons['good'];
-$statuses['php'] = version_compare(PHP_VERSION, "5.6.0", "<") ? $icons['bad'] : (version_compare(PHP_VERSION, "7.3.0", ">=") ? $icons['warn'] : $icons['good']);
+$statuses['php'] = version_compare(PHP_VERSION, "7.3.0", "<") ? $icons['bad'] : (version_compare(PHP_VERSION, "8.3.15", ">=") ? $icons['good'] : $icons['good']);
 $statuses['curl'] = !function_exists("curl_init") ? $icons['bad'] : $icons['good'];
 $statuses['zip'] = !extension_loaded("zip") ? $icons['bad'] : $icons['good'];
 $statuses['mbstring'] = !extension_loaded("mbstring") ? $icons['bad'] : $icons['good'];
@@ -51,7 +51,7 @@ function renderDiagnosticRow($label, $status) {
 echo elementTitle($lang["system_diagnostic"]);
 echo "<div class=\"page_full\">
     <div class=\"page_element\">
-        " . renderDiagnosticRow('Php version 5.6 - 7.2', $statuses['php']) . "
+        " . renderDiagnosticRow('Php version 7.3.0 - 8.x', $statuses['php']) . "
         " . renderDiagnosticRow('GD is installed', $statuses['gd']) . "
         " . renderDiagnosticRow('Curl is installed', $statuses['curl']) . "
         " . renderDiagnosticRow('Zip is installed', $statuses['zip']) . "

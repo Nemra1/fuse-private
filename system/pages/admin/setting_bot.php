@@ -71,7 +71,7 @@ function bot_list_room(){
             						<option value="1800"  <?php if($data['bot_delay']==1800){echo "selected";} ?>>30 min</option>
             				</select>
             		</div>
-		<div class="setting_element">
+					<div class="setting_element">
 					<p class="label">Advance search</p>
 					<select id="bot_rooms">
 						<option value="0" selected="" disabled="">Select Room</option>
@@ -91,7 +91,7 @@ function bot_list_room(){
 					<div class="sub_list_item" id="bot_line_<?php echo $key['id']; ?>">
 						<div class="sub_list_avatar">
 							<img class="admin_user28" src="<?php echo myAvatar($key['user_tumb']); ?>" />
-							<img class="sub_list_active" src="https://drop200.net/default_images/icons/active.svg" />
+							<img class="sub_list_active" src="default_images/icons/active.svg" />
 						</div>
 						<div class="sub_list_name">
 							<p class="username <?php echo $key['user_color']; ?>"><?php echo $key['bot_name']; ?></p>

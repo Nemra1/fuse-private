@@ -281,7 +281,7 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 
 /* pro menu */
 .fmenu { position:absolute; border-radius:5px; overflow:hidden; display:none; }
-.fmenu_item { padding: 10px 10px; display: table; table-layout: fixed; width: 100%; cursor: pointer; font-size: 14px; text-shadow: none; font-weight: 500; text-transform: capitalize; }
+.fmenu_item { padding: 10px 10px; display: table; table-layout: fixed; width: 100%; cursor: pointer; font-size: 14px; text-shadow: none; font-weight: 700; text-transform: capitalize; }
 .fmenu_icon { width: 30px; text-align: center; display: table-cell; vertical-align: middle; font-size: 16px; }
 .fmenu_text { display: table-cell; vertical-align: middle; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; text-align: initial; padding: 0 5px; }
 .fmenut { padding:10px; }

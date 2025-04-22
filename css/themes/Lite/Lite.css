@@ -67,7 +67,7 @@ input, textarea, .post_input_container { background: #f2f2f2; border: 1px solid 
 .sub_menu_icon, .menui, .menuo, .menup { color: #665dfe; font-size: x-large; }
 
 /* Outside Menu */
-.sub_menu_item, .fmenu_item, .avitem { border-bottom: 1px solid #ededed; color: #666; background: #fff; }
+.sub_menu_item, .fmenu_item, .avitem { border-bottom: 1px solid #ededed; color: #000000; background: #fff; }
 .sub_menu_item:hover, .fmenu_item:hover, .avitem:hover { background: #ededed; color: #666 !important; }
 
 /* Inside Menu */

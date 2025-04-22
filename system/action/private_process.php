@@ -11,21 +11,20 @@
 */
 require_once("./../config_session.php");
 if (isset($_POST['target']) && isset($_POST['content'])){
-	if(muted()){
-		die();
-	}
 	if(checkFlood()){
-		echo 100;
-		die();
+		echo systemPrivateMute($data,5);
+		die(fu_json_results(['error' => 'Your account has been muted 5 minutes for flooding','code' => 100]));
 	}
+	if(privateBlocked()){
+		die(fu_json_results(['error' => 'Private is blocked','code' => 150]));
+	}	
 	$target = escape($_POST['target']);
 	$content = escape($_POST['content']);
 	$content = wordFilter($content, 1);
 	$content = textFilter($content);
 
 	if(!canSendPrivate($target)){
-		echo 20;
-		die();
+		die(fu_json_results(['code' => 20]));
 	}
 	else {
 		echo postPrivate($data['user_id'], $target, $content, 1);

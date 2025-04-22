@@ -1,6 +1,6 @@
 <?php
 /**
- * FuseChat
+ * FuseChat - chat_process.php
  *
  * @package FuseChat
  * @author www.nemra-1.com
@@ -10,41 +10,27 @@
  */
 require_once("./../config_session.php");
 
-if(mainBlocked()){
-    die(json_encode(['error' => 'System unavailable']));
+ if (!isset($_POST['content'], $_POST['snum'])){
+	die();
 }
-// Check if required POST parameters are set
-if (!isset($_POST['content'], $_POST['snum'])) {
-    die(); // or handle the error appropriately
+if(isTooLong($_POST['content'], $data['max_main'])){
+	die();
 }
-
-// Validate and sanitize input content
-$content = $_POST['content'];
-$snum = $_POST['snum'];
-
-// Length Validation
-if (isTooLong($content, $data['max_main']) || empty(trim($content))) {
-    die(json_encode(['error' => 'invalid_length']));
-}
-// Check if user is muted or room is muted
 if (muted() || isRoomMuted($data)) {
-    die(json_encode(['error' => 'muted']));
+	die();
 }
-// Check for flood control
-// 3. Rate Limiting
-if(checkFlood()) {
-    die(json_encode(['error' => 'flood'])); // Consistent with your 100 code
+if(checkFlood()){
+	echo 100;
+	die();
 }
-// Sanitize and filter content
-$content = escape($content);
+
+$snum = escape($_POST['snum']);
+$content = escape($_POST['content']);
 $content = wordFilter($content, 1);
 $content = textFilter($content);
-// Validate the content and room status
-if (empty($content) && $content !== '0' || !inRoom()) {
-	 die(json_encode(['error' => 'Validate the content and room status']));
+
+if(empty($content) && $content !== '0' || !inRoom()){
+	die();
 }
-
-// Process and echo the chat post
-echo userPostChat($content, array('snum' => $snum));
-
+echo userPostChat($content, array('snum'=> $snum));
 ?>

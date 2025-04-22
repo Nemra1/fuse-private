@@ -692,48 +692,51 @@ if ($section === "security" && boomAllow(100)) {
             return 99;
         }
     }
-if ($section == "gateway_mods" && boomAllow(100)) {
-    // CSRF token validation (ensure it's included in the form and checked here)
-    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] == $_SESSION['csrf_token']) {
-        if (isset($_POST["gateway_mods"])) {
-            // Validate and sanitize each expected input
-            $allow_paypal = filter_var($_POST["allow_paypal"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            $paypal_mode = in_array($_POST["paypal_mode"], ['sandbox', 'live']) ? $_POST["paypal_mode"] : null;
-            $paypalTestingClientKey = filter_var($_POST["paypalTestingClientKey"], FILTER_SANITIZE_STRING);
-            $paypalTestingSecretKey = filter_var($_POST["paypalTestingSecretKey"], FILTER_SANITIZE_STRING);
-            $paypalLiveClientKey = filter_var($_POST["paypalLiveClientKey"], FILTER_SANITIZE_STRING);
-            $paypalLiveSecretKey = filter_var($_POST["paypalLiveSecretKey"], FILTER_SANITIZE_STRING);
-            $use_wallet = filter_var($_POST["use_wallet"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            $point_cost = filter_var($_POST["dollar_to_point_cost"], FILTER_VALIDATE_FLOAT);
-            $currency = filter_var($_POST["currency"], FILTER_SANITIZE_STRING);
-            // Check for any missing or invalid values
-            if (is_null($allow_paypal) || !$paypal_mode || empty($paypalTestingClientKey) || empty($paypalTestingSecretKey) ||
-                empty($paypalLiveClientKey) || empty($paypalLiveSecretKey) || is_null($use_wallet) || !is_numeric($point_cost) ||
-                empty($currency)) {
-                return 0; // Invalid data
-            }
-            // Prepare data for update
-            $data_query = array(
-                "allow_paypal" => $allow_paypal,
-                "paypal_mode" => $paypal_mode,
-                "paypalTestingClientKey" => $paypalTestingClientKey,
-                "paypalTestingSecretKey" => $paypalTestingSecretKey,
-                "paypalLiveClientKey" => $paypalLiveClientKey,
-                "paypalLiveSecretKey" => $paypalLiveSecretKey,
-                "use_wallet" => $use_wallet,
-                "point_cost" => $point_cost,
-                "currency" => $currency,
-            );
-            // Update the dashboard
-            $update = fu_update_dashboard($data_query);
-            // Return result based on success
-            return $update === true ? 1 : 0; // Return 1 on success, 0 on failure
+   if ($section == "gateway_mods" && boomAllow(100)) {
+         if(isset($_POST["gateway_mods"])) {
+			// Process PayPal settings if provided
+			if(isset($_POST["allow_paypal"]) && 
+				isset($_POST["paypal_mode"]) && 
+				isset($_POST["paypalTestingClientKey"]) &&
+				isset($_POST["paypalTestingSecretKey"]) &&
+				isset($_POST["paypalLiveClientKey"]) &&
+				isset($_POST["paypalLiveSecretKey"])) {
+				$data_query = array(
+					"allow_paypal" => escape($_POST["allow_paypal"]),
+					"paypal_mode" => escape($_POST["paypal_mode"]),
+					"paypalTestingClientKey" => escape($_POST["paypalTestingClientKey"]),
+					"paypalTestingSecretKey" => escape($_POST["paypalTestingSecretKey"]),
+					"paypalLiveClientKey" => escape($_POST["paypalLiveClientKey"]),
+					"paypalLiveSecretKey" => escape($_POST["paypalLiveSecretKey"]),
+				);
+        $update = fu_update_dashboard($data_query);
+        if ($update === true) {
+            return 1;
+        } else {
+            return 0; // Handle update failure
         }
-    } else {
-        // CSRF token mismatch, handle accordingly
-        return 0; // Token validation failed
     }
-}
+    // Process wallet settings if provided
+            if (isset($_POST["allow_wallet"]) && 
+                isset($_POST["dollar_to_point_cost"]) && 
+                isset($_POST["currency"])) {
+        
+                $data_query = array(
+                    "use_wallet" => escape($_POST["allow_wallet"]),
+                    "point_cost" => escape($_POST["dollar_to_point_cost"]),
+                    "currency" => escape($_POST["currency"]),
+                );
+        
+                $update = fu_update_dashboard($data_query);
+        
+                if ($update === true) {
+                    return 1;
+                } else {
+                    return 0; // Handle update failure
+                }
+            }
+        } 
+    }
 
 if($section === "websocket" && boomAllow(100)) {
     // CSRF token validation (make sure it's included in the form)
@@ -843,12 +846,12 @@ if ($section === "xp_system" && boomAllow(100)) {
 
 if($section === "gold_reward" && boomAllow(100)) {
     // CSRF token validation (ensure it is included in the form)
-    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    if (isset($_POST['csrf_token'])) {
         // Check if required POST parameters are set
         if (isset($_POST["set_allow_sendcoins"], $_POST["set_allow_takecoins"])) {
             // Validate and sanitize inputs
-            $allow_sendcoins = filter_var($_POST["set_allow_sendcoins"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            $allow_takecoins = filter_var($_POST["set_allow_takecoins"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            $allow_sendcoins = escape($_POST["set_allow_sendcoins"]);
+            $allow_takecoins = escape($_POST["set_allow_takecoins"]);
             // Validate if both are valid booleans
             if (is_null($allow_sendcoins) || is_null($allow_takecoins)) {
                 return 99; // Invalid input data

@@ -131,7 +131,7 @@ if ($f == 'system_login') {
 					"language" => $res['guest_lang'],
 					"ip" => $res['guest_ip'],
 					"rank" => 0,
-					"avatar" => "default_guest.png",
+					"avatar" => "default_guest.svg",
 					"email" => "" // Empty email as it's a guest
 				];
 				if (guestForm()) {

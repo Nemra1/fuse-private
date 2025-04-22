@@ -241,6 +241,6 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 	$d['pico'] = $data['private_count'];
 	//$d['userRelationDetails'] = roomDetails($room);
 
-	echo json_encode($d, JSON_UNESCAPED_UNICODE);
+	echo fu_json_results($d, JSON_UNESCAPED_UNICODE);
 }
 ?>

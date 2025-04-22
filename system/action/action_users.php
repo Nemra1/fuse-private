@@ -282,52 +282,44 @@ function boomChangeUserVerify() {
 }
 function boomChangeColor() {
     global $mysqli, $data, $cody;
-    // 1. Input Validation (Ensures valid ID and sanitizes inputs)
-    $id = filter_input(INPUT_POST, 'user', FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => 1]
-    ]);
-    $color = isset($_POST['user_color']) ? trim($_POST['user_color']) : '';
-    $font = isset($_POST['user_font']) ? trim($_POST['user_font']) : '';
-    if ($id === false || empty($color) || empty($font)) {
-        return 0; // Invalid input
-    }
-    // 2. Get User Details Securely
+    // Validate and sanitize input
+    $color = escape($_POST["user_color"]);
+    $font = escape($_POST["user_font"]);
+    $id = escape($_POST["user"]);
+    // Fetch user details
     $user = userDetails($id);
-    if (empty($user)) {
-        return 0; // User not found
-    }
-    // 3. Permission Check (Ensures user has permission to modify color)
+    // Check if the current user has permission to modify the color
     if (!canModifyColor($user)) {
-        return 0; // Permission denied
+        return 0; // No permission
     }
-    // 4. Validate Color and Font Format (Ensures valid color and font format)
+    // Validate the color and font
     if (!validNameColor($color)) {
-        return 0; // Invalid color format
+        return 0; // Invalid color
     }
     if (!validNameFont($font)) {
-        return 0; // Invalid font format
+        return 0; // Invalid font
     }
-    // 5. Secure Database Update with Prepared Statement
+    // Prepare and execute the SQL query using prepared statements
     $stmt = $mysqli->prepare("UPDATE boom_users SET user_color = ?, user_font = ? WHERE user_id = ?");
-    if ($stmt) {
-        $stmt->bind_param("ssi", $color, $font, $id);
-        if ($stmt->execute()) {
-            // 6. Log the action
-            boomConsole("change_color", [
-                "target" => $id,
-                "color" => $color,
-                "font" => $font,
-            ]);
-            $stmt->close();
-            return 1; // Success
-        } else {
-            error_log("Color update failed for user {$id}: " . $stmt->error);
-        }
-        $stmt->close();
-    } else {
-        error_log("Prepare failed: " . $mysqli->error);
+    if (!$stmt) {
+        // Log the error if the statement preparation fails
+        error_log("Database error: " . $mysqli->error);
+        return 0; // Database error
     }
-    return 0; // Update failed
+    $stmt->bind_param("ssi", $color, $font, $id);
+    $result = $stmt->execute();
+    // Check if the query execution was successful
+    if (!$result) {
+        error_log("Query execution failed: " . $stmt->error);
+        $stmt->close();
+        return 0; // Query failed
+    }
+    $stmt->close();
+
+    // Log the action in the console
+    boomConsole("change_color", ["target" => $id]);
+    // Return success
+    return 1;
 }
 function staffUserEmail() {
     global $mysqli, $data, $cody;
@@ -579,12 +571,12 @@ function boomDeleteAccount(){
 function staffCreateUser(){
     global $mysqli, $data, $cody;
     $name = escape($_POST["create_name"]);
-    $name = sanitizeChatInput($_POST["create_name"]);
     $pass = escape($_POST["create_password"]);
     $email = escape($_POST["create_email"]);
-    $age = sanitizeChatInput($_POST["create_age"]);
-    $gender = sanitizeChatInput($_POST["create_gender"]);
-    if (!boomAllow(90)) {
+    $age = escape($_POST["create_age"]);
+    $gender = escape($_POST["create_gender"]);
+
+    if (!boomAllow(80)) {
         return 2;
     }
     if ($name == "" || $pass == "" || $email == "") {
@@ -611,19 +603,9 @@ function staffCreateUser(){
     if (!validGender($gender)) {
         $gender = 1;
     }
-    // Use PASSWORD_BCRYPT for password hashing
     $enpass = password_hash($pass, PASSWORD_BCRYPT);
-    $system_user = [
-        "name" => $name,
-        "password" => $enpass,
-        "email" => $email,
-        "language" => $data["language"],
-        "verified" => 1,
-        "cookie" => 0,
-        "gender" => $gender,
-        "avatar" => genderAvatar($gender),
-        "age" => $age
-    ];
+    //$enpass = encrypt($pass);
+    $system_user = ["name" => $name, "password" => $enpass, "email" => $email, "language" => $data["language"], "verified" => 1, "cookie" => 0, "gender" => $gender, "avatar" => genderAvatar($gender), "age" => $age];
     $user = boomInsertUser($system_user);
     boomConsole("create_user", ["target" => $user["user_id"]]);
     return 1;

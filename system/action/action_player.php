@@ -51,7 +51,7 @@ function deletePlayer() {
 
 
 function staffAddPlayer() {
-    
+     global $mysqli, $data;
     // Escape the input to prevent SQL injection
     $player_url = escape($_POST["player_url"]);
     $player_alias = escape($_POST["player_alias"]);

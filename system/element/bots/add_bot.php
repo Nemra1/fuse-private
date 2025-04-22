@@ -71,6 +71,7 @@ $(document).on('click', '#add_bot_form', function(e) {
             if (data.status == 201) {
                 callSaved(data.message, 1);
                 hideModal();
+				loadLob('admin/setting_bot.php');
             } else {
                 callSaved(data.message, 3);
             }

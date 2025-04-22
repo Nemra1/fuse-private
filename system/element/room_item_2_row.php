@@ -18,7 +18,7 @@ if($data['user_id'] == $boom['room_creator']){
 	$owner = 'owner ';
 }
 ?>
-<div data-room="usa-communications"  class="room-one-block col-md-4" onclick="switchRoom(<?php echo $boom['room_id']; ?>, <?php echo $ask; ?>, <?php echo $boom['access']; ?>);">
+<div data-room="usa-communications"  class="room-one-block col-md-4" onclick="switchRoom(<?php echo $boom['room_id']; ?>,<?php echo $ask; ?>,<?php echo $boom['access']; ?>);">
 	<div class="room-container-outline">
 		<div class="head-bg"></div>
 		<div class="room-content d-flex">

@@ -18,8 +18,18 @@
             <option value="1" <?php if($boom['bot_type']==1){echo "selected";} ?>>Normal</option>
             <option value="2" <?php if($boom['bot_type']==2){echo "selected";} ?>>Random</option>
             </select>
-
 		</div>
+			<div class="setting_element">
+            <label for="group_id" class="label">Select Room</label>
+            <select class="form-control" id="group_id" name="group_id">
+                <?php 
+                foreach (bot_adminRoomList() as $room){
+                 ?>
+                 <option value="<?php echo $room['room_id']; ?>"><?php echo $room['room_name']; ?></option>
+                 <?php
+                }?>
+            </select>	
+            </div>		
 		<div class="setting_element">
             <label for="fuse_bot_line" class="label">Add a bot line</label>
 			<textarea class="full_textarea medium_textarea" name="fuse_bot_line" id="fuse_bot_line" rows="3" cols="80" maxlength="1000"><?php echo $boom['bot_reply'];?></textarea>			

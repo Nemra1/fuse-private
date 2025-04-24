@@ -60,6 +60,15 @@ function processCover(){
                 }
                 unlinkCover($data["user_cover"]);
                 $mysqli->query("UPDATE boom_users SET user_cover = '" . $file_name . "' WHERE user_id = '" . $data["user_id"] . "'");
+					// send msg to room with  updated avatar
+					// Introduce a delay of 2 seconds (adjust as needed)
+					sleep(2);
+					$res = [
+						'image_thumb' => myCover($file_name), // Generate the thumbnail for the cover image
+						'msg'         => 'updated their profile Cover' // Message to indicate the action
+					];
+					$change_msg = boomTemplate("element/avatar_update", $res);
+					systemPostChat($data['user_roomid'], $change_msg, ['type' => 'public__message']);
                 return boomCode(5, ["data" => myCover($file_name)]);
             }
             return boomCode(7);

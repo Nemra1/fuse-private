@@ -238,12 +238,12 @@ if ($section == "registration" && boomAllow(90)) {
 }
 
 if ($section == "guest" && boomAllow(90)) {
-    if (isset($_POST["set_allow_guest"]) && isset($_POST["set_guest_form"]) && isset($_POST["set_guest_talk"]) && isset($_POST["set_max_greg"])) {
+    if (isset($_POST["set_allow_guest"]) && isset($_POST["set_guest_form"]) && isset($_POST["set_guest_talk"]) && isset($_POST["set_guest_per_day"])) {
         // Sanitize inputs
         $allow_guest = escape($_POST["set_allow_guest"]);
         $guest_form = escape($_POST["set_guest_form"]);
         $guest_talk = escape($_POST["set_guest_talk"]);
-        $guest_per_day = escape($_POST["set_max_greg"]);
+        $guest_per_day = escape($_POST["set_guest_per_day"]);
         // Validate the values
         if (!in_array($allow_guest, [0, 1])) {
             return 99;  // Invalid allow_guest value

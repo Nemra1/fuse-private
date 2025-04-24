@@ -75,6 +75,12 @@ function processAvatar() {
                     $stmt->bind_param("si", $file_tumb, $data["user_id"]);
                     $stmt->execute();
                     $stmt->close();
+					// send msg to room with  updated avatar
+					// Introduce a delay of 2 seconds (adjust as needed)
+					sleep(2);
+					$res =['image_thumb' => myAvatar($file_tumb),'msg' => ' updated their profile picture'];
+					$change_msg = boomTemplate("element/avatar_update", $res);
+					systemPostChat($data['user_roomid'], $change_msg, ['type' => 'public__message']);
                     return boomCode(5, ["data" => myAvatar($file_tumb)]);
                 }
                 unlinkAvatar($file_avatar);

@@ -88,6 +88,7 @@ if ($f == 'system_login') {
 			if (!okGuest($res['guest_ip'])) {
 				$res['code'] = 16; // Prevent new guest login if already exists
 				$res['msg'] = 'A guest is already logged in from this IP address.';
+				$res['ip'] = $res['guest_ip'];
 			}
 			// Sanitize and validate user input
 			$res['guest_name'] = trim(escape($_POST["guest_name"] ?? ''));

@@ -56,23 +56,25 @@ function deletePrivateHistory(){
 }
 
 function chatDeletePost(){
-    global $mysqli,$data;
+    global $mysqli, $data;
+    // Escape input
     $post = escape($_POST["del_post"]);
     $type = escape($_POST["type"]);
+    // Get log information
     $log = logInfo($post);
-    if (empty($log)) {
+    if ($log === null || empty($log)) { // Check if $log is null or empty
         return "";
     }
-    
+    // Permission check
     if (!canDeleteLog() && !canDeleteRoomLog() && !canDeleteSelfLog($log)) {
         return "";
     }
-
+    // Get room information
     $room = roomInfo($data["user_roomid"]);
-    if (empty($room)) {
+    if ($room === null || empty($room)) { // Check if $room is null or empty
         return "";
     }
-
+    // Delete post query
     $deletePostQuery = "DELETE FROM boom_chat WHERE post_id = ? AND post_roomid = ?";
     if ($stmt = $mysqli->prepare($deletePostQuery)) {
         $stmt->bind_param("ii", $post, $data["user_roomid"]);
@@ -82,7 +84,7 @@ function chatDeletePost(){
         error_log("Error preparing delete post query: " . $mysqli->error);
         return "";
     }
-
+    // Delete report query
     $deleteReportQuery = "DELETE FROM boom_report WHERE report_post = ? AND report_type = '1' AND report_room = ?";
     if ($stmt = $mysqli->prepare($deleteReportQuery)) {
         $stmt->bind_param("ii", $post, $data["user_roomid"]);
@@ -91,25 +93,32 @@ function chatDeletePost(){
     } else {
         error_log("Error preparing delete report query: " . $mysqli->error);
     }
-
+    // Update affected rows
     if ($mysqli->affected_rows > 0) {
         updateStaffNotify();
     }
-
+	$current_time= time();
+    // Update room query
     $updateRoomQuery = "UPDATE boom_rooms SET rldelete = IF(rldelete IS NULL, ?, CONCAT(rldelete, ',', ?)), rltime = ? WHERE room_id = ?";
     if ($stmt = $mysqli->prepare($updateRoomQuery)) {
-        $stmt->bind_param("isii", $post, $post, time(), $data["user_roomid"]);
+        $stmt->bind_param("isii", $post, $post, $current_time, $data["user_roomid"]);
         $stmt->execute();
         $stmt->close();
     } else {
         error_log("Error preparing update room query: " . $mysqli->error);
     }
-
-    boomConsole("delete_log", ["target" => $log["user_id"], "room" => $data["user_roomid"], "reason" => strip_tags($log["post_message"])]);
+    // Log deletion action
+    boomConsole(
+        "delete_log",
+        [
+            "target" => $log["user_id"],
+            "room" => $data["user_roomid"],
+            "reason" => strip_tags($log["post_message"])
+        ]
+    );
+    // Remove related files
     removeRelatedFile($post, "chat");
 }
-
-
 function privateDeletion(){
 	global $mysqli,$data;
     $item = escape($_POST["private_delete"]);

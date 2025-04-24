@@ -149,11 +149,11 @@ ul.styled-list li:hover { background-color: #e0e0e0; cursor: pointer; }
 .rank_c_image_center_image { max-width: 100%; height: auto; }
 .rank_c_message { margin-top: 10px; text-align: center; font-size: 16px; background: linear-gradient(to right, #ff6a00, #ee0979); color: white; padding: 5px; border-radius: 17px; }
 /*photo frame*/
-.frame_class { left: 0px; position: absolute; top: -3px; border-radius: 0; width: 38px !important; height: 38px !important; right: 0; }
+.frame_class { left: -2px; position: absolute; top: -2px; border-radius: 0; width: 40px !important; height: 40px !important; right: 0; }
 .chat_avatar_frame img {width: 35px;height: 35px; }
-.user_item_avatar_frame {width: 40px; }
+.user_item_avatar_frame {width: 35px; }
 .user_item_avatar_frame .acav {width: 37px;height: 37px; }
-.ex_levels { position: absolute; right: 0; left: -4px; margin: 0 auto; top: 33px; width: 21px; text-align: center; color: #fff; border-radius: 10px; font-size: xx-small; z-index: 10; }
+.ex_levels { position: absolute; right: 0; left: 0; margin: 0 auto; top: 33px; width: 20px; text-align: center; color: #fff; border-radius: 10px; font-size: xx-small; z-index: 10; }
 .reachborder-100{border:2px solid #d67701}
 .reach-100{background:#d67701}
 @keyframes pulseGlow{0%{box-shadow:0 0 10px rgba(255,165,0,0.5),0 0 20px rgba(255,165,0,0.5),0 0 30px rgba(255,165,0,0.5),0 0 40px rgba(255,165,0,0.5)}50%{box-shadow:0 0 20px rgba(255,165,0,1),0 0 40px rgba(255,165,0,1),0 0 60px rgba(255,165,0,1),0 0 80px rgba(255,165,0,1)}100%{box-shadow:0 0 10px rgba(255,165,0,0.5),0 0 20px rgba(255,165,0,0.5),0 0 30px rgba(255,165,0,0.5),0 0 40px rgba(255,165,0,0.5)}}
@@ -173,7 +173,17 @@ ul.styled-list li:hover { background-color: #e0e0e0; cursor: pointer; }
 .title-bar > li:only-child .close{display:none}
 #slidePrevRoomTab,#slideNextRoomTab{cursor:pointer;background:none;border:none;outline:none;color:#fff;font-size:20px;position:absolute;top:50%;transform:translateY(-50%);z-index:10}#slidePrevRoomTab{left:0;background:#8b00d1e8;height:35px}#slideNextRoomTab{right:0;background:#fb832e;height:35px}.slide-room-tabs{display:flex;justify-content:space-between;align-items:center}.chat_topping{position:absolute;z-index:11;width:100%;margin:0 auto;left:0;right:0}.notification-counter{background:red;color:#fff;position:absolute;top:17px;right:1px;padding:2px 3px;border-radius:9px;font-size:11px;font-weight:700}
 .tab_overflow { overflow: hidden; width: 100%; position: relative; display: flex; overflow-x: auto; white-space: nowrap; left: 30px;}
-
+.avatar_action { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px !important; font-weight: 500; color: #fff; letter-spacing: 0.2px; margin-left: 5px; white-space: nowrap; background: linear-gradient(90deg, #f64f59, #c471ed, #12c2e9); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 2px 0; border-radius: 4px;text-transform: capitalize;}
+/* Update Card Container */
+.update_card { display: flex ; align-items: center; padding: 5px; border-radius: 8px; box-shadow: 0 2px 6px #0000001a; margin: 2px 0; max-width: 400px; transition: transform .2s ease, box-shadow .2s ease; background: linear-gradient(#fff, #e9eef2); }.update_card:hover{transform:translateY(-2px);box-shadow:0 4px 10px #00000026}
+.update_avatar { display: flex ; margin-right: 1px; top: 4px; position: relative; }
+.avatar_image{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px dotted #b92eff;transition:border-color .3s ease}
+.update_card:hover .avatar_image{border-color:#007bff}
+.update_content{display:flex;flex-direction:column}
+.avatar_username { font-weight: bold; color: #007bff; cursor: pointer; transition: color .3s ease; font-size: 16px !important; position: relative; text-transform: capitalize; }
+.avatar_username:hover{text-decoration:underline;color:#0056b3}
+.avatar_username img { width: 18px; height: 17px; padding: 1px; }
+.update_card_rank{position: relative; top: -20px; width: 20px; height: 20px; border-radius: 50%; margin-left: 5px; right: -16px; }
 @media (max-width: 768px){
 .title-bar .nav-link { max-width: 165px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 2px;height: 30px;font-size: smaller;}
 	.room-tabs { width: 490px; height: 30px;}

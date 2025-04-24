@@ -482,7 +482,7 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 #show_chat ul { width:100%; position:relative; }
 #menu_container_inside { margin:0 auto; }
 #wrap_footer { height:auto; width:100%; position:fixed; bottom:0; left:0; z-index:200; }
-#my_menu{ width:100%; height:46px; display:table; table-layout:fixed; }
+#my_menu{ width:100%; height:35px; display:table; table-layout:fixed; }
 .mute_mode { position:absolute; top:5px; border-radius:50px; width:90%; max-width:600px; margin-left: auto; margin-right: auto; left: 0; right: 0; text-align:center; z-index:100; padding:5px; opacity:0.9; }
 
 /* private box */
@@ -522,8 +522,8 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 /* chat logs css */
 .ch_logs { padding:8px; word-wrap: break-word; display:table; width:100%; table-layout:fixed; max-width:100%; overflow:hidden; cursor:pointer; }
 .other_logs{ padding:8px; word-wrap: break-word; display:table; width:100%; table-layout:fixed; max-width:100%; overflow:hidden; }
-.chat_avatar { display:table-cell; width:40px; vertical-align:top; position:relative; }
-.cavatar  { height:40px; width:40px; border-radius:50%; display:block; overflow:hidden; cursor:pointer; }
+.chat_avatar { display:table-cell; width:35px; vertical-align:top; position:relative; }
+.cavatar  { height:35px; width:35px; border-radius:50%; display:block; overflow:hidden; cursor:pointer; }
 .my_text { display:table-cell; vertical-align:top; padding:0 0 0 4px; position:relative; }
 .my_text .username { font-size:12px; }
 .chat_image { max-width:100%; height:100px; width:auto; margin:5px 0 0 0; border-radius:5px; }

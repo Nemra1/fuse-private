@@ -235,7 +235,7 @@ function checkKick(){
 }
 function removeAllAction($user){
 	global $mysqli;
-	$mysqli->query("UPDATE boom_users SET user_kick = 0, user_mute = 0, user_ban = 0,  user_regmute = 0 WHERE user_id = {$user['user_id']}");
+	$mysqli->query("UPDATE boom_users SET user_kick = 0, user_mute = 0, user_ban = 0,  user_regmute = 0,  user_pmute = 0,  user_mmute = 0 WHERE user_id = {$user['user_id']}");
 }
 function boomStaffContact($id){
 	global $mysqli;
@@ -1454,8 +1454,9 @@ function banAccount($id, $reason = ''){
 		return 2;
 	}
 	systemBan($user, $reason);
+	boomHistory('ban', [ 'target' => $user['user_id'], 'reason' => $reason, 'hunter' => $data['user_id'] ]);
 	boomConsole('ban', array('target'=> $user['user_id'], 'custom'=>$user['user_ip'], 'reason'=> $reason));
-	boomHistory('ban', array('target'=> $user['user_id'], 'reason'=> $reason));
+	//boomHistory('ban', array('target'=> $user['user_id'], 'reason'=> $reason));
 	return 1;
 }
 /*system value*/
@@ -1473,9 +1474,11 @@ function ghostValues(){
 }
 /*log section*/
 function banLog($user){
-	global $lang;
+	global $lang,$data;
 	if(useLogs(3) && userInRoom($user)){
-		$content = str_replace('%user%', systemNameFilter($user), $lang['system_ban']);
+		//$content = str_replace('%user%', systemNameFilter($user), $lang['system_ban']);
+		$hunter = escape($data['user_name']);
+		$content = str_replace(array('%hunter%', '%user%'), array($hunter, systemNameFilter($user)), $lang['system_ban']);
 		systemPostChat($user['user_roomid'], $content, array('type'=> 'system__action'));
 	}
 }
@@ -3295,18 +3298,55 @@ function softGuestDelete($u){
 	$mysqli->query("UPDATE boom_users SET user_name = '$new_name', user_password = '$new_pass' WHERE user_id = '$id'");
 	$mysqli->query("DELETE FROM boom_users_gift WHERE target = '$id' OR hunter = '$id'");
 }
-function clearRoom($id){
-	global $data, $mysqli, $lang;
-	$clearmessage = str_ireplace('%user%', $data['user_name'], $lang['room_clear']);
-	$mysqli->query("DELETE FROM `boom_chat` WHERE `post_roomid` = '$id' ");
-	systemPostChat($data['user_roomid'], $clearmessage, array('type'=> 'system__clear'));
-	chatAction($id);
-	$mysqli->query("DELETE FROM boom_report WHERE report_room = '$id'");
-	if($mysqli->affected_rows > 0){
-		updateStaffNotify();
-	}
-	boomConsole('clear_logs');
-	return true;
+function clearRoom($id) {
+    global $data, $mysqli, $lang;
+    // Validate $id
+    if (!is_numeric($id)) {
+        error_log("Invalid room ID: " . $id);
+        return false;
+    }
+    // Prepare system message
+    $clearmessage = str_ireplace('%user%', $data['user_name'], $lang['room_clear']);
+    // Start a transaction to ensure atomicity
+    $mysqli->begin_transaction();
+    try {
+        // Delete chat messages for the room
+        $deleteChatQuery = "DELETE FROM `boom_chat` WHERE `post_roomid` = ?";
+        $stmt = $mysqli->prepare($deleteChatQuery);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+        // Post system message about clearing the room
+        systemPostChat($data['user_roomid'], $clearmessage, ['type' => 'system__clear']);
+        // Trigger chat action
+        chatAction($id);
+        // Delete reports for the room
+        $deleteReportQuery = "DELETE FROM `boom_report` WHERE `report_room` = ?";
+        $stmt = $mysqli->prepare($deleteReportQuery);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+        // Clear `rldelete` field for the room
+        $updateRoomQuery = "UPDATE `boom_rooms` SET `rldelete` = '' WHERE `room_id` = ?";
+        $stmt = $mysqli->prepare($updateRoomQuery);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $stmt->close();
+        // Check if any rows were affected
+        if ($mysqli->affected_rows > 0) {
+            updateStaffNotify();
+        }
+        // Commit the transaction
+        $mysqli->commit();
+        // Log the action
+        boomConsole('clear_logs');
+        return true;
+    } catch (Exception $e) {
+        // Rollback the transaction on error
+        $mysqli->rollback();
+        error_log("Error clearing room: " . $e->getMessage());
+        return false;
+    }
 }
 function changeTopic($topic, $id){
 	global $mysqli, $data;

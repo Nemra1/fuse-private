@@ -1,0 +1,79 @@
+body {
+    overflow: hidden!important;
+	  font-family: noto kufi arabic, sans-serif, trebuchet ms, lucida grande, lucida sans unicode, arial, helvetica, sans-serif;
+}
+.external_wrap{width:100%;height:100%}
+#login_logo{height:85px}
+.login_panel{position:relative;display:none;max-width:100%;width:350px;height:100%;padding:36px 20px;overflow:hidden;overflow-y:auto}
+.login_body{width:100%;height:100%;overflow:hidden;overflow-y:hidden}
+.login_body:hover{overflow-y:auto}
+.login_body.login_pbody{width:calc(100% - 350px)}
+.login_pbody .login_body_inner #intro_top #intro_top::before{background-attachment:unset!important}
+.login_body_inner{display:block;max-width:94%;width:500px;margin:0 auto;color:#fff}
+.login_box,.login_box,.centered_element,.modal_content,.theme_btn {
+font-family: noto kufi arabic, sans-serif, trebuchet ms, lucida grande, lucida sans unicode, arial, helvetica, sans-serif;
+}
+.login_box,.login_box *{border-color:#ffffff14!important}
+#intro_top{position:relative;z-index:1;width:100%;height:100%;background:#000}
+#intro_top::before{content:'';position:absolute;top:0;left:0;z-index:-1;width:100%;height:100%;background:url(images/background.jpg);background-repeat:no-repeat;background-attachment:fixed;background-position:center center;background-size:cover;opacity:.5}
+
+#intro_lang{position:absolute;top:10px;right:20px;width:40px;height:40px}
+.lpanel_close{display:none;position:absolute;top:10px;right:10px;z-index:1;width:36px;height:36px}
+.lpanel_cicon{font-size:18px}
+.lpanel_toggle{position:absolute;top:10px;left:20px;z-index:1;width:40px;height:40px}
+.lpanel_ticon{font-size:18px}
+.section{width:100%;height:auto;margin:0 auto}
+.section_content{width:100%;max-width:1100px;margin:0 auto}
+.section_inside{margin:0 auto}
+.default_btn,.theme_btn,.ok_btn{background:linear-gradient(#ff8f00,#ff5722)!important;color:#fff!important}
+.bshadow,.page_element,.float_menu,.btnshadow,.pboxed{box-shadow:0 1px 3px #0003}
+.ok_btn, .default_btn, .back_default, .theme_btn { font-weight: bold; }
+/* Main container for social login */
+.intro_social_container{display:flex;justify-content:center;align-items:center;margin-top:20px;padding:15px 0;border-radius:8px;box-shadow:0 4px 6px #ffffff24;width:auto}
+/* Inner content wrapper */
+.intro_social_content{display:inline;align-items:center}
+/* Individual social button */
+.intro_social_btn{width:40px;height:40px;cursor:pointer;transition:transform .2s ease,filter .2s ease;border-radius:50%;box-shadow:0 2px 4px #0000001a}
+/* Hover effect for buttons */
+.intro_social_btn:hover{transform:scale(1.1);filter:brightness(1.1)}
+/* Active/click effect for buttons */
+.intro_social_btn:active{transform:scale(0.95);filter:brightness(0.9)}
+/* Accessibility: Add outline for keyboard navigation */
+.intro_social_btn:focus{outline:2px solid #007bff;outline-offset:2px}
+/*rooms list*/
+.back_panel{background:#fff}
+.rborder{border-right:1px solid #00000014}
+.reg_menu ul li{display:inline-block;padding:8px 10px;border-radius:3px;cursor:pointer;font-size:13px;font-weight:700}
+.rselected{background:linear-gradient(#ff8f00,#ff5722);color:#fff}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .intro_social_content {
+        flex-direction: column; /* Stack buttons vertically on small screens */
+        gap: 10px; /* Reduce spacing */
+    }
+
+    .intro_social_btn {
+        width: 50px; /* Larger buttons for better touch targets */
+        height: 50px;
+    }
+}
+@media screen and (max-width: 1120px) {
+    .section_inside {
+        width:96%
+    }
+}
+@media screen and (max-width: 930px) {
+    .login_panel {
+        position:fixed;
+        top: 0;
+        left: 0;
+        z-index: 100
+    }
+    .login_pbody {
+        width: 100%!important
+    }
+    .lpanel_close {
+        display: block
+    }
+}

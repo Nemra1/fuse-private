@@ -43,6 +43,8 @@ var wLoadMore = 0;
 var curDel = 1000;
 var addons = '';
 focused = true;
+let lastSubmitTime = 0, isProcessing = false, rAFId = null, isTyping = false, typingTimeout = null;
+const lagThreshold = 100;
 var PageTitleNotification = {
     On: function() {
         $('#siteicon').attr('href', 'default_images/icon2.png' + bbfv);
@@ -313,6 +315,8 @@ chatReload = function() {
 						checkForNotifications(response.rooms_updates); // Check for updated room actions
 					}
                 }
+				stopAnimation();
+				checkImagesForErrors();
             }
             fuse_loader("#global_chat", "hide", "");
         },
@@ -2084,7 +2088,7 @@ processChatCommand = function(message) {
                     actualTopic = response.data;
                     scrollIt(fload);
                 } else if (code == 100) {
-                   checkRm({ isMuted: true, canPrivate: false, isMainMuted: true, isRoomMuted: true });
+                   checkRm({ isMuted: true, isPrivateMuted: false, isMainMuted: true, isRoomMuted: true });
                 } else if (code == 200) {
                     callSaved(system.invalidCommand, 3);
                 } else if (code == 300) {
@@ -2253,8 +2257,45 @@ getLeaderboard = function() {
             overModal(res)
         });
 }
+function stopAnimation() {
+if (rAFId) cancelAnimationFrame(rAFId), rAFId = null;
+}
+    // Smooth scrolling animation
+function startAnimation() {
+    if (!isTyping && !rAFId) {
+    rAFId = requestAnimationFrame(() => {
+       startAnimation();
+    });
+   }
+}
+// Function to check all images on the page
+// Default avatar URL
+const de_Avatar = domain + '/default_images/avatar/default_avatar.svg';
+// Function to check all images on the page
+function checkImagesForErrors() {
+    // Select all <img> elements inside #chat_logs_container
+    const images = document.querySelectorAll('#chat_logs_container img');
+
+    images.forEach(image => {
+        // Check if the image has a valid `src`
+        const src = image.src;
+
+        if (!src || src === window.location.href) {
+            console.warn(`Empty or invalid src detected for image:`, image);
+            image.src = de_Avatar; // Set default avatar for invalid sources
+        }
+
+        // Add an error handler for images that fail to load
+        image.onerror = function () {
+            console.warn(`Failed to load image: ${this.src}`);
+            this.src = de_Avatar; // Replace with default avatar
+        };
+    });
+}
+
 adjustHeight();
 adjustSide();
+
 // document load start -----------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------------------------
 
@@ -2301,61 +2342,36 @@ checkPrivSubItem();
 manageOthers();
 logPending();
 loadSavedRooms();
-$(document).ready(function () {
-    let lastSubmitTime = 0, isProcessing = false, rAFId = null, isTyping = false, typingTimeout = null;
-    const lagThreshold = 100;
-    // Handle form submission
-    $('#main_input').off('submit').on('submit', function (event) {
-        const currentTime = performance.now();
-        if (lastSubmitTime > 0 && currentTime - lastSubmitTime > lagThreshold) {
-            console.warn(`Lag detected: ${(currentTime - lastSubmitTime).toFixed(2)}ms`);
-        }
-        lastSubmitTime = currentTime;
-        if (isProcessing) return console.log('Skipping submission: Already processing.'), false;
-        isProcessing = true;
+startAnimation(); // Start smooth scrolling
+$('#main_input').submit(function(event) {
+    var message = $('#content').val();
+    if (message == '') {
         event.preventDefault();
-        const message = $('#content').val().trim();
-        if (!message || /^\s+$/.test(message)) return console.log('Invalid message.'), isProcessing = false, false;
+    } else if (/^\s+$/.test(message)) {
+        event.preventDefault();
         chatInput();
-        if (waitReply === 0) {
+    } else {
+        chatInput();
+        if (waitReply == 0) {
             waitReply = 1;
-            if (message.startsWith('/')) {
-                console.log('Processing command:', message);
-                console.time('processChatCommand');
+            if (message.match("^\/")) {
                 processChatCommand(message);
-                console.timeEnd('processChatCommand');
             } else {
-                console.log('Processing post:', message);
-                console.time('processChatPost');
                 processChatPost(message);
-                console.timeEnd('processChatPost');
             }
-            console.log(`Processed in ${(performance.now() - currentTime).toFixed(2)}ms`);
         } else {
-            console.log('Still waiting for a reply.');
-        }
-        setTimeout(() => isProcessing = false, 300);
-        return false;
-    });
-    // Smooth scrolling animation
-    function startAnimation() {
-        if (!isTyping && !rAFId) {
-            rAFId = requestAnimationFrame(() => {
-                startAnimation();
-            });
+            event.preventDefault();
         }
     }
-    function stopAnimation() {
-        if (rAFId) cancelAnimationFrame(rAFId), rAFId = null;
-    }
-    // Detect typing activity
-    $('#content').on('input', function () {
-        if (!isTyping) isTyping = true, stopAnimation();
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => isTyping = false, 500);
-    });
-    startAnimation(); // Start smooth scrolling
+    return false;
 });
+// Detect typing activity
+$('#content').on('input', function() {
+    if (!isTyping) isTyping = true, stopAnimation();
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => isTyping = false, 500);
+});
+
 $(document).on('click', '.avitem', function() {
         resetAvMenu();
 });
@@ -2727,7 +2743,25 @@ $(document).on('submit', '.news_reply_form', function() {
         var id = $(this).attr('data-id');
         newsReply(id, item);
     });
-/*iframe api fullscreen*/
+
+// Run the check every 5 seconds (5000ms)
+//setInterval(checkImagesForErrors, 5000);
+
+// Optional: Run the check immediately on page load
+document.addEventListener("DOMContentLoaded", function () {
+    checkImagesForErrors();
+});
+
+
+// Run the check every 5 seconds (5000ms)
+//setInterval(checkImagesForErrors, 5000);
+
+// Optional: Run the check immediately on page load
+document.addEventListener("DOMContentLoaded", function () {
+    checkImagesForErrors();
+});
+	
+/*if1rame api fullscreen*/
 ! function(e) {
         e.extend(e.fn, {
             fullScreenIframe: function() {

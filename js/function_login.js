@@ -202,8 +202,10 @@ sendRegistration = async function() {
             gender: ugender,
             recaptcha: regRecapt
         }, function(res) {
-            if(res.code != 1){
-                resetRecaptcha();
+            if(recapt > 0){
+                if(res.code != 1){
+                    resetRecaptcha();
+                }
             }
            switch(String(res.code)) { 
                 case '2':
@@ -293,10 +295,12 @@ sendGuestLogin = async function(){
             guest_age: gage, // Guest age
             recaptcha: guestRecapt // reCAPTCHA response
         }, function(response) {
+             if(recapt > 0){
             // Reset guest reCAPTCHA if needed
-            if (response.code != 1) {
-                resetRecaptcha('guest');
-            }
+                if (response.code != 1) {
+                    resetRecaptcha('guest');
+                }
+             }
             // Handle the server response
             switch (String(response.code)) { 
                 case '4': // Invalid username
@@ -454,20 +458,25 @@ async function getRecaptchaToken(form) {
     });
 }
 document.addEventListener('DOMContentLoaded', function () {
+    if(recapt > 0){
     // Ensure grecaptcha is available and fully loaded
-    if (typeof grecaptcha !== 'undefined') {
-        // Wait until reCAPTCHA is fully loaded
-        setTimeout(function () {
-            // Render reCAPTCHA for login and register forms
-            renderRecaptcha('login', 'recaptcha_login');
-            renderRecaptcha('register', 'recaptcha_register');
-        }, 3000); // Wait for 1 second before attempting to render
-    }
+        if (typeof grecaptcha !== 'undefined') {
+            // Wait until reCAPTCHA is fully loaded
+            setTimeout(function () {
+                // Render reCAPTCHA for login and register forms
+                renderRecaptcha('login', 'recaptcha_login');
+                renderRecaptcha('login', 'recaptcha_guest');
+                renderRecaptcha('register', 'recaptcha_register');
+            }, 3000); // Wait for 1 second before attempting to render
+        }
+    }  
 });
 
 // Example: Reset Recaptcha for login form after the page reloads
 window.addEventListener('load', function() {
-    resetRecaptcha('login');    // Reset the Recaptcha for the login form
-    resetRecaptcha('register'); // Reset the Recaptcha for the register form
-    resetRecaptcha('guest');    // Reset the Recaptcha for the guest form
+     if(recapt > 0){
+        resetRecaptcha('login');    // Reset the Recaptcha for the login form
+        resetRecaptcha('register'); // Reset the Recaptcha for the register form
+        resetRecaptcha('guest');    // Reset the Recaptcha for the guest form
+     }
 });

@@ -437,7 +437,7 @@ saveSettings = function(source){
 			set_allow_guest: $('#set_allow_guest').val(),
 			set_guest_form: $('#set_guest_form').val(),
 			set_guest_talk: $('#set_guest_talk').val(),
-			set_max_greg: $('#set_max_greg').val(),
+			set_guest_per_day: $('#set_guest_per_day').val(),
 			token: utk,
 			}, function(response) {
 				if(response == 1){

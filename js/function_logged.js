@@ -211,6 +211,7 @@ uploadAvatar = function(){
 			form_data.append("file", file_data)
 			form_data.append("self", 1)
 			form_data.append("token", utk)
+			form_data.append("snum", snum)
 			$.ajax({
 				url: "system/action/avatar.php",
 				dataType: 'json',

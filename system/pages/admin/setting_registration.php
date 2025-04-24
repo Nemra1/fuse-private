@@ -56,7 +56,7 @@ echo elementTitle($lang["registration_settings"]);
                     <div class="setting_element">
                         <p class="label"><?php echo $lang["max_name"]; ?></p>
                         <select id="set_max_username">
-                            <?php echo optionCount($data["max_username"], 4, 20, 1, ""); ?>
+                            <?php echo optionCount($data["max_username"], 4, 50, 1, ""); ?>
                         </select>
                     </div>
                     <div class="setting_element">
@@ -82,8 +82,8 @@ echo elementTitle($lang["registration_settings"]);
                     </div>
                     <div class="setting_element">
                         <p class="label"><?php echo $lang["max_greg"]; ?></p>
-                        <select id="set_max_greg">
-                            <?php echo optionCount($data['guest_per_day'], 1, 20, 1); ?>
+                        <select id="set_guest_per_day">
+                            <?php echo optionCount($data['guest_per_day'], 1, 50, 1); ?>
                         </select>
                     </div>                    
                     <div class="setting_element">

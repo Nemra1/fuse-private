@@ -351,7 +351,7 @@ function selectWing(baseName, wing1Url, wing2Url, goldPrice,ext) {
     console.log("Wing selected:", selectedWing);
 }
 <?php if(canPhotoFrame()){ ?>
-var isProcessing = false; // Flag to prevent duplicate submissions
+var isProcessing_store = false; // Flag to prevent duplicate submissions
 function getFrames(){
     $.post(FU_Ajax_Requests_File(), {
             f: "store",
@@ -370,7 +370,7 @@ function getFrames(){
 }
 
 function buy_frame() {
-    if (isProcessing) {
+    if (isProcessing_store) {
         console.log("Request is already being processed.");
         return; // Prevent further execution if a request is in progress
     }
@@ -383,7 +383,7 @@ function buy_frame() {
         var ext = frame_elm.data('ext');
         var ext_id = frame_elm.data('id');
         console.log("Selected amount:", amount); // Log the selected amount
-        isProcessing = true; // Set the flag to true to prevent duplicate submissions
+        isProcessing_store = true; // Set the flag to true to prevent duplicate submissions
         // Send AJAX request to buy the frame
         $.post(FU_Ajax_Requests_File(), {
             f: "store",
@@ -403,7 +403,7 @@ function buy_frame() {
             }
         }).always(function() {
             // Reset the flag after the request is completed
-            isProcessing = false;
+            isProcessing_store = false;
         });
     } else {
         console.log("No frame selected."); // Log if no frame is selected

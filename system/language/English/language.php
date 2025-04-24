@@ -616,7 +616,7 @@ $lang['allow_wupload'] = 'Allow wall upload';
 $lang['guest_talk'] = 'Allow guest to talk in chat';
 $lang['system_name_change'] = '%user% %bcname% %nname%';
 $lang['system_kick'] = '<b style="color:red">%user% %bckick%  By %hunter%</b>';
-$lang['system_ban'] = '%user% %bcban%';
+$lang['system_ban'] = '<b style="color:red">%user% %bcban% By %hunter%</b>';
 $lang['system_mute'] = '<b style="color:red">%user% %bcmute%  By %hunter%</b>';
 $lang['name_message'] = 'is now known as';
 $lang['kick_message'] = '<d style="color:#FF5722">has been kicked</d>';

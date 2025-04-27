@@ -2415,7 +2415,6 @@ function sendEmail($type, $to, $item = ''){
         $mail->Password = $data['smtp_password'];
         $mail->SMTPSecure = $data['smtp_type'];
         $mail->Port = $data['smtp_port'];
-        
         // SSL Options for SMTP
         $mail->SMTPOptions = array(
             'ssl' => array(
@@ -2445,19 +2444,60 @@ function sendEmail($type, $to, $item = ''){
     }
 }
 
-function resetUserPass($user){
-	global $mysqli;
-	$temp_pass = tempPass();
-	$temp_encrypt = encrypt($temp_pass);
-	if(!canSendMail($user, 'recovery', 4)){
-		return 0;
-	}
-	$test_reset = sendEmail('recovery', $user, $temp_pass);
-	if($test_reset == 1){
-		$mysqli->query("UPDATE boom_users SET temp_pass = '$temp_encrypt', temp_date = '" . time() . "' WHERE user_id = '{$user['user_id']}'");
-		insertMail($user, 'recovery');
-	}
-	return $test_reset;
+function resetUserPass($user) {
+    global $mysqli;
+    // Generate a temporary password
+    $temp_pass = tempPass();
+    if (!$temp_pass) {
+        error_log("Failed to generate temporary password.");
+        return 0;
+    }
+    // Hash the temporary password using PASSWORD_BCRYPT
+    $temp_encrypt = password_hash($temp_pass, PASSWORD_BCRYPT);
+    if (!$temp_encrypt) {
+        error_log("Failed to hash temporary password.");
+        return 0;
+    }
+    // Check if the user is eligible to receive the recovery email
+    if (!canSendMail($user, 'recovery', 4)) {
+        error_log("User is not eligible to receive recovery email.");
+        return 0; // User is not eligible
+    }
+    // Send the recovery email with the temporary password
+    $test_reset = sendEmail('recovery', $user, $temp_pass);
+    // Log the result of sendEmail for debugging
+    error_log("sendEmail result: " . $test_reset);
+    // If the email was sent successfully
+    if ($test_reset == 1) {
+        // Update the database with the hashed temporary password and timestamp
+        $stmt = $mysqli->prepare("UPDATE boom_users SET temp_pass = ?, temp_date = ? WHERE user_id = ?");
+        if ($stmt) {
+            $current_time = time();
+            $stmt->bind_param("sii", $temp_encrypt, $current_time, $user['user_id']);
+            if ($stmt->execute()) {
+                // Log the email action in the database
+                insertMail($user, 'recovery');
+                // Set session flag to force password change
+                $_SESSION["force_password_change"] = true;
+                // Close the statement and return success
+                $stmt->close();
+                return 1; // Success
+            } else {
+                // Handle query execution error
+                error_log("Failed to execute SQL statement: " . $stmt->error);
+                $stmt->close();
+                return 0;
+            }
+        } else {
+            // Handle query preparation error
+            error_log("Failed to prepare SQL statement: " . $mysqli->error);
+            return 0;
+        }
+    } else {
+        // Log failure to send email
+        error_log("Failed to send recovery email.");
+        return 0;
+    }
 }
 function sendActivation($user){
 	global $mysqli, $data;
@@ -2900,6 +2940,7 @@ function isRtl($l){
 		return true;
 	}
 }
+
 function getTheme(){
 	global $mysqli, $data;
 	$t = $data['default_theme'];
@@ -2919,22 +2960,35 @@ function getLoginPage(){
 	global $data;
 	return $data['login_page'];
 }
-function getLogo(){
-	global $mysqli, $data;
-	$logo = $data['domain'] . '/default_images/logo.png';
-	if(boomLogged()){
-		if(canTheme() && $data['user_theme'] != 'system'){
-			if(file_exists(BOOM_PATH . '/css/themes/' . $data['user_theme'] . '/images/logo.png')){
-				$logo = $data['domain'] . '/css/themes/' . $data['user_theme'] . '/images/logo.png';
-			}
-		}
-	}
-	else {
-		if(file_exists(BOOM_PATH . '/css/themes/' . $data['default_theme'] . '/images/logo.png')){
-			$logo = $data['domain'] . '/css/themes/' . $data['default_theme'] . '/images/logo.png';
-		}
-	}
-	return $logo . boomFileVersion();
+function getLogo() {
+    global $data;
+    // Default logo path
+    $logo = $data['domain'] . '/default_images/logo.png';
+    // Check if the user is logged in
+    if (boomLogged()) {
+        // Check if the user has a custom theme and it's not the system theme
+        if (canTheme() && $data['user_theme'] != 'system') {
+            $themeLogoPath = BOOM_PATH . '/css/themes/' . $data['user_theme'] . '/images/logo.png';
+            if (file_exists($themeLogoPath)) {
+                $logo = $data['domain'] . '/css/themes/' . $data['user_theme'] . '/images/logo.png';
+            }
+        }
+    } else {
+        // Use the default theme logo if the user is not logged in
+        $defaultThemeLogoPath = BOOM_PATH . '/css/themes/' . $data['default_theme'] . '/images/logo.png';
+        if (file_exists($defaultThemeLogoPath)) {
+            $logo = $data['domain'] . '/css/themes/' . $data['default_theme'] . '/images/logo.png';
+        }
+    }
+    // Use the website logo from $data['website_logo'] if it exists
+    if (!empty($data['website_logo'])) {
+        $websiteLogoPath = BOOM_PATH . '/' . ltrim($data['website_logo'], '/');
+        if (file_exists($websiteLogoPath)) {
+            $logo = $data['domain'] . '/' . $data['website_logo'];
+        }
+    }
+    // Append file versioning to prevent caching issues
+    return $logo . boomFileVersion();
 }
 function emoticon($emoticon){
 	$supported = smiliesType();
@@ -4111,5 +4165,10 @@ function get_fontStyle() {
     // Trim to avoid leading or trailing spaces
     return trim($font_cls);
 }
-
+function useMonitor(){
+	global $data;
+	if($data['enable_monitor'] > 0){
+		return true;
+	}
+}
 ?>

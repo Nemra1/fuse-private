@@ -187,7 +187,7 @@ if(isset($_POST['last'], $_POST['snum'], $_POST['caction'], $_POST['fload'], $_P
 	if ($private == 1) {
 		if ($privlog->num_rows > 0) {
 			// Use prepared statements to avoid SQL injection
-			$stmt = $mysqli->prepare("UPDATE `boom_private` SET `status` = 1 WHERE `hunter` = ? AND `target` = ?");
+			$stmt = $mysqli->prepare("UPDATE `boom_private` SET `status` = 1, `view` = 1 WHERE `hunter` = ? AND `target` = ?");
 			$stmt->bind_param("ii", $priv, $data['user_id']);  // Bind parameters (assumes both are integers)
 			$stmt->execute();  // Execute the update query
 			// Fetch the private logs securely

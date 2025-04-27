@@ -37,7 +37,8 @@ function staffRemoveAvatar() {
     return boomCode(1, ["data" => $reset]); // Return reset avatar link
 }
 function processAvatar() {
-    global $mysqli, $data, $cody;
+    global $mysqli, $data, $cody,$lang;
+	$res['msg'] = $lang['upadate_avatar'];
     ini_set("memory_limit", "128M");
     $info = pathinfo($_FILES["file"]["name"]);
     $extension = strtolower($info["extension"]);
@@ -78,7 +79,7 @@ function processAvatar() {
 					// send msg to room with  updated avatar
 					// Introduce a delay of 2 seconds (adjust as needed)
 					sleep(2);
-					$res =['image_thumb' => myAvatar($file_tumb),'msg' => ' updated their profile picture'];
+					$res =['image_thumb' => myAvatar($file_tumb),'msg' => $res['msg']];
 					$change_msg = boomTemplate("element/avatar_update", $res);
 					systemPostChat($data['user_roomid'], $change_msg, ['type' => 'public__message']);
                     return boomCode(5, ["data" => myAvatar($file_tumb)]);

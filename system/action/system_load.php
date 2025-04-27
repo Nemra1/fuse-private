@@ -15,7 +15,13 @@ if (isset($_POST['page'])) {
     $d["pending"] = pendingPush($d["pending"], checkregmute());
     $d['geo'] = boomGeo();
     $d['recheckVpn'] = recheckVpn();
-    if (useStore()) {
+	// Check if the session key "force_password_change" exists
+	$d['forced_password'] = isset($_SESSION["force_password_change"]) ? $_SESSION["force_password_change"] : false;
+	// If the session key exists and is true, set the message
+	if ($d['forced_password']) {
+		$d['message'] = 'You need to change your password now';
+	}
+   if (useStore()) {
         $d['premiumUserClean'] = premiumUserClean();
         $d['rankUserClean'] = Rank_UserClean();
     }

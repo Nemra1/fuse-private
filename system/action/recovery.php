@@ -1,22 +1,21 @@
 <?php
 /**
-* Codychat
+* FuseChat
 *
-* @package Codychat
-* @author www.boomcoding.com
+* @package FuseChat
+* @author www.nemra-1.com
 * @copyright 2020
 * @terms any use of this script without a legal license is prohibited
-* all the content of Codychat is the propriety of BoomCoding and Cannot be 
+* all the content of FuseChat is the propriety of FuseChat and Cannot be 
 * used for another project.
 */
-<?php
 if (isset($_POST["remail"])) {
     require_once(__DIR__ . "./../config.php");
     $email = trim($_POST['remail']); // Trim spaces
     $email = filter_var($email, FILTER_SANITIZE_EMAIL); // Sanitize the email
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {  // Validate email format
         // Return JSON response for invalid email format
-        echo json_encode([
+        echo fu_json_results([
             'status' => 'error',
             'code' => 3,
             'message' => 'Invalid email format.'
@@ -30,17 +29,22 @@ if (isset($_POST["remail"])) {
     $result = $stmt->get_result();
     if ($result->num_rows > 0) {
         $user = $result->fetch_assoc();
-        // Assuming resetUserPass() returns a success message or process
-        echo json_encode([
-            'status' => 'success',
-            'code' => 1,
-            'message' => 'Password reset link sent successfully.',
-            'user_id' => $user['user_id'] // You can return additional data if needed
-        ]);
-        die();
+		// Call the resetUserPass function
+		$resetResult = resetUserPass($user);
+		$_SESSION["force_password_change"] = true;	
+		// Return the result of resetUserPass as JSON
+		echo fu_json_results([
+					'code' => 1,
+					'success' => true,
+					'message' => 'Password reset link sent successfully',
+					'result' => $resetResult,
+					'force_password' => $_SESSION["force_password_change"],
+					'user_id' => $user['user_id'] // You can return additional data if needed
+		]);
+		die();
     } else {
         // Return JSON response for user not found
-        echo json_encode([
+        echo fu_json_results([
             'status' => 'error',
             'code' => 2,
             'message' => 'Email not found in the system.'
@@ -50,7 +54,7 @@ if (isset($_POST["remail"])) {
     $stmt->close(); // Close the prepared statement
 } else {
     // Return JSON response for missing parameter
-    echo json_encode([
+    echo fu_json_results([
         'status' => 'error',
         'code' => 99,
         'message' => 'Missing email parameter.'

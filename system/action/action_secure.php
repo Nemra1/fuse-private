@@ -59,6 +59,7 @@ function accountSecurity(){
     $stmt->bind_param("ssssi", $user_name, $hashed_password, $user_email, $smail, $data["user_id"]);
     $stmt->execute();
     $stmt->close();
+    // Set session flag to disable temp password alert
     // Update session or authentication cookie
     setBoomCookie($data["user_id"], $hashed_password);
     return 1; // Success

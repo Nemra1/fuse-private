@@ -58,22 +58,56 @@ function my_likes($target){
 function getRandomNumber() {
     return rand(0, 11199); // Generates a random number between 0 and 99
 }
-
+function after_recovery_pass() {
+	 global $mysqli,$data;
+    // Sanitize inputs
+    $pass = escape($_POST["user_new_password"]);
+    $target = escape($_POST["target_id"]);
+    // Fetch user details
+    $user = userDetails($target);
+    if (!$user) {
+        return -1; // User not found
+    }
+    // Permission check
+    if (!canModifyPassword($user)) {
+        return 0; // No permission
+    }
+    // Validate password
+    if (!boomValidPassword($pass)) {
+        return 2; // Invalid password
+    }
+    // Hash the password using PASSWORD_BCRYPT
+    $new_pass = password_hash($pass, PASSWORD_BCRYPT);
+    // Update database using prepared statement
+    $stmt = $mysqli->prepare("UPDATE boom_users SET user_password = ? WHERE user_id = ?");
+    if (!$stmt) {
+        error_log("Prepare failed: " . $mysqli->error);
+        return -1; // Database error
+    }
+    $stmt->bind_param("si", $new_pass, $user["user_id"]);
+    if (!$stmt->execute()) {
+        error_log("Execute failed: " . $stmt->error);
+        return -1; // Database error
+    }
+    // Log the action
+    boomConsole("pass_user", ["target" => $user["user_id"], "custom" => $user["user_name"]]);
+    return 1; // Success
+}
 if ($f == "action_member") {
-   if ($s == "like_profile") {
+	if 	($s == "like_profile") {
          // Send response as JSON
         $target = userDetails(escape($_POST['like_profile']));
         $result = like_profile($target);
         echo ($result);
         exit();       
     } 
-    if ($s == "my_likes") {
+    if 	($s == "my_likes") {
          $list =  my_likes(intval($data['user_id']));
          header("Content-type: application/json");
          echo json_encode($list);
         exit();       
     }
-    if($s =="share_gold"){
+    if	($s =="share_gold"){
         if(checkFlood()){ 
         	echo 100;
             exit();
@@ -136,8 +170,7 @@ if ($f == "action_member") {
         }
           
     }
-
-    if ($s == "acceptWarn") {
+    if	($s == "acceptWarn") {
         $res['status'] = 100;
         $query = cl_update_user_data($data['user_id'],array(
             "warn_msg" =>'',
@@ -147,9 +180,8 @@ if ($f == "action_member") {
         }
 		echo fu_json_results($res);
 		exit(); 
-    }
-    
-if ($s == "start_dj") {
+    }  
+	if ($s == "start_dj") {
     $media_type = escape($_POST['media_type']);
     $media_url = escape($_POST['media_url']);
     // Initialize response array
@@ -269,7 +301,6 @@ if ($s == "start_dj") {
        	 echo fu_json_results($res);
         exit(); 
     }
-
     if ($s == "risehand_dj") {
         $rise_handId = $data['user_id'];  // User requesting to raise hand
         $broadcast_id = escape($_POST['b_id']);  // Broadcast ID from the request
@@ -313,7 +344,7 @@ if ($s == "start_dj") {
 		 echo fu_json_results($res);
 		 exit();
     }
-   if ($s == "user_onair") {
+	if ($s == "user_onair") {
      	$onair = escape($_POST['user_onair'], true);
     	if(!userDj($data)){
     		$res['status'] = 99;
@@ -382,6 +413,62 @@ if ($s == "start_dj") {
         echo fu_json_results($res);
         exit();
 
-    }
+    } 
+	if ($s == "after_recovery_pass") {
+		// Initialize response
+		$res = ['success' => false, 'message' => 'Unknown error', 'code' => 0];
+		// Sanitize inputs
+		$pass = escape($_POST["user_new_password"]);
+		$target_id = escape($_POST["target_id"]);
+		// Fetch user details
+		$user = userDetails($target_id);
+		if (!$user) {
+			$res['message'] = 'User not found';
+			$res['code'] = 1; // User not found
+			echo fu_json_results($res);
+			$_SESSION["force_password_change"] = false;
+			exit;
+		}
+		// Validate password
+		if (!boomValidPassword($pass)) {
+			$res['message'] = 'Invalid password';
+			$res['code'] = 2; // Invalid password
+			$_SESSION["force_password_change"] = true;
+			echo fu_json_results($res);
+			exit;
+		}
+		// Hash the password using PASSWORD_BCRYPT
+		$new_pass = password_hash($pass, PASSWORD_BCRYPT);
+		// Update database using prepared statement
+		$stmt = $mysqli->prepare("UPDATE boom_users SET user_password = ? WHERE user_id = ?");
+		if (!$stmt) {
+			error_log("Prepare failed: " . $mysqli->error);
+			$res['message'] = 'Database error';
+			$res['code'] = 3; // Database prepare error
+			echo fu_json_results($res);
+			exit;
+		}
+		$stmt->bind_param("si", $new_pass, $user["user_id"]);
+		if (!$stmt->execute()) {
+			error_log("Execute failed: " . $stmt->error);
+			$res['message'] = 'Database error';
+			$res['code'] = 4; // Database execute error
+			echo fu_json_results($res);
+			exit;
+		}
+		$stmt->close();
+		// Log the action
+		boomConsole("pass_user", ["target" => $user["user_id"], "custom" => $user["user_name"]]);
+		// Return success response
+		$res['success'] = true;
+		$res['code'] = 5; // Success
+		$res['message'] = 'Password updated successfully';
+		$_SESSION["force_password_change"] = false;
+		// Set session flag to disable temp password alert
+		// Update session or authentication cookie
+		setBoomCookie($data["user_id"], $new_pass);
+		echo fu_json_results($res);
+		exit;
+	}
 }	
 ?> 

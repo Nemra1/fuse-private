@@ -7,7 +7,6 @@ if (isset($_POST["store_name"]) && isset($_POST["store_pass"])) {
     if (!checkToken($_POST['utk'])) {
         exit('Invalid CSRF token');
     }   
-    echo boomsystemvalidate();
     exit;
 }
 if (isset($_POST["save_admin_section"])) {
@@ -749,6 +748,10 @@ if($section === "websocket" && boomAllow(100)) {
             $websocket_mode = filter_var($_POST["set_websocket_mode"], FILTER_VALIDATE_INT);
 			$websocket_protocol = in_array($_POST["set_websocket_protocol"], ['https://', 'wss://'], true) ? $_POST["set_websocket_protocol"] : null;
 			$istyping_mode = filter_var($_POST["set_istyping_mode"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+			$prive_line = filter_var($_POST["set_del_prive_line"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+			$public_announcement = filter_var($_POST["set_public_announcement"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+			$enable_monitor = filter_var($_POST["set_enable_monitor"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+			$privateTyping = filter_var($_POST["set_privateTyping"], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
             // Prepare the data query
             $data_query = array(
                 "websocket_path"    => $websocket_path,
@@ -756,6 +759,10 @@ if($section === "websocket" && boomAllow(100)) {
                 "websocket_mode"    => $websocket_mode,
                 "websocket_protocol"=> $websocket_protocol,
                 "istyping_mode"     => $istyping_mode,
+                "del_prive_line"     => $prive_line,
+                "public_announcement"     => $public_announcement,
+                "enable_monitor"     => $enable_monitor,
+                "privateTyping"     => $privateTyping,
             );
             // Update the settings
             $update = fu_update_dashboard($data_query);

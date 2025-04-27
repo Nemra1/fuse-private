@@ -81,7 +81,7 @@ if (isset($_POST["change_rank"]) && isset($_POST["target"])) {
         if (isset($_POST["create_user"]) && isset($_POST["create_name"]) && isset($_POST["create_password"]) && isset($_POST["create_email"]) && isset($_POST["create_age"]) && isset($_POST["create_gender"])) {
             echo staffCreateUser();
             exit;
-        }
+        }		
     }
 }
 // Update user location settings
@@ -89,7 +89,6 @@ if (isset($_POST["user_language"]) && isset($_POST["user_country"]) && isset($_P
     echo setUserLocation();
     exit;
 }
-
 exit;
 function staffChangePassword() {
 	 global $mysqli,$data;

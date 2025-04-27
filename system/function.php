@@ -147,6 +147,7 @@ function boomNull($val){
 function boomCacheUpdate(){
 	global $mysqli;
 	$mysqli->query("UPDATE boom_setting SET bbfv = bbfv + 0.01 WHERE id > 0");
+	return true;
 }
 function embedMode(){
 	global $data;
@@ -665,6 +666,7 @@ function postPrivate($from, $to, $content, $snum = ''){
             'time' => $time,
             'message' => $content,
             'hunter' => $from,
+            'target' => $to,
         );
         $post = array_merge($data, $user_post);
         if (!empty($post)) {
@@ -1423,34 +1425,53 @@ function createLog($data, $post, $ignore = ''){
 				'.$chat_style.'
 			</li>';
 }
-function privateLog($post, $hunter){
-	if($hunter == $post['hunter']){
-		return '<li id="priv' . $post['id'] . '">
-					<div class="private_logs">
-						<div class="private_avatar">
-							<img data="' . $post['user_id'] . '" class="get_info avatar_private" src="' . myAvatar($post['user_tumb']) . '"/>
-						</div>
-						<div class="private_content">
-							<div class="hunter_private">' . processPrivateMsg($post) . '</div>
-							<p class="pdate">' . displayDate($post['time']) . '</p>
-						</div>
-					</div>
-				</li>';
-	}
-	else {
-		return '<li id="priv' . $post['id'] . '">
-					<div class="private_logs">
-						<div class="private_content">
-							<div class="target_private">' . processPrivateMsg($post) . '</div>
-							<p class="ptdate">' . displayDate($post['time']) . '</p>
-						</div>
-						<div class="private_avatar">
-							<img data="' . $post['user_id'] . '" class="get_info avatar_private" src="' . myAvatar($post['user_tumb']) . '"/>
-						</div>
-					</div>
-				</li>';
-	}
-} 
+function privateLog($post, $hunter) {
+    global $data;
+
+    // Initialize the delete button as empty
+    $buttons = '';
+
+    // Check if the current user is the sender of the message
+    if ($data['user_id'] == $post['user_id']) {
+        // Determine if the delete button should be enabled or disabled
+        $isDeleteEnabled = $data['del_prive_line'] == 1 ? '' : 'hidden';
+
+        // Show delete button only for the current user's messages
+        $buttons = '<div class="private_btn_control" data="' . $data['del_prive_line'] . '">
+                        <button title="Delete your message" onclick="delete_My_msg(this)" type="button" class="default_btn ' . $isDeleteEnabled . '" data-message-id="' . $post['id'] . '">
+                            <i class="ri-chat-delete-line"></i>
+                        </button>
+                    </div>';
+    }
+    // Determine the layout based on whether the current user is the hunter or target
+    if ($hunter == $post['hunter']) {
+        return '<li id="priv' . $post['id'] . '">
+                    <div class="private_logs">
+                        <div class="private_avatar">
+                            <img data="' . $post['user_id'] . '" class="get_info avatar_private" src="' . myAvatar($post['user_tumb']) . '"/>
+                        </div>
+                        <div class="private_content">
+                            <div class="hunter_private">' . processPrivateMsg($post) . '</div>
+                            ' . $buttons . '
+                            <p class="pdate">' . displayDate($post['time']) . '</p>
+                        </div>
+                    </div>
+                </li>';
+    } else {
+        return '<li id="priv' . $post['id'] . '">
+                    <div class="private_logs">
+                        <div class="private_content">
+                            <div class="target_private">' . processPrivateMsg($post) . '</div>
+                            ' . $buttons . '
+                            <p class="ptdate">' . displayDate($post['time']) . '</p>
+                        </div>
+                        <div class="private_avatar">
+                            <img data="' . $post['user_id'] . '" class="get_info avatar_private" src="' . myAvatar($post['user_tumb']) . '"/>
+                        </div>
+                    </div>
+                </li>';
+    }
+}
 function avGender_icon($s){
 	global $data;
 	if($data['gender_ico'] > 0){

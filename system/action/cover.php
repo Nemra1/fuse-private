@@ -21,6 +21,8 @@ echo " ";
 
 function processCover(){
 	global $mysqli,$data,$cody;
+	$res = array();
+	$res['msg'] = $lang['upadate_cover'];
     if (!canCover()) {
         return boomCode(1);
     }
@@ -62,14 +64,7 @@ function processCover(){
                 $mysqli->query("UPDATE boom_users SET user_cover = '" . $file_name . "' WHERE user_id = '" . $data["user_id"] . "'");
 					// send msg to room with  updated avatar
 					// Introduce a delay of 2 seconds (adjust as needed)
-					sleep(2);
-					$res = [
-						'image_thumb' => myCover($file_name), // Generate the thumbnail for the cover image
-						'msg'         => 'updated their profile Cover' // Message to indicate the action
-					];
-					$change_msg = boomTemplate("element/avatar_update", $res);
-					systemPostChat($data['user_roomid'], $change_msg, ['type' => 'public__message']);
-                return boomCode(5, ["data" => myCover($file_name)]);
+                return sendCoverUpdateMessage($file_name,$res['msg']);
             }
             return boomCode(7);
         }
@@ -77,7 +72,18 @@ function processCover(){
     }
     return boomCode(1);
 }
-
+// Helper function to send a chat message about the updated cover
+function sendCoverUpdateMessage($coverFile,$msg) {
+    global $data;
+    $res = [
+        'image_thumb' => myCover($coverFile),
+        'msg'         => $msg,
+    ];
+    $change_msg = boomTemplate("element/avatar_update", $res);
+    $execute = systemPostChat($data['user_roomid'], $change_msg, ['type' => 'public__message']);
+    header("Content-type: application/json");
+    return boomCode(5, ["data" => myCover($coverFile), "content" => $execute]);
+}
 function staffAddCover(){
     global $mysqli,$data,$cody;
     $target = escape($_POST["target"]);

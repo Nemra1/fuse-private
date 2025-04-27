@@ -54,7 +54,7 @@ if(empty($room)){
 						<i class="ri-close-circle-line"></i>
 					</div>
 					<div class="ricon_button">
-						<i class="ri-image-circle-line" id="ricon_icon" data="fa-camera"></i>
+						<i class="ri-image-circle-line" id="ricon_icon" data="ri-camera-lens-fill"></i>
 						<input id="ricon_image" class="up_input" onchange="adminRoomIcon(<?php echo $room['room_id']; ?>);" type="file">
 					</div>
 				</div>

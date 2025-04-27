@@ -30,7 +30,7 @@ if(!canEditUser($user, 70)){
 								<i id="cover_button" class="ri-close-circle-line"></i>
 							</div>
 							<div class="cover_item add_cover">
-								<i id="admin_cover_icon" data="fa-camera" class="ri-image-circle-fill"></i>
+								<i id="admin_cover_icon" data="fa-ri-camera-lens-fill" class="ri-image-circle-fill"></i>
 								<input id="admin_cover_file" class="up_input" onchange="adminUploadCover(<?php echo $user['user_id']; ?>);" type="file"/>
 							</div>
 						</div>
@@ -58,7 +58,7 @@ if(!canEditUser($user, 70)){
 							<i class="ri-close-circle-line i_btm"></i>
 						</div>
 						<div id="avatarupload" class="avatar_button">
-							<i id="avat_admin" data="fa-camera" class="ri-image-circle-fill"></i>
+							<i id="avat_admin" data="ri-camera-lens-fill" class="ri-image-circle-fill"></i>
 							<input id="admin_avatar_image" class="up_input" onchange="adminUploadAvatar(<?php echo $user['user_id']; ?>);" type="file" >
 						</div>
 					</div>

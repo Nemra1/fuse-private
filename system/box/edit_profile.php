@@ -14,7 +14,7 @@ require('../config_session.php');
 							<i id="cover_button" class="ri-close-circle-line"></i>
 						</div>
 						<div class="cover_item add_cover">
-								<i id="cover_icon" data="fa-camera" class="ri-image-circle-fill"></i>
+								<i id="cover_icon" data="ri-camera-lens-fill" class="ri-image-circle-fill"></i>
 								<input id="cover_file" class="up_input" onchange="uploadCover();" type="file"/>
 						</div>
 					</div>
@@ -41,7 +41,7 @@ require('../config_session.php');
 							<i class="ri-close-circle-line i_btm"></i>
 						</div>
 						<div id="avatarupload" class="avatar_button">
-							<i id="avat_icon" data="fa-camera" class="ri-image-circle-fill"></i>
+							<i id="avat_icon" data="ri-camera-lens-fill" class="ri-image-circle-fill"></i>
 							<input id="avatar_image" class="up_input" onchange="uploadAvatar();" type="file">
 						</div>
 					</div>

@@ -31,11 +31,13 @@ require('../config.php');
 	</div>
 	<div class="clear"></div>
 	<?php if(boomRecaptcha()){ ?>
-	<div class="recapcha_div tmargin10">
-		<div id="boom_recaptcha_register" class="register_recaptcha">
+		<div class="wow_form_fields recapcha_div">
+		<!-- Login Form Recaptcha -->
+		<div id="recaptcha_register"></div>
+		<a onclick="resetRecaptcha('recaptcha_register');" class="main">Reset Recaptcha</a>
+		</br>
 		</div>
-	</div>
-	<?php } ?>
+		<?php } ?>
 	<div class="login_control">
 		<button onclick="sendRegistration();" type="button" class="theme_btn full_button large_button" id="register_button"><i class="ri-settings-2-line"></i> <?php echo $lang['register']; ?></button>
 	</div>
@@ -43,3 +45,17 @@ require('../config.php');
 		<p class="rules_text text_xsmall sub_text"><?php echo $lang['i_agree']; ?> <span class="rules_click" onclick="showRules();"><?php echo $lang['rules']; ?></span></p>
 	</div>
 </div>
+<script data-cfasync="false">
+<?php if(boomRecaptcha()){ ?>
+document.addEventListener('DOMContentLoaded', function () {
+    // Ensure grecaptcha is available and fully loaded
+    if (typeof grecaptcha !== 'undefined') {
+        // Wait until reCAPTCHA is fully loaded
+        setTimeout(function () {
+            // Render reCAPTCHA for login and register forms
+           renderRecaptcha('register', 'recaptcha_register');
+        }, 1700); // Wait for 1 second before attempting to render
+    }
+});
+<?php } ?>
+</script>

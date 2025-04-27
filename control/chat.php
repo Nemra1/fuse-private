@@ -118,15 +118,27 @@ $set_user = setUserRoom();
 				</div>
 								
 			<?php } ?>	
-			<?php if(isOwner($data)){?>
+			<?php if(isOwner($data) && $data['websocket_mode'] > 0){?>
+			<?php if(useMonitor()){?>
 			<div id="openSocketMonitor" class="fmenu_item">
 				<div class="fmenu_icon">
 					<i class="ri-mac-line menuo"></i>
 				</div>
 				<div class="fmenu_text">
-					Monitor
+					Monitor <span class="badge">New</span>
 				</div>
-			</div>			    
+			</div>	
+			<?php } ?>	
+			<?php if($data['public_announcement'] > 0){?>
+			<div onclick="open_Public_announcement();" class="fmenu_item">
+				<div class="fmenu_icon">
+					<i class="ri-chat-ai-line menuo"></i>
+				</div>
+				<div class="fmenu_text">
+					Public announcement <span class="badge">New</span>
+				</div>
+			</div>	
+				<?php } ?>		    
 			<?php } ?>	
 
 				<?php if(userDj($data)){ ?>
@@ -482,11 +494,13 @@ $set_user = setUserRoom();
 			<i class="ri-close-circle-line i_btm"></i>
 		</div>
 	</div>
-	<div id="private_wrap_content">
+	<div id="private_wrap_content" data-target-id="0">
 		<div id="private_content" class="background_box extra_black" value="1">
 			<ul>
 			</ul>
+			<div id="private_typing_indicator" class="private_typing_indicator" style="display: none;">	</div>
 		</div>
+		
 		<div id="priv_input_extra" class="add_shadow background_box extra_black">
 			<?php if(canUploadPrivate()){ ?>
 			<div class="psub_options">

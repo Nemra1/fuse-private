@@ -131,6 +131,11 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 		const allow_OneSignal =  '<?php echo $data['allow_onesignal']; ?>';
 		const allow_typing =  '<?php echo $data['istyping_mode']; ?>';
 		let current_vmode = null;
+		const allow_websocket =  <?php echo $data['websocket_mode']; ?>;
+		let user_id = '<?php echo $data["user_id"] ?? 0; ?>';
+		let user_name = '<?php echo $data["user_name"] ?? 'Guest'; ?>';
+		let private_id = 0;
+		let privateTyping = <?php echo $data["privateTyping"] ?? 0; ?>;
 	<?php 
 	if($data['websocket_mode']==1){ ?>
         const s_protocol = '<?php echo $data['websocket_protocol']; ?>';
@@ -153,10 +158,10 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 <?php } ?>
 <?php if(boomLogged()){ ?>
 	<script data-cfasync="false">
-	    var user_name = '<?php echo $data['user_name']; ?>';
+	     user_name = '<?php echo $data["user_name"] ?? 'Guest'; ?>';
 	    var cur_room = 'room_<?php echo $data['user_roomid']; ?>';
 		var user_rank = <?php echo $data["user_rank"]; ?>;
-		var user_id = <?php echo $data["user_id"]; ?>;
+		 user_id = <?php echo $data["user_id"]; ?>;
 		var utk = '<?php echo setToken(); ?>';
 		var avw = <?php echo $data['max_avatar']; ?>;
 		var cvw = <?php echo $data['max_cover']; ?>;

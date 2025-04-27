@@ -49,6 +49,8 @@ $allow_array = array(
     'action_room',
     'login_as',
 	'action',
+	'action_private',
+	'admin_actions',
 );
 $non_login_array = array(
 	'payment_gateway',

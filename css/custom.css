@@ -120,7 +120,7 @@ filter: blur(5px); } .fuse_loader span:nth-child(2) { filter: blur(10px); } .fus
 .thumbnail-item img { width: 100%; height: 100%; object-fit: none; display: block; }
 #content:focus{}
 /*typing typing-indicator*/
-#typing-indicator { position: relative; display: flex; z-index: 1; text-align: center; justify-content: center; top: 0px; }
+#typing-indicator { position: absolute; display: flex ; z-index: 1; text-align: center; justify-content: center; top: 11%; right: 0; left: 0; }
 .cp_typing_indicator { position: absolute; bottom: 8px; display: inline-flex; }
 .cp_ball { display: inline-block; width: 10px; height: 10px; margin: 0 1px; border-radius: 50%; background-color: #4814E5 ; animation: ball_typing 1.2s linear infinite; }
 .cp_ball2 { animation-delay: .1s; }
@@ -148,6 +148,8 @@ ul.styled-list li:hover { background-color: #e0e0e0; cursor: pointer; }
 .rank_c_image_wrapper { display: flex; flex-direction: column; align-items: center; position: relative; }
 .rank_c_image_center_image { max-width: 100%; height: auto; }
 .rank_c_message { margin-top: 10px; text-align: center; font-size: 16px; background: linear-gradient(to right, #ff6a00, #ee0979); color: white; padding: 5px; border-radius: 17px; }
+.upgrade_exp_content{}
+
 /*photo frame*/
 .frame_class { left: -2px; position: absolute; top: -2px; border-radius: 0; width: 40px !important; height: 40px !important; right: 0; }
 .chat_avatar_frame img {width: 35px;height: 35px; }
@@ -184,6 +186,36 @@ ul.styled-list li:hover { background-color: #e0e0e0; cursor: pointer; }
 .avatar_username:hover{text-decoration:underline;color:#0056b3}
 .avatar_username img { width: 18px; height: 17px; padding: 1px; }
 .update_card_rank{position: relative; top: -20px; width: 20px; height: 20px; border-radius: 50%; margin-left: 5px; right: -16px; }
+/*private control*/
+/* Button control styling */
+.private_btn_control { display: inline-flex; align-items: center; justify-content: flex-start; margin-left: auto; position: relative; }
+.private_btn_control button { background: transparent; border: none; cursor: pointer; font-size: 16px; color: #999;transition: color 0.3s ease; }
+.private_btn_control button:hover { color: #ff4d4d; }
+/* Modal container */
+.public_message_modal { position: relative; top: 0; left: 0; width: 100%; height: 100%; display: flex ; justify-content: center; align-items: center; z-index: 9999; }
+/* Message content container */
+.public_message_content { border-radius: 1px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); width: 100%; max-width: 100%; padding: 2px; position: relative; }
+.public_message_text { font-size: 14px; color: #555555; line-height: 1.5; word-wrap: break-word; /* Prevent long words from breaking layout */ }
+.message-box { border: 1px dotted #ccc; padding: 7px; background-color: #f9f9f9; word-wrap: break-word; white-space: normal; overflow-wrap: break-word; overflow: hidden; box-sizing: border-box; min-width: 300px; border-radius: 10px; }
+/* private chat indicator */
+.private_typing_indicator { display: flex ; align-items: center; padding: 1px; border-radius: 0px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin-bottom: 0px; font-family: Arial, sans-serif; position: absolute; z-index: 11; bottom: 0; right: 0; left: 0; }
+.typing-avatar img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; margin-right: 2px; }
+.typing-info { display: flex ; align-items: center; gap: 5px; font-size: smaller; color: coral; }
+.typing-info span { font-size: 14px; color: #000; font-weight: bolder; }
+.typing-animation { display: flex; gap: 3px; }
+.typing-animation .dot { width: 6px; height: 6px; background-color: #6c757d; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
+.typing-animation .dot:nth-child(1) { animation-delay: 0s; }
+.typing-animation .dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-animation .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
 @media (max-width: 768px){
 .title-bar .nav-link { max-width: 165px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 2px;height: 30px;font-size: smaller;}
 	.room-tabs { width: 490px; height: 30px;}

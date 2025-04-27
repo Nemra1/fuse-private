@@ -38,6 +38,7 @@ echo elementTitle('Websocket Setting');
 					</div>
 					<div class="setting_element">
 						<p class="label">Websocket Protocol</p>
+						<small class="option_notice">"Better leave it like that WSS!" 🎇</small>
 						<select id="set_websocket_protocol">
             			<option value="https://" <?php if($data['websocket_protocol']=='https://'){echo "selected";} ?>>https://</option>
             			<option value="wss://" <?php if($data['websocket_protocol']=='wss://'){echo "selected";} ?>>wss://</option>
@@ -45,14 +46,44 @@ echo elementTitle('Websocket Setting');
 					</div>					
 					<div class="setting_element">
 						<p class="label">Enable Websocket</p>
+						<small class="option_notice">"WebSocket enabled: Chat room speed boosted by 10X!" 🚀</small>
 						<select id="set_websocket_mode">
                          <?php echo yesNo($data["websocket_mode"]); ?>
 						</select>
 					</div>	
 					<div class="setting_element">
 						<p class="label">User is typing </p>
+						<small class="option_notice">"Show typing indicator: See who's typing in real-time!" ✍️</small>
 						<select id="set_istyping_mode">
                          <?php echo yesNo($data["istyping_mode"]); ?>
+						</select>
+					</div>
+					<div class="setting_element">
+						<p class="label">Monitor Console </p>
+						<small class="option_notice">Console Panel enabled: Monitor all user actions in real-time!" 👁️💻 </small>
+						<select id="set_enable_monitor">
+                         <?php echo yesNo($data["enable_monitor"]); ?>
+						</select>
+					</div>					
+					<div class="setting_element">
+						<p class="label">Delete Private Message  <span class="badge">New</span></p>
+						<small class="option_notice">"Users can delete their own messages." 🗑️</small>
+						<select id="set_del_prive_line">
+                         <?php echo yesNo($data["del_prive_line"]); ?>
+						</select>
+					</div>					
+					<div class="setting_element">
+						<p class="label">Public announcement<span class="badge">New</span></p>
+						<small class="option_notice">"Owner can send public messages to the current room or all online users." 📢</small>
+						<select id="set_public_announcement">
+                         <?php echo yesNo($data["public_announcement"]); ?>
+						</select>
+					</div>					
+					<div class="setting_element">
+						<p class="label">Private Chat typing indicator<span class="badge">New</span></p>
+						<small class="option_notice">"Show typing indicator: See who's typing in real-time in Private Chat." 📢</small>
+						<select id="set_privateTyping">
+                         <?php echo yesNo($data["privateTyping"]); ?>
 						</select>
 					</div>					
 					

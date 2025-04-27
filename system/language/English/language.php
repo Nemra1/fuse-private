@@ -828,5 +828,8 @@ $lang['system_error'] = 'System error';
 $lang['action_complete'] = 'Action completed';
 $lang['action_failed'] = 'Action failed';
 $lang['member_notfound'] = 'User Not found';
+$lang['upadate_avatar'] = 'Update profile picture .';
+$lang['upadate_cover'] = 'Update Profile Cover..';
+
 
 ?>

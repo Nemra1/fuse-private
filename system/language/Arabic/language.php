@@ -826,5 +826,7 @@ $lang['system_error'] = 'خطأ في النظام';
 $lang['action_complete'] = 'اكتملت العملية';
 $lang['action_failed'] = 'فشلت العملية';
 $lang['member_notfound'] = 'لم يتم العثور على المستخدم';
+$lang['upadate_avatar'] = 'قام بتحديث صورته الشخصية..';
+$lang['upadate_cover'] = 'قام بتحديث خلفية الملف الشخصي';
 
 ?>

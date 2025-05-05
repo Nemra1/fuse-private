@@ -387,6 +387,18 @@ function onlineMap(){
     
     return $usersDetails;
 }
-
-
+function listAdminCall(){
+	global $mysqli, $data, $lang;
+	$get_call = $mysqli->query("SELECT * FROM boom_call WHERE call_status > 0 AND call_active > 0 ORDER BY call_time DESC LIMIT 100");
+	$list = '';
+	if($get_call->num_rows > 0){
+		while($call = $get_call->fetch_assoc()){
+			$list .= boomTemplate('element/admin_call', $call);
+		}
+	}
+	else {
+		$list = emptyZone($lang['empty']);
+	}
+	return $list;
+}
 ?>

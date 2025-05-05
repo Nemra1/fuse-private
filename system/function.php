@@ -59,6 +59,16 @@ function boomTemplate($getpage, $boom = '') {
     ob_end_clean();
     return $structure;
 }
+function boomTemplate_control($getpage, $boom = '') {
+	global $data, $lang, $mysqli, $cody;
+    $page = BOOM_PATH . '/' . $getpage . '.php';
+    $structure = '';
+    ob_start();
+    require($page);
+    $structure = ob_get_contents();
+    ob_end_clean();
+    return $structure;
+}
 function addons_boomTemplate($getpage, $boom = '') {
 	global $data, $lang, $mysqli, $cody;
     $page = BOOM_PATH . '/addons/' . $getpage . '.php';
@@ -619,6 +629,12 @@ function postPrivate($from, $to, $content, $snum = ''){
     if ($from <= 0 || $to <= 0 || empty($content)) {
         return false; // Invalid input
     }
+    // Handle runtime user experience points
+    if(useLevel()){
+        $mysqli->query("UPDATE boom_users SET user_exp = user_exp + 1 WHERE user_id = '{$data['user_id']}'");
+        userExpLevel("exp_priv");
+        getMyGift($content);
+    }	
     $time = time();
     // Use prepared statement to insert private message securely
     $stmt = $mysqli->prepare("INSERT INTO boom_private (time, target, hunter, message) VALUES (?, ?, ?, ?)");
@@ -1133,7 +1149,6 @@ function userExpLevel($type) {
     // Escape and determine the type of XP gain
     $exp_type = escape($type);
     $exp_amount = 0;
-
     // Determine the amount of XP based on the type
     switch($exp_type) {
         case "exp_chat":
@@ -1152,25 +1167,19 @@ function userExpLevel($type) {
             $exp_amount = 0; // Default to 0 if type is not recognized or no value provided
             break;
     }
-
     // Set default XP gain to 0 if no specific XP value is found
     $xpGain = $exp_amount > 0 ? $exp_amount : 0;
-
-    $maxlevel = 100; // Maximum level a user can reach
+    $maxlevel = 100000; // Maximum level a user can reach
     $currentLevel = $data['user_level'];
     $currentExp = $data['user_exp'];
-    
     // Calculate experience needed for the next level
     $expNeeded = $currentLevel == 0 ? 5 : $currentLevel * 50;
-
     // Calculate remaining experience needed to level up
     $xpToNextLevel = $expNeeded - $currentExp;
-
     // Output remaining XP needed to reach the next level
     $res['xpToNextLevel'] = "You need $xpToNextLevel XP to reach the next level.";
-
     // User can gain experience but hasn't leveled up yet
-    if ($currentExp + $xpGain < $expNeeded && $currentLevel < $maxlevel) {
+    if ($currentExp + $xpGain < $expNeeded && $currentLevel < $maxlevel && $data['user_rank'] >0) {
         $mysqli->query("UPDATE boom_users SET user_exp = user_exp + $xpGain WHERE user_id = '{$data['user_id']}'");
     }
     // User reaches or exceeds the required experience for the next level
@@ -1178,7 +1187,6 @@ function userExpLevel($type) {
         $newLevel = $currentLevel + 1;
         // Calculate remaining XP after leveling up
         $remainingXP = ($currentExp + $xpGain) - $expNeeded;
-
         // Level up the user, reset experience and add remaining XP (if any)
         $mysqli->query("UPDATE boom_users SET user_exp = $remainingXP, user_level = user_level + 1 WHERE user_id = '{$data['user_id']}'");
         // Create a message to announce the level-up
@@ -1187,10 +1195,8 @@ function userExpLevel($type) {
             array($data['user_name'], $newLevel),
             '<a class="status_icon" style="display: inline-block; width: 15px;"> <img src="default_images/status/online.svg" alt="Status Icon" style="width: 12px; height: 12px;"> </a> <span>Member <strong style="color: #b70606;">[ @user@ ]</strong> has reached Level <strong style="color: #b70606;">[ @level@ ]</strong>! Congratulations! Keep interacting to level up even more.</span>'
         );
-
         // Send the level-up message to the chat
         systemPostChat($data['user_roomid'], $msg);
-
         // Display the level-up template
         echo boomTemplate('store/exp_level_up', $msg);
     }
@@ -1203,8 +1209,6 @@ function getProfileLevel($user){
 	global $data;
 	echo boomTemplate('element/pro_level', $user);
 }
-
-
 function useLevel(){
 	global $data;
 	if($data['use_level'] > 0){
@@ -3669,7 +3673,26 @@ function useWallet(){
 		return true;
 	}
 }
-
+function walletTitle($type){
+	global $lang;
+	switch($type){
+		case 1:
+			return $lang['gold'];
+		case 2:
+			return $lang['ruby'];
+		default:
+			return $lang['gold'];
+	}
+}
+function walletBalance($type, $amount){
+	global $data;
+	if($type == 1 && goldBalance($amount)){
+		return true;
+	}
+/* 	if($type == 2 && rubyBalance($amount)){
+		return true;
+	} */
+}
 function useGold(){
 	global $data;
 	if($data['use_gold'] > 0){

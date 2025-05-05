@@ -18,6 +18,8 @@ require("database.php");
 require("variable.php");
 require("function.php");
 require("function_all.php");
+require(dirname(dirname(__FILE__)) . "/system/webrtc/voice_call/function_call.php");
+
 // Enable caching in production mode
 if ($cody['dev_mode'] === 1) {
 	header("Cache-Control: no-cache, no-store, must-revalidate");

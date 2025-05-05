@@ -17,6 +17,7 @@ require dirname(__DIR__) . "/vendor/autoload.php";
 require "database.php";
 require "variable.php";
 require "function.php";
+require "socket.php";
 // Enable caching in production mode
 if ($cody['dev_mode'] === 1) {
 	header("Cache-Control: no-cache, no-store, must-revalidate");
@@ -25,14 +26,7 @@ if ($cody['dev_mode'] === 1) {
 } else {
 	header("Cache-Control: public, max-age=31536000, immutable"); // Cache for production
 }
-if($cody['secure_header'] === 1) {
-	// Security headers
-	//header("X-Content-Type-Options: nosniff");
-	////header("X-Frame-Options: DENY"); // Or use SAMEORIGIN if you need some frames
-	//header("X-XSS-Protection: 1; mode=block");
-	// Improved Content-Security-Policy
-	//header("Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline';");
-}
+
 // Validate the request token and cookies
 if (!checkToken() || !isset($_COOKIE[BOOM_PREFIX . 'userid']) || !isset($_COOKIE[BOOM_PREFIX . 'utk']) || !validateAuth()) {
     echo json_encode(["check" => 99]);
@@ -55,11 +49,11 @@ $ident = escape($_COOKIE[BOOM_PREFIX . 'userid']);
 $query = "
     SELECT 
         s.system_id, s.default_theme, s.site_description, s.domain, s.guest_talk, s.allow_logs, s.allow_private, s.use_wings,s.chat_display, 
-        s.allow_main, s.bbfv, s.can_raction, s.use_vpn, s.language, s.timezone, s.speed, s.gender_ico, s.act_delay, 
-        s.bot_delay, s.allow_bot, s.can_ghost, s.can_vghost, s.use_gold,s.allow_gold,s.use_frame,s.use_level,s.gold_delay,s.gold_base,s.can_gold,
+        s.allow_main, s.bbfv, s.can_raction, s.use_vpn, s.language, s.timezone, s.speed, s.gender_ico, s.act_delay, s.max_public_history,s.max_private_history, 
+        s.bot_delay, s.allow_bot, s.can_ghost, s.can_vghost, s.use_gold,s.allow_gold,s.use_frame,s.use_level,s.gold_delay,s.gold_base,s.can_gold,s.del_prive_line,
         u.user_id, u.user_name, u.user_join, u.join_msg, u.last_action, u.user_language, u.user_timezone, 
         u.user_status, u.user_color, u.user_rank, u.user_roomid, u.user_sound, u.session_id, u.pcount,
-        u.user_news, u.user_mute, u.user_regmute, u.user_banned, u.user_kick, u.user_role, u.user_action, 
+        u.user_news, u.user_mute, u.user_regmute, u.user_banned, u.user_kick, u.user_role, u.user_action,u.ucall,u.bcall, 
         u.room_mute, u.naction, u.user_ghost, u.user_pmute, u.user_mmute,u.user_gold,u.room_mute,u.warn_msg,u.user_level,u.user_exp,u.user_badge,u.last_gold,u.name_wing1,u.name_wing2,u.is_live,
         r.topic, r.room_id, r.rcaction, r.rldelete, r.rltime,r.room_name,r.room_icon,r.max_user,r.slug,
         (SELECT COUNT(DISTINCT hunter) FROM boom_private WHERE target = ? AND hunter != ? AND status = '0') as private_count

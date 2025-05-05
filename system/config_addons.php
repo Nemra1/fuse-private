@@ -31,6 +31,7 @@ if (!checkToken()) {
 }
 require(BOOM_PATH . "/addons/" . $load_addons . "/system/addons_function.php");
 $mysqli = @new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
+$mysqli->query("SET NAMES 'utf8mb4'");
 if (mysqli_connect_errno()) {
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed.']);
     exit();

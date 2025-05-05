@@ -27,6 +27,8 @@ if (!checkToken() || empty($_COOKIE[BOOM_PREFIX . 'userid']) || empty($_COOKIE[B
 }
 // **Secure Database Connection**
 $mysqli = new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
+$mysqli->query("SET NAMES 'utf8mb4'");
+
 if ($mysqli->connect_error) {
     echo json_encode(['status' => 'error', 'message' => 'Database connection failed.']);
     exit();

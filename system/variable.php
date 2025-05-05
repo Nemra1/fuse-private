@@ -103,6 +103,7 @@ $cody['use_gold'] = 1;
 $cody['can_sgold'] = 100;
 $cody['allow_private'] = 0;       //started rank allowed to private chat from low to high (0 to 100)
 $cody['allow_main'] = 0;          //started rank allowed to Main chat from low to high (0 to 100)  
+$cody['fuse_voice_call_purchased'] = true;          //started rank allowed to Main chat from low to high (0 to 100)  
 $_SESSION['csrf_token'] =         generateCsrfToken();
 // cookie and session settings
 
@@ -156,7 +157,7 @@ function setBoomCookie($user_id, $password_hash) {
         'path' => '/',                  // Accessible across the entire domain
         'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
         'httponly' => true,             // Prevents JavaScript access (prevents XSS)
-        'samesite' => 'Strict'             // Prevents CSRF by restricting cross-site requests
+        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
     ]);
     // Set Auth Token Cookie (could store a session token or something less sensitive than the actual password)
     setcookie($prefix . "utk", $password_hash, [
@@ -164,7 +165,7 @@ function setBoomCookie($user_id, $password_hash) {
         'path' => '/',                  // Accessible across the entire domain
         'secure' => $is_https,          // Secure cookie (only transmitted over HTTPS)
         'httponly' => true,             // Prevents JavaScript access (prevents XSS)
-        'samesite' => 'Strict'             // Prevents CSRF by restricting cross-site requests
+        'samesite' => 'Lax'             // Prevents CSRF by restricting cross-site requests
     ]);
 }
 function validateAuth() {

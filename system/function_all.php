@@ -14,6 +14,19 @@ function boomLogged(){
 		return true;
 	}
 }
+function getSocialLoginCallbackUrl($provider) {
+    global $mysqli,$data;
+    // Ensure the provider is valid
+    $valid_providers = ['google', 'facebook', 'twitter', 'linkedin', 'github'];
+    if (!in_array(strtolower($provider), $valid_providers)) {
+        return null;  // Return null or some default error message
+    }
+    // Check if $bdata['domain'] is set
+    if (!isset($data['domain']) || empty($data['domain'])) {
+        return 'Error: Domain not configured'; // Return an error or a default URL
+    }
+    return $data['domain'] . "/login/social_login.php?provider=" . ucfirst(strtolower($provider));
+}
 function cl_text_secure($text = "") {
     global $data;
     $text = trim($text);
@@ -3381,7 +3394,7 @@ function clearRoom($id) {
         $stmt->execute();
         $stmt->close();
         // Clear `rldelete` field for the room
-        $updateRoomQuery = "UPDATE `boom_rooms` SET `rldelete` = '' WHERE `room_id` = ?";
+        $updateRoomQuery = "UPDATE `boom_rooms` SET `rldelete` = '0' WHERE `room_id` = ?";
         $stmt = $mysqli->prepare($updateRoomQuery);
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -4170,5 +4183,35 @@ function useMonitor(){
 	if($data['enable_monitor'] > 0){
 		return true;
 	}
+}
+function checkRateLimit(){
+	global $data;
+/* 	if($data['use_rate'] == 1){
+		if(isset($_SESSION[BOOM_PREFIX . 'fignore']) && $_SESSION[BOOM_PREFIX . 'fignore'] > time()){
+			return true;
+		}
+		if(!isset($_SESSION[BOOM_PREFIX .'ftime']) || $_SESSION[BOOM_PREFIX . 'ftime'] < (time() - 20)){
+			$_SESSION[BOOM_PREFIX . 'ftime'] = time();
+			$_SESSION[BOOM_PREFIX . 'fcount'] = 1;
+			return false;
+		}
+		else if($_SESSION[BOOM_PREFIX . 'fcount'] >= $data['rate_limit']){
+			$_SESSION[BOOM_PREFIX . 'fignore'] = (time() + 300);
+			return true;
+		}
+		$_SESSION[BOOM_PREFIX . 'fcount']++;
+	}
+ */
+ }
+ // basic call functions
+ function callActive($c){
+	// call is canceld of endded if more than 1
+	if($c['call_status'] > 1){
+		return false;
+	}
+	if($c['call_status'] == 1 && $c['call_active'] < calSecond(30)){
+		return false;
+	}
+	return true;
 }
 ?>

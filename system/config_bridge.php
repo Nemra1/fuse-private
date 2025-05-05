@@ -15,6 +15,8 @@ require("database.php");
 require("variable.php");
 require("function_bridge.php");
 $bmysqli = @new mysqli(BOOM_DHOST, BOOM_DUSER, BOOM_DPASS, BOOM_DNAME);
+$bmysqli->query("SET NAMES 'utf8mb4'");
+
 if (mysqli_connect_errno() || $check_install != 1) {
 	die();
 }

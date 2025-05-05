@@ -1,114 +1,75 @@
 <?php
-function createBridgeUser($provider, $info) {
-    global $bmysqli, $bdata;
-    $bridge_user = array();
-    
-    // Validate input
-    if (empty($info) || empty($provider)) {
-        return false;
-    }
-    
-    // Default values for the new user
-    $bridge_default = array(
-        'id' => '',
-        'name' => '',
-        'age' => 0,
-        'gender' => 3, // Default: unspecified
-        'password' => bridgeRandomPass(),
-        'language' => bridgeLanguage(),
-        'avatar' => '',
-        'ip' => bridgeGetIp(),
-    );
-    
-    // Merge incoming data with default values
-    $bridge = array_merge($bridge_default, $info);
-    
-    // Secure and sanitize input data
-    $provider = bridgeEscape($provider);
-    $bridge['id'] = bridgeEscape($bridge['id']);
-    $bridge['name'] = bridgeEscape($bridge['name']);
-    $bridge['age'] = (int)$bridge['age']; // Ensure age is an integer
-    $bridge['gender'] = bridgeEscape($bridge['gender']);
-    $bridge['password'] = bridgeEscape($bridge['password']);
-    $bridge['language'] = bridgeEscape($bridge['language']);
-    $bridge['avatar'] = bridgeEscape($bridge['avatar']);
-    
-    // Check if critical fields are provided
-    if (empty($bridge['id']) || empty($bridge['name'])) {
-        return false;
-    }
-    
-    // Define unique bridge identity
-    $bridge['identity'] = $provider . '_' . $bridge['id'];
-    
-    // Ensure valid gender
-    switch (strtolower($bridge['gender'])) {
-        case 'female':
-            $bridge['gender'] = 2;
-            break;
-        case 'male':
-            $bridge['gender'] = 1;
-            break;
-        default:
-            $bridge['gender'] = 3; // Default: unspecified
-            break;
-    }
-    
-    // Validate avatar URL (ensure it’s a full URL starting with http)
-    if (stripos($bridge['avatar'], 'http') === false) {
-        $bridge['avatar'] = '';
-    }
-    
-    // Check if the bridge user already exists
-    $bridge_exist = $bmysqli->prepare("SELECT * FROM `boom_users` WHERE `sub_id` = ? AND `sub_id` != '' LIMIT 1");
-    $bridge_exist->bind_param('s', $bridge['identity']);
-    $bridge_exist->execute();
-    $result = $bridge_exist->get_result();
-    
-    if ($result->num_rows > 0) {
-        // Update the user IP if the user already exists
-        $bridge_user = $result->fetch_assoc();
-        $update_stmt = $bmysqli->prepare("UPDATE boom_users SET user_ip = ? WHERE user_id = ?");
-        $update_stmt->bind_param('si', $bridge['ip'], $bridge_user['user_id']);
-        $update_stmt->execute();
-    } else {
-        // User doesn't exist, create a new one
-        $bridge['name'] = getBridgeName($bridge['name'], $bmysqli);
-        $insert_stmt = $bmysqli->prepare("INSERT INTO boom_users 
-            (user_name, sub_id, user_password, user_ip, user_join, last_action,
-            user_theme, user_sex, user_age, user_language, user_timezone, user_roomid, verified, user_rank)
-            VALUES 
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)");
-        
-        $user_join = time();
-        $insert_stmt->bind_param(
-            'sssssiiiisss',
-            $bridge['name'],
-            $bridge['identity'],
-            $bridge['password'],
-            $bridge['ip'],
-            $user_join,
-            $user_join,
-            $bdata['default_theme'],
-            $bridge['gender'],
-            $bridge['age'],
-            $bridge['language'],
-            $bdata['timezone'],
-            0 // user_roomid
-        );
-        $insert_stmt->execute();
-        $bridge_user = bridgeUserDetails($bmysqli->insert_id);
-    }
-    
-    // Download avatar if provided
-    if ($bridge['avatar'] != '') {
-        $add_bridge_avatar = downloadBridgeAvatar($bridge_user, $bridge['avatar'], $provider);
-    }
-    
-    // Create session for the new or existing user
-    setBoomCookie($bridge_user['user_id'], $bridge_user['user_password']);
-    
-    return $bridge_user;
+function createBridgeUser($provider, $info){
+	global $bmysqli, $bdata;
+	$bridge_user = array();
+	if(empty($info) || empty($provider)){
+		return false;
+	}
+	$bridge_default = array(
+		'id'=> '',
+		'name'=> '',
+		'age'=> 0,
+		'gender'=> 3,
+		'password'=> password_hash(bridgeRandomPass(), PASSWORD_BCRYPT),
+		'language'=> bridgeLanguage(),
+		'avatar'=> '',
+		'ip'=> bridgeGetIp(),
+	);
+	$bridge = array_merge($bridge_default, $info);
+	// secure data for insert 
+	$provider = bridgeEscape($provider);
+	$bridge['id'] = bridgeEscape($bridge['id']);
+	$bridge['name'] = bridgeEscape($bridge['name']);
+	$bridge['age'] = bridgeEscape($bridge['age']);
+	$bridge['gender'] = bridgeEscape($bridge['gender']);
+	$bridge['password'] = bridgeEscape($bridge['password']);
+	$bridge['language'] = bridgeEscape($bridge['language']);
+	$bridge['avatar'] = bridgeEscape($bridge['avatar']);
+	if(empty($bridge['id']) || empty($bridge['name'])){
+		return false;
+	}
+	// define bridge identity
+	$bridge['identity'] = $provider . '_' . $bridge['id'];
+	if(!is_numeric($bridge['age'])){
+		$bridge['age'] = 0;
+	}
+	switch(strtolower($bridge['gender'])){
+		case 'female':
+			$bridge['gender'] = 2;
+			break;
+		case 'male':
+			$bridge['gender'] = 1;
+			break;
+		default:
+			$bridge['gender'] = 3;
+			break;
+	}
+	if(stripos($bridge['avatar'], 'http') === false){
+		$bridge['avatar'] = '';
+	}
+	// check if bridge user exist
+	$bridge_exist = $bmysqli->query("SELECT * FROM `boom_users` WHERE `sub_id` = '{$bridge['identity']}' AND `sub_id` != '' LIMIT 1");
+	if($bridge_exist->num_rows > 0){
+		$bridge_user = $bridge_exist->fetch_assoc();
+		$bmysqli->query("UPDATE boom_users SET user_ip = '{$bridge['ip']}' WHERE user_id = '{$bridge_user['user_id']}'");
+	}
+	else {
+		$bridge['name'] = getBridgeName($bridge['name'], $bmysqli);
+		$bmysqli->query("INSERT INTO boom_users 
+		(user_name, sub_id, user_password, user_ip, user_join, last_action,
+		user_theme, user_sex, user_age, user_language, user_timezone, user_roomid, verified)
+		VALUES 
+		('{$bridge['name']}', '{$bridge['identity']}', '{$bridge['password']}', '{$bridge['ip']}',
+		'" . time() . "', '" . time() . "', '{$bdata['default_theme']}', '{$bridge['gender']}', '{$bridge['age']}', '{$bridge['language']}', '{$bdata['timezone']}', '0', 1)");
+		$bridge_user = bridgeUserDetails($bmysqli->insert_id);
+	}
+	// download avatar for bridged user
+	if($bridge['avatar'] != ''){
+		$add_bridge_avatar = downloadBridgeAvatar($bridge_user, $bridge['avatar'], $provider);
+	}
+	// create bridge user session
+	setBoomCookie($bridge_user['user_id'], $bridge_user['user_password']);
+	return $bridge_user;
 }
 
 // bridge functions

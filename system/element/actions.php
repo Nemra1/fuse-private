@@ -48,6 +48,10 @@
 	<div data="" value="" data-av=""  class="avset avitem avpriv gprivate">
 		<i class="ri-eye-line theme_color"></i> <?php echo $lang['private_chat']; ?>
 	</div>
+	<div data="" value="" data-av="" class="avset bmenu avitem opencall avcall">
+		<i class="ri-phone-line"></i> <?php echo $lang['call']; ?>
+	</div>
+
 	<div data="" value="" data-av="" class="avset avitem get_actions avactions">
 		<i class="ri-water-flash-line error"></i> <?php echo $lang['do_action']; ?>
 	</div>
@@ -59,6 +63,9 @@
 	<div data="" value="" data-av=""  class="avset avitem avpriv gprivate">
 		<i class="ri-eye-line theme_color"></i> <?php echo $lang['private_chat']; ?>
 	</div>
+	<div data="" value="" data-av="" class="avset bmenu avitem opencall avcall">
+		<i class="ri-phone-line success"></i> <?php echo $lang['call']; ?>
+	</div>	
 	<div data="" value="" data-av="" class="avset avitem get_room_actions avactions">
 		<i class="ri-water-flash-line error"></i> <?php echo $lang['do_action']; ?>
 	</div>
@@ -66,6 +73,9 @@
 <div class="avother background_box bottomcard">
 	<div data="" value="" data-av="" class="avset avitem get_info">
 		<i class="ri-user-smile-line default_color"></i> <?php echo $lang['info']; ?>
+	</div>
+	<div data="" value="" data-av="" class="avset bmenu avitem opencall avcall">
+		<i class="ri-phone-line success"></i> <?php echo $lang['call']; ?>
 	</div>
 	<div data="" value="" data-av=""  class="avset avitem avpriv gprivate">
 		<i class="ri-eye-line theme_color"></i> <?php echo $lang['private']; ?>

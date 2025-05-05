@@ -4,6 +4,13 @@
 	<div class="sub_list_content"><?php echo $lang['private']; ?></div>
 </div>
 <?php } ?>
+<?php if(canCall() && canCallUser($boom) && insideChat($boom['cpage'])){ ?>
+<div data="<?php echo $boom['user_id']; ?>" class="opencall sub_list_item bbackhover action_item">
+	<div class="sub_list_icon"><i class="ri-chat-smile-3-line success"></i></div>
+	<div class="sub_list_content"><?php echo $lang['call']; ?></div>
+</div>
+
+<?php } ?>
 <?php if(canFriend($boom) && !ignored($boom) && !ignoring($boom) && isMember($data) && isMember($boom)){ ?>
 <div onclick="addFriend(<?php echo $boom['user_id']; ?>);" class="sub_list_item bbackhover action_item">
 	<div class="sub_list_icon"><i class="ri-chat-smile-3-line success"></i></div>

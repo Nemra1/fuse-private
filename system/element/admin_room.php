@@ -5,6 +5,7 @@
 	</div>
 	<div class="sub_list_name">
 		<?php echo $boom['room_name']; ?>
+		<p class="text_small bellips sub_text"><?php echo $boom['description']; ?></p>
 	</div>
 	<div class="sub_list_img">
 		<?php echo roomIcon($boom, 'roomlisting'); ?>

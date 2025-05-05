@@ -38,7 +38,7 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 .large_icon { width:100px; height:100px; }
 
 /* listing css */
-.sub_list_item { margin-bottom: 3px; border-radius: 3px; display: table; table-layout: fixed; width: 100%; padding: 12px 10px; cursor: pointer; }
+.sub_list_item { margin-bottom: 3px; border-radius: 13px; display: table; table-layout: fixed; width: 100%; padding:10px 10px; cursor: pointer; }
 .sub_half_item { display:table; table-layout:fixed; width:calc(50% - 10px); padding:10px; cursor:pointer; margin:0 5px 3px 5px; float:left; }
 .sub_list_avatar_small { width:36px; display:table-cell; vertical-align:middle; text-align:center; }
 .sub_list_avatar_small img { width:36px; height:28px; border-radius:50%; display:block; }
@@ -55,7 +55,7 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 .sub_list_pcontent { display:table-cell; vertical-align:middle; padding:0 5px; }
 .sub_list_cell { display:table-cell; vertical-align:middle; }
 .sub_list_cell_top { display:table-cell; vertical-align:top; }
-.sub_list_name { padding:0 5px; display:table-cell; vertical-align:middle; white-space:nowrap; overflow:hidden; }
+.sub_list_name { padding:0 5px; display:table-cell; vertical-align:middle; white-space:nowrap; overflow:hidden;font-weight: bold; }
 .sub_list_active { position: absolute; bottom: 0; right: 0px; width: 12px !important; height:12px !important; }
 .sub_list_gift { width:50px; display:table-cell; vertical-align:middle; text-align:center; position:relative; }
 .sub_list_gift img { height:50px; height:auto; display:block; }
@@ -191,7 +191,7 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 .mod_button { padding: 8px 10px; min-width: 100px; margin: 0 0 5px 0; }
 .modr_button { padding:8px 10px; margin:0 0 5px 0; }
 .small_button { padding:8px 10px; min-width:50px; }
-.large_button { padding:10px 20px; border-radius:3px; min-width:200px; font-size:16px; }
+.large_button { padding: 10px 20px; border-radius: 3px; min-width: 200px; font-size: 16px; }
 .small_button_rounded { padding:8px 12px;  border-radius:25px; }
 .large_button_rounded { padding:12px 20px;  border-radius:25px; font-size:16px; min-width:200px; margin-top:5px; }
 .small_button, .reg_button, .mod_button, .modr_button, .button, .tiny_button, .micro_button, .thin_button, .macro_button, .card_button { border-radius:20px; }
@@ -608,7 +608,16 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 /* stream css */
 #wrap_stream { width:640px; height:360px; border-top:1px solid #333; }
 #wrap_stream iframe { width:100%; height:100%; border:none; padding:0; margin:0; }
+#wrap_stream video { width:100%; height:100%; border:none; padding:0; margin:0; }
 #container_stream { width:auto; height:auto; z-index:999; position:fixed; top:50%; left:50%; margin-left:-320px; margin-top:-195px; display:none; }
+.vidopt { height: 40px; width: 40px; font-size: 18px !important; color: #fff; text-align: center; cursor: pointer; }
+#mstream_img { display:block; margin:0 auto; width:30px; height:30px; border-radius:50%; }
+.streamhide { display:none !important; }
+.streamout { left:-10000px !important; }
+#wrap_stream_audio { width:300px; height:auto; border-top:1px solid #333; }
+#wrap_stream_audio audio { width:100%; border:none; padding:0; margin:0; }
+#container_stream_audio { width:300px; height:auto; z-index:160; position:fixed; top:100px; left:50%; margin-left:-150px; margin-top:0px; display:none; }
+.over_stream { z-index:1100 !important; }
 #stream_header { width:100%; height:30px; }
 #close_stream { float:right; padding:3px 10px 3px 10px; font-size:24px !important; color:#fff; }
 
@@ -796,7 +805,7 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 .cover_menu { display:table-cell; vertical-align:middle; width:80px; }
 .cover_item_wrap { display:table; border-radius:50px; overflow:hidden; }
 .cover_item { width:40px; height:30px; display:table-cell; vertical-align:middle; text-align:center; }
-.modal_menu, .tab_menu { font-size:0px;border-radius: 20px;}
+.modal_menu, .tab_menu { font-size:0px;border-radius: 10px 10px 4px 4px;}
 .profile_background { background-size:cover !important; background-position:50% 50% !important; }
 .modal_menu ul li, .tab_menu ul li { display:inline-block; padding:10px 10px; cursor:pointer; font-size:14px; }
 .hide_zone { display:none; }
@@ -994,3 +1003,65 @@ input { font-family: 'FontAwesome', sans-serif,'trebuchet ms','lucida grande','l
 .gold_text { font-size:16px; }
 .gold_text2 { font-size:16px; }
 .badge { background-color: red; color: white; padding: 0px 5px; border-radius: 12px; font-size: 9px; font-weight: bold; }
+/* call request box */
+#call_request,#incoming_call { position:absolute; top:90px; left:50%; transform: translate(-50%, -50%); width:280px; border-radius:100px; z-index:1300; }
+.call_avatar { width:40px; height:40px; }
+.call_avatar img { width:40px; height:40px; border-radius:50%; display:block; }
+.call_btn { width:40px; height:40px; cursor:pointer; }
+.call_btn img { width:34px; height:34px; border-radius:50%; display:block; margin:0 auto; }
+.call_spacer { width:5px; }
+/* call list */
+.call_lock { width:20px; height:20px; border-radius:50%; display:block; margin:0 auto; }
+.call_ctag { width:14px; height:14px; border-radius:50%; display:block; margin:0 auto; }
+.call_count { font-size:14px; font-weight:bold; text-align:right; }
+.call_opt { width:20px; }
+.call_cicon_wrap { width:46px; height:46px; }
+.call_cicon_wrap img { width:46px; height:46px; border-radius:5px; display:block; }
+
+/* call join */
+.incall_user { display:inline-block; width:46px; height:46px; border-radius:50%; margin:0 -3px; }
+/* call item */
+.call_item_container { padding:15px 15px 60px 15px; }
+.call_item { margin-bottom:5px; padding:5px; border-radius:5px; cursor:pointer; }
+.call_item_avatar { width:30px; }
+.call_item_avatar img { display:block; width:30px; height:30px; border-radius:5px; }
+.call_item_name { padding:0 10px; font-size:16px; }
+.call_mic { width:30px; }
+.call_mic img { width:20px; height:20px; margin:0 auto; display:block; }
+.call_action { width:40px; font-size:16px; text-align:center; }
+/* container cam */
+#container_call { z-index:201; position:fixed; top:80px; left:10px; margin-left:0px; margin-top:0px; display:none; }
+.videosize { height:400px !important; }
+.audiosize { height:160px; }
+.groupsize { height:300px !important; }
+.callsize { width:360px; }
+.biframe { padding:0; margin:0; border:0; display:block; }
+.vcallhide { display:none !important; }
+#vcall_streams { height: 100%; width:100%; }
+#vcall_self { width:80px; height:100px; position:absolute; top:10px; left:10px; border-radius:10px; overflow:hidden; }
+.vcall_self { width:140px !important; height:160px !important; }
+.vcall_player { width: 100%; height: 100%; overflow: hidden; }
+.vcall_player video { width:100%; height:100%; object-fit:cover; }
+.vcall_container { width:100%; height:100%; }
+.vcall_user { display:flex; align-items: center; column-gap: 0.5em;  padding: 5px 10px; border-radius: 5px; position: absolute; top: 10px; right: 10px; z-index: 9999; margin: 0; font-size: 18px; }
+.vcall_vol{ height:20px; width:20px; }
+#vcall_control { display:table; width:100%; position: absolute; bottom: 15px; left: 0; }
+#vcall_group_control { display:table; width:100%; position: fixed; bottom: 15px; left: 0; }
+.vcall_btn { width:30px; text-align: center; cursor: pointer; padding:10px; border-radius:5px; }
+.vcall_spacer { width:15px; }
+.vcall_icon { display: block; height: 18px; width: 18px; }
+.call_status_btn { padding:5px 10px; border-radius:5px; display:inline-block; font-size:13px; max-width:100%; text-align:center; }
+.med_avatar { width: 64px; height: 64px; }
+.cost_tag_wrapper {
+    display: inline-block;
+}
+.fborder {
+    border: 1px solid rgb(0, 0, 0, 0.08);
+}
+/* cost element */
+.cost_tag { padding:3px; border-radius:50px; }
+.cost_tag_icon { width:16px; }
+.cost_tag_icon img { width:16px; height:16px; display:block; }
+.cost_tag_amount { font-weight:bold; font-size:14px; padding:0 3px; }
+.cost_tag_wrapper { display:inline-block; }
+.footer_item { width: 40px; height: 100%; text-align: center; cursor: pointer; display: table-cell; max-width: 16.66666666%; vertical-align: middle; position: relative; }

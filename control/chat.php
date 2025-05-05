@@ -107,16 +107,7 @@ $set_user = setUserRoom();
 					<div class="fmenu_text">
 						My wallet  : <?php echo $data['wallet']; ?>
 					</div>
-				</div>
-				<div class="fmenu_item" onclick="share_box();">
-					<div class="fmenu_icon">
-						<i class="ri-share-line menuo"></i>
-					</div>
-					<div class="fmenu_text">
-						Share
-					</div>
-				</div>
-								
+				</div>		
 			<?php } ?>	
 			<?php if(isOwner($data) && $data['websocket_mode'] > 0){?>
 			<?php if(useMonitor()){?>
@@ -197,15 +188,6 @@ $set_user = setUserRoom();
 				</div>
 			</div>
 			<?php } ?>
-			<div id="open_about" class="fmenu_item" onclick="openAbout();">
-				<div class="fmenu_icon">
-					<i class="ri-bubble-chart-line menuo"></i>
-				</div>
-				<div class="fmenu_text">
-				<?php echo $lang['about']; ?>
-				</div>
-			</div>
-
 			<div id="open_logout" class="fmenu_item" onclick="openLogout();">
 				<div class="fmenu_icon">
 					<i class="ri-login-circle-line menuo"></i>
@@ -265,18 +247,32 @@ $set_user = setUserRoom();
 					</div>
 				</div>
 			<?php if(useLevel()){ ?>
-			<div id="leader_menu" class="left_list left_item" onclick="getLeaderboard();">
-				<div class="fmenu_icon">
-					<i class="ri-vip-crown-2-line menui"></i>
-				</div>
-				<div class="fmenu_text">
-					<?php echo $lang['leaderboard']; ?>
-				</div>
-			</div>
+				<div id="leader_menu" class="left_list left_item" onclick="getLeaderboard();">
+					<div class="left_item_icon">
+						<i class="ri-vip-crown-2-line menuo menui"></i>
+					</div>
+					<div class="left_item_text">
+						<?php echo $lang['leaderboard']; ?>
+					</div>
+				</div>			
 			<?php } ?>
-				
-				<div id="end_left_menu">
+				<div class="left_list left_item" onclick="share_box();">
+					<div class="left_item_icon">
+						<i class="ri-share-line menuo menui"></i>
+					</div>
+					<div class="left_item_text">
+						Share
+					</div>
 				</div>
+				<div id="open_about" class="left_list left_item" onclick="openAbout();">
+					<div class="left_item_icon">
+						<i class="ri-bubble-chart-line menuo menui"></i>
+					</div>
+					<div class="left_item_text">
+						<?php echo $lang['about']; ?>
+					</div>
+				</div>	
+				<div id="end_left_menu"></div>
 				<div id="more_menu"class="left_list">
 					<div id="open_more_menu" class="left_item" onclick="openMoreMenu();">
 						<div class="left_item_icon">
@@ -446,6 +442,11 @@ $set_user = setUserRoom();
 		<div onclick="" id="private_name" class="bcell_mid bellips">
 			<p class="bellips"></p>
 		</div>
+		<?php if($cody['fuse_voice_call_purchased']){ ?>
+		<div id="private_call" data="" class="opencall private_opt">
+			<i class="ri-phone-fill"></i>
+		</div>	
+		<?php } ?>		
 		<div id="priv_minimize" onclick="togglePrivate(1);" class="private_opt">
 			<i class="ri-skip-down-line"></i>
 		</div>
@@ -605,6 +606,12 @@ $set_user = setUserRoom();
 					</div>
 					<?php } ?>
 				</div>
+				<div class="bcell_mid"></div>
+				<?php if (function_exists('isAVCallPurchased') && isAVCallPurchased()) { ?>
+					<div id="mstream" onclick="toggleStream(2)" class="footer_item streamhide"> <img id="mstream_img" src="default_images/icons/vidhide.svg"> </div>
+					<div id="mstream_call" onclick="toggleCall(2)" class="footer_item streamhide"> <img id="mstream_img" src="default_images/icons/callmin.svg"> </div>
+					<div id="mstream_audio" onclick="toggleStreamAudio(2)" class="footer_item streamhide"> <img id="mstream_img" src="default_images/icons/audiohide.svg"> </div>
+				<?php } ?>
 				<?php if(userDj($data)){?>
                 <div  id="open-boradcast_panel" class="chat_footer_item">
                     <div class="riseHandcount"></div>
@@ -651,8 +658,16 @@ $set_user = setUserRoom();
 </div>
 <div id="broadcast_windows" class=""></div>
 <div id="SocketMonitor_container" class="background_stream"></div>
+
 <script data-cfasync="false">
 	var curPage = 'chat';
+	var roomTitle = '<?php echo $room['room_name']; ?>';
+	var user_room = <?php echo $data['user_roomid']; ?>;
+	var userAction = '<?php echo $data['user_action']; ?>';
+	var	globNotify = 0;
+	var pCount = "<?php echo $data['pcount']; ?>";
+	var uCall = '<?php echo $data['ucall']; ?>';
+	var callLock = '<?php echo $data['bcall']; ?>';
 	var ignoreList = new Set(<?php echo json_encode(loadIgnore($data['user_id'])); ?>);
 </script>
 <?php loadAddonsJs();?>
@@ -664,4 +679,7 @@ $set_user = setUserRoom();
 <script data-cfasync="false" src="js/function_player.js<?php echo $bbfv; ?>"></script>
 <?php if(boomLogged() &&  canGift() && useGift() && insideChat($page['page'])){ ?>
 	<script data-cfasync="false" src="system/gifts/files/script.js<?php echo $bbfv; ?>"></script>
+<?php } ?>
+<?php if (function_exists('isAVCallPurchased') && isAVCallPurchased()) { ?>
+<script data-cfasync="false" src="js/function_call.js<?php echo $bbfv; ?>"></script>
 <?php } ?>

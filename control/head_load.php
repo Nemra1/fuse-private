@@ -1,7 +1,5 @@
 <?php
 require_once dirname(__DIR__) . '/vendor/autoload.php';
-use MyChatSocket\WSChatHelper;
-
 if($chat_install != 1){
 	header('location: ./');
 	die();
@@ -134,6 +132,7 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 		const allow_websocket =  <?php echo $data['websocket_mode']; ?>;
 		let user_id = '<?php echo $data["user_id"] ?? 0; ?>';
 		let user_name = '<?php echo $data["user_name"] ?? 'Guest'; ?>';
+		 user_room = '<?php echo $room['room_id'] ?? 1; ?>';
 		let private_id = 0;
 		let privateTyping = <?php echo $data["privateTyping"] ?? 0; ?>;
 	<?php 
@@ -149,11 +148,11 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 <?php if(!boomLogged()){ ?>
 	<script data-cfasync="false">
 		var logged = 0;
-		var utk = '0';
+		var utk = 0;
 		var recapt = <?php echo $data['use_recapt']; ?>;
 		var recaptKey = '<?php echo $data['recapt_key']; ?>';
 		var avatar = 'default_images/avatar/default_avatar.svg';
-		var user_rank = 0;
+		var user_rank = 0;		
 	</script>
 <?php } ?>
 <?php if(boomLogged()){ ?>
@@ -168,14 +167,17 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 		var fmw = <?php echo $data['file_weight']; ?>;
 		var uSound = '<?php echo $data['user_sound']; ?>';
 		var logged = 1;
-		var systemLoaded = 0;
 		var onesignal_web_push_id =  '<?php echo $data['onesignal_web_push_id']; ?>';
 		var allow_gift = '<?php echo $data['use_gift']; ?>';
     	var uQuote = <?php echo $data['allow_quote']; ?>;
     	var upQuote = <?php echo $data['allow_pquote']; ?>;
 		var priMin = <?php echo $data['allow_private']; ?>;
 		var avatar = '<?php echo myAvatar($data['user_tumb']); ?>';
-		
+		var useLevel = <?php echo $data['use_level']; ?>;
+		var canCall = <?php if (function_exists('isVoiceCallPurchased') && isVoiceCallPurchased()) { echo minCall(); } else { echo 0; } ?>;
+		var useCall = <?php echo $data['use_call']; ?>;
+		var useLevel = <?php echo $data['use_level']; ?>;
+		var systemLoaded = 0;
 	</script>
 <?php } ?>
 <?php if(boomLogged() && $page['page'] == 'chat'){ ?>
@@ -220,6 +222,8 @@ if (!empty($_SESSION['switched_user_name']) && !empty($_SESSION['original_owner_
 </head>
 <body>
 <?php
+
+
 if(checkBan($ip)){
 	include('banned.php');
 	include('body_end.php');

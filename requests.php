@@ -51,6 +51,8 @@ $allow_array = array(
 	'action',
 	'action_private',
 	'admin_actions',
+	'action_call',
+	'console',
 );
 $non_login_array = array(
 	'payment_gateway',

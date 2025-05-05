@@ -1,16 +1,7 @@
 /* General Colors */
-::-webkit-scrollbar {
-    width: 7px;
-    height: 6px;
-}
-::-webkit-scrollbar-thumb {
-    background-color: #C0D2E6;
-    border-radius: 20px;
-}
-::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
-}
-
+::-webkit-scrollbar { width: 7px; height: 6px; }
+::-webkit-scrollbar-thumb { background-color: #C0D2E6; border-radius: 20px; }
+::-webkit-scrollbar-track {background: rgba(0, 0, 0, 0.1);}
 /* Base Styles */
 a { color: orange; }
 body { background: #ededed; color: #444; }
@@ -31,9 +22,13 @@ input, textarea, .post_input_container { background: #f2f2f2; border: 1px solid 
 .back_xlite { background: #fff; color: #666; }
 
 /* Button Colors */
+.default_btn, .back_default {
+    background: #222;
+    color: #fff;
+}
 .theme_btn { color: #fff; background-color: #665dfe; border-color: #665dfe; }
-.default_btn, .dark_selected { background: linear-gradient(to bottom, #17c9ff, #655dfff7); color: #fff; }
-.ok_btn { background: #74b20e; color: #fff; }
+/* .default_btn, .dark_selected { background: linear-gradient(to bottom, #17c9ff, #655dfff7); color: #fff; }
+ */.ok_btn { background: #74b20e; color: #fff; }
 .warn_btn { background: orange; color: #fff; }
 .delete_btn { background: #cc0000; color: #fff; }
 .sub_btn { background: #888; color: #fff; }
@@ -53,7 +48,7 @@ input, textarea, .post_input_container { background: #f2f2f2; border: 1px solid 
 
 /* Modal */
 .modal_menu, .tab_menu { background: #f3f3f3; color: #555; font-family: noto kufi arabic, sans-serif, trebuchet ms, lucida grande, lucida sans unicode, arial, helvetica, sans-serif; }
-.modal_selected, .tab_selected { background: #012832; color: #fff; }
+.modal_selected, .tab_selected {font-weight: bolder; background: #ef007f; color: #fff; }
 .modal_back { background-color:rgba(0,0,0,0.6); }
 
 /* Panel Selected */
@@ -109,7 +104,7 @@ input, textarea, .post_input_container { background: #f2f2f2; border: 1px solid 
 .bnotify { background: red; color: #fff; }
 
 /* Elements */
-.element_color, .player_options, .page_element, #private_box, .chat_side_panel, #side_menu, .modal_in { background: #fff; color: #444; }
+.element_color, .player_options, .page_element, #private_box, .chat_side_panel, #side_menu, .modal_in ,.ui-widget-header{ background: linear-gradient(#fff, #e9eef2); color: #000; }
 .background_chat { border-radius: 1px; }
 .chat_panel { background: #fff; }
 
@@ -127,7 +122,7 @@ input, textarea, .post_input_container { background: #f2f2f2; border: 1px solid 
 .full_border { border: 1px solid #ededed; }
 
 /* List Element */
-.sub_list_item, .sub_item, .sub_half_item, .reply_item, .ulist_item, .sub_list { background: #f3f3f3; color: #666; }
+.sub_list_item, .sub_item, .sub_half_item, .reply_item, .ulist_item, .sub_list { background: linear-gradient(#fff, #ffffff70); color: #000; }
 .sub_list_item:hover, .sub_item:hover, .sub_half_item:hover, .ulist_item:hover { background: #ededed; }
 
 /* Slider */
@@ -177,7 +172,7 @@ input, textarea, .post_input_container { background: #f2f2f2; border: 1px solid 
 /* Custom */
 .login_sub_text, .login_title_text, .login_register_text { text-shadow: 1px 1px 1px #666; }
 #chat_right_content { width: 100%; background: #fffffff7; }
-.modal_top { background: linear-gradient(to top, #cfd9df, #e2ebf0); border-radius:3px 2px 1px 1px; }
+.modal_top { border-radius:3px 2px 1px 1px; }
 #mobile_main_menu { border: 1px solid #d9dcdefa; border-radius: 17px; background: linear-gradient(#fff, #e9eef2); }
 
 /* Gifts */
@@ -201,3 +196,8 @@ input, textarea, .post_input_container { background: #f2f2f2; border: 1px solid 
 .profile_background {
     background-repeat: no-repeat !important;
 }
+/*call*/
+.back_modal {
+    background: #fff;
+}
+.vcall_user{color: white;}

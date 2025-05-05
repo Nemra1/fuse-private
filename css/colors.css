@@ -22,10 +22,30 @@
 .avatar_spin { border:2px solid #fff; }
 .sub_list_active { border:2px solid #fff; }
 .avavatar { border:2px solid #fff; }
+.baseb { color: #333; background: #f0f0f0; }
+/* call */
+.call_back { background:#000; color:#fff; }
+.vcall_user { background-color: rgba(31, 31, 31, 0.556); }
+.vcall_btn { background:#222; }
+.vcall_off { background-color:rgba(255, 80, 80, 0.7); }
+#vcall_self { background:#000; }
 
+/* ghost post */
+.ghost_post { border-color:#03add8; }
 /* special log default colors */
 .topic_log { background:#d9f2e6; color:#0d261a; }
 .seen { background:#ffe6f2; color:#330019; }
+/* alert colors */
+.alert_neutral { color: #004085; background: #cce5ff; border-color: #b8daff; }
+.alert_success { color: #155724; background: #d4edda; border-color: #c3e6cb; }
+.alert_error { color: #721c24; background: #f8d7da; border-color: #f5c6cb;}
+.alert_warn { color: #0c5460; background: #d1ecf1; border-color: #bee5eb; }
+.alert_base { color: #333; background: #f0f0f0; border-color: #888; }
+.neutralb { color: #004085; background: #cce5ff; }
+.successb { color: #155724; background: #d4edda; }
+.errorb { color: #721c24; background: #f8d7da;}
+.warnb { color: #0c5460; background: #d1ecf1; }
+.baseb { color: #333; background: #f0f0f0; }
 
 /* basic name colors */
 .bcolor1 { color:#ff3333; }

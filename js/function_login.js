@@ -83,7 +83,7 @@ moreLogin = function(){
 getRecovery = function(){
 	$.post('system/box/pass_recovery.php', {
 		}, function(response) {
-			if(response != 0){
+			if(response.code != 0){
 				showModal(response);
 			}
 			else {
@@ -347,39 +347,40 @@ sendGuestLogin = async function(){
 
 sendRecovery = function() {
     var rEmail = $('#recovery_email').val().trim(); // Trim input to remove spaces
-
     // Validate email field is not empty or just whitespace
     if (rEmail === '') {
         callSaved(system.emptyField, 3);
         return false;
     }
-
     // Check if recovery email is only whitespace
     if (/^\s+$/.test(rEmail)) {
         callSaved(system.emptyField, 3);
         $('#recovery_email').val(""); // Clear input
         return false;
     }
-
     // Proceed with recovery request if validation passes
     if (waitReply === 0) {
         waitReply = 1;
         $.post('system/action/recovery.php', {
             remail: rEmail
         }, function(response) {
-            switch(response) {
-                case '1': // Successful recovery
+            switch(response.code) {
+                case 1: // Successful recovery
                     $('#recovery_email').val("");
                     hideModal();
-                    callSaved(system.recoverySent, 1);
+                    callSaved(system.recoverySent, 1,1500);
+					getLogin();
                     break;
-                case '2': // No user found
+                case 2: // No user found
                     $('#recovery_email').val("");
                     callSaved(system.noUser, 3);
                     break;
-                case '3': // Invalid email
+                case 3: // Invalid email
                     $('#recovery_email').val("");
                     callSaved(system.invalidEmail, 3);
+                case 99: // Invalid email
+                    $('#recovery_email').val("");
+                    callSaved(response.message, 3);
                     break;
                 default: // Handle other errors
                     hideModal();

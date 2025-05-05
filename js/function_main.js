@@ -44,6 +44,7 @@ var curDel = 1000;
 var addons = '';
 focused = true;
 let lastSubmitTime = 0, isProcessing = false, rAFId = null, isTyping = false, typingTimeout = null;
+let isMuted = false;
 const lagThreshold = 100;
 var PageTitleNotification = {
     On: function() {
@@ -315,6 +316,9 @@ chatReload = function() {
 						checkForNotifications(response.rooms_updates); // Check for updated room actions
 					}
                 }
+				if('call' in response){
+					checkCall(response.call);
+				}				
 				stopAnimation();
 				checkImagesForErrors();
             }
@@ -336,7 +340,30 @@ grantRoom = function() {
 ungrantRoom = function() {
     $('.room_granted').addClass('nogranted');
 }
-
+/*canPrivate :  true isMainMuted :  false isMuted :  true isRoomMuted :  true*/
+function checkRm(muteFlags) {
+    // Check if the user is muted
+	if(muteFlags.isMainMuted) {
+		fullBlock();
+		postLock();
+	}else{
+		mainUnlock();
+		unblockAll();		
+		postUnlock();
+	}
+	if(muteFlags.isMuted ||  muteFlags.isRoomMuted){
+		console.log('muteFlags.isMuted ||  muteFlags.isRoomMuted')
+		mainLock();
+	}else{
+		unblockAll();
+		mainUnlock();	
+	}
+	if(muteFlags.isPrivateMuted) {
+		privateLock(1);
+	}else{
+		privateUnlock();
+	}	
+}
 mainUnlock = function() {
     $('#content, #submit_button, #chat_file').prop('disabled', false);
     if ($('#chat_file').length) {
@@ -346,7 +373,7 @@ mainUnlock = function() {
     $('#container_input').removeClass('hidden');
 }
 privateLock = function(v) {
-    $('#private_send, #private_file, #message_content').prop('disabled', true);
+    $('#private_send, #private_file, #message_content, #private_content').prop('disabled', true);
     if ($('#private_file').length) {
         $("#private_file")[0].setAttribute("onchange", "doNothing()");
     }
@@ -354,19 +381,23 @@ privateLock = function(v) {
     $('#private_disabled').removeClass('hidden');
     if (v == 1) {
         $('.privelem').addClass('fhide');
+        $('.gprivate').hide();
+        $('#private_input').hide();
         privLock = 1;
     }
     hidePrivEmoticon();
     closePrivSub();
 }
 privateUnlock = function() {
-    $('#private_send, #private_file, #message_content').prop('disabled', false);
+    $('#private_send, #private_file, #message_content, #private_content').prop('disabled', false);
     if ($('#private_file').length) {
         $("#private_file")[0].setAttribute("onchange", "uploadPrivateFile()");
     }
     $('#private_disabled, #private_load').addClass('hidden');
     $('#private_input').removeClass('hidden');
     $('.privelem').removeClass('fhide');
+	$('#private_input').show();
+	$('.gprivate').show();
     privLock = 0;
 }
 postLock = function() {
@@ -446,6 +477,7 @@ mainLock = function() {
     $('#main_disabled').removeClass('hidden');
     hideEmoticon();
     closeChatSub();
+	
 }
 fullBlock = function() {
     $('#content, #submit_button, #chat_file, #private_send, #private_file, #message_content').prop('disabled', true);
@@ -472,24 +504,7 @@ doNothing = function() {
 noAction = function() {
     errPost++;
 }
-/*canPrivate :  true isMainMuted :  false isMuted :  true isRoomMuted :  true*/
-function checkRm(muteFlags) {
-    // Check if the user is muted
-	if(muteFlags.isMainMuted || muteFlags.isRoomMuted) {
-		mainLock();
-		fullBlock();
-		postLock();
-	}else{
-		mainUnlock();
-		unblockAll();		
-		postUnlock();		
-	}
-	if(muteFlags.isPrivateMuted) {
-		privateLock(1);
-	}else{
-		privateUnlock();
-	}	
-}
+
 
 chatRightIt = function(data) {
     $('#chat_right_data').html(data);
@@ -725,6 +740,13 @@ openPrivate = function(who, whoName, whoAvatar) {
         $('#get_private').attr('value', who);
         $('#private_av, #dpriv_av').attr('src', whoAvatar);
         $('#private_av').attr('onclick', 'getProfile(' + who + ')');
+		if(useCall > 0 && boomAllow(canCall) && callLock == 0){
+			$('#private_call').removeClass('fhide');
+		}else {
+			$('#private_call').addClass('fhide');
+		}
+		$('#private_call').attr('data', who);
+		
         if (!$('#private_box:visible').length) {
             $('#private_box').toggle();
             resetPrivate();
@@ -2217,6 +2239,13 @@ openSocketMonitor = function(elm) {
             $(elm).html(res)
         });
 }
+open_Public_announcement = function(elm) {
+        $.post('system/box/public_announcement.php', {
+            token: utk,
+        }, function(res) {
+            overEmptyModal(res)
+        });
+}
  // Function to initialize the dialog
 initializeMonitor = function() {
         $("#SocketMonitor_container").dialog({
@@ -2234,7 +2263,7 @@ initializeMonitor = function() {
                     $(this).dialog("close");
                 },
                 "Clear": function() {
-                    $('#SocketMonitor_wrap_stream').html('');
+					clearMonitorDataFromLocalStorage();
                 },
             }
         });
@@ -2273,7 +2302,8 @@ function startAnimation() {
 const de_Avatar = domain + '/default_images/avatar/default_avatar.svg';
 // Function to check all images on the page
 function checkImagesForErrors() {
-    // Select all <img> elements inside #chat_logs_container
+
+ // Select all <img> elements inside #chat_logs_container
     const images = document.querySelectorAll('#chat_logs_container img');
 
     images.forEach(image => {
@@ -2291,8 +2321,70 @@ function checkImagesForErrors() {
             this.src = de_Avatar; // Replace with default avatar
         };
     });
+
+}
+// Delete my message in private chat
+function delete_My_msg(button) {
+    // Extract the message ID and target ID
+    const messageId = parseInt(button.dataset.messageId, 10); // Convert to number
+    const targetId = parseInt($('#get_private').attr('value'), 10); // Convert to number
+    // Validate the message ID and target ID
+    if (!messageId || isNaN(messageId)) {
+        console.error('Invalid message ID:', messageId);
+        alert('An error occurred while retrieving the message ID.');
+        return;
+    }
+    if (!targetId || isNaN(targetId)) {
+        console.error('Invalid target ID:', targetId);
+        alert('An error occurred while retrieving the target ID.');
+        return;
+    }
+    // Confirm deletion with the user
+    if (!confirm('Are you sure you want to delete this message?')) return;
+    // Disable the button and show a loading spinner
+    $(button).prop('disabled', true).html('<i class="ri-loader-2-line spin"></i>');
+    // Send a POST request to delete the message
+    $.post(FU_Ajax_Requests_File(), {
+            f: 'action_private',
+            s: 'delete_msg',
+            msg_id: messageId, // Pass as a number
+            token: utk, // Ensure `utk` is defined and valid
+        })
+        .done(data => {
+            if (data.success) {
+                // Use WebSocket if enabled; otherwise, remove the message from the DOM directly
+                if (allow_websocket > 0) {
+                    FUSE_SOCKET.delete_private_msg(button, messageId, targetId);
+					 //removeMessageFromDOM(messageId);
+                } else {
+                    removeMessageFromDOM(messageId);
+                }
+            } else {
+                alert(data.error || 'Failed to delete message.');
+            }
+        })
+        .fail(error => {
+            console.error('Error deleting message:', error);
+            alert('An error occurred while deleting the message.');
+        })
+        .always(() => {
+            // Re-enable the button and restore its original content
+            $(button).prop('disabled', false).html('<i class="ri-chat-delete-line"></i>');
+        });
 }
 
+// Helper function to remove a message from the DOM
+function removeMessageFromDOM(messageId) {
+    const messageElement = $(`#priv${messageId}`);
+    if (messageElement.length > 0) {
+        messageElement.fadeOut(300, () => {
+            messageElement.remove();
+            console.log('Message element removed:', messageId);
+        });
+    } else {
+        console.warn(`Message element not found in DOM for msg_id: ${messageId}`);
+    }
+}
 adjustHeight();
 adjustSide();
 
@@ -2300,6 +2392,7 @@ adjustSide();
 //--------------------------------------------------------------------------------------------------------------------------
 
 $(document).ready(function() {
+
 $(document).on('change', '#usearch_type, #usearch_order', function() {
 		var evSearchVal = $(this).val();
 		searchUser();
@@ -2329,10 +2422,13 @@ adjustPanelWidth();
 userlist = setInterval(userReload, 30000);
 friendlis = setInterval(myFriends, 30000);
 chatLog = setInterval(chatReload, speed);
+//chatLog = setInterval(chatReload_empty, speed);
 addBalance = setInterval(chatActivity, 60000);
 clearOtherLogs = setInterval(manageOthers, 30000);
 reportRefresh = setInterval(loadReport, 6000);
 runLog = setInterval(logPending, 3000);
+function chatReload_empty(){};
+chatReload_empty();
 chatReload();
 userReload();
 adjustHeight();
@@ -2358,6 +2454,16 @@ $('#main_input').submit(function(event) {
                 processChatCommand(message);
             } else {
                 processChatPost(message);
+				if (allow_websocket > 0) {
+					// Get the message from the input field
+					//const msg = 'test message';  // Use .trim() to remove leading/trailing whitespace
+					//console.log('Sending message:', msg);
+					// Emit the chatMessage event to the server
+					//var room_id = FUSE_SOCKET.currentRoom;
+					//FUSE_SOCKET.socket.emit('chatMessage', { user_id, msg,room_id});
+					// Clear the input field
+					//$('#content').val('');
+				}
             }
         } else {
             event.preventDefault();
@@ -2450,6 +2556,12 @@ $(document).on('click', '.gprivate', function() {
         // Set private message reload flags
         privReload = 1;
         lastPriv = 0;
+		if(allow_websocket >0 ){
+			$('#private_wrap_content,#private_box').attr('data-target-id', thisPrivate);
+			console.log('Using .data():', $('#private_wrap_content').data('target-id')); // Logs 789
+			FUSE_SOCKET.private_id = thisPrivate;
+			FUSE_SOCKET.startPrivateChat(thisPrivate);
+		}		
     });
 $(document).on('click', '.delete_private', function() {
         var toDelete = $(this).attr('data');
@@ -2484,7 +2596,10 @@ $('#private_input').submit(function(event) {
                     $('#message_content').focus();
                     callSaved(system.cannotContact, 3);
                 } else if (response.code == 100) {
+					callSaved(response.error, 3,1500);
                     checkRm({ isMuted: false, isPrivateMuted: true, isMainMuted: false, isRoomMuted: false});
+                } else if (response.code == 150) {
+                     callSaved(response.error, 3);
                 } else {
                     $('#message_content').focus();
                     $("#private_content ul").append(response);

@@ -43,10 +43,10 @@ hideSubMenu = function(){
 	}
 }
 var curCall = '';
-callSaved = function(text, type){
+callSaved = function(text, type,time = 3000){
 	var s = 3000;
 	if(type == 1){
-		s = 1000;
+		s = 2000;
 	}
 	if(text == curCall && $('.saved_data:visible').length){
 		return false;
@@ -62,7 +62,7 @@ callSaved = function(text, type){
 			$('.saved_data').removeClass('saved_warn saved_ok').addClass('saved_error');
 		}
 		$('.saved_span').text(text);
-		$('.saved_data').fadeIn(300).delay(s).fadeOut();
+		$('.saved_data').fadeIn(300).delay(time).fadeOut();
 		curCall = text;
 	}
 }
@@ -278,6 +278,42 @@ newsPlay = function(){
 okayPlay = function(){
 		document.getElementById('okay_sound').play();
 }
+incomingPlay = function() {
+    if (boomSound(2)) {
+        const audioElement = document.getElementById('call_in');
+        if (!audioElement) {
+            console.error("Audio element with ID 'call_in' not found.");
+            return;
+        }
+        // Attempt to play the audio
+        audioElement.play().catch(error => {
+            console.error("Failed to play audio:", error);
+        });
+    }
+}
+requestCallPlay = function() {
+    // Check if sound is allowed
+    if (boomSound(2)) {
+        const audioElement = document.getElementById('call_out');
+        if (!audioElement) {
+            console.error("Audio element with ID 'call_out' not found.");
+            return;
+        }
+        // Attempt to play the audio
+        audioElement.play().catch(error => {
+            console.error("Failed to play audio:", error);
+        });
+    }
+}
+function pauseAllAudio() {
+    const allAudioElements = document.querySelectorAll('audio');
+    allAudioElements.forEach(audio => {
+        if (!audio.paused) {
+            audio.pause(); // Pause the audio if it's playing
+            audio.currentTime = 0; // Reset playback position (optional)
+        }
+    });
+}
 updateSession = function(){
 	$.post('system/action/update_session.php', { 
 		token: utk,
@@ -298,7 +334,7 @@ closeTrigger = function(){
 getLanguage = function(){
 	$.post('system/box/language.php', {
 		}, function(response) {
-				showModal(response, 240);
+			showModal(response, 240);
 	});
 }
 
@@ -389,6 +425,12 @@ getOver = function(f, t, s){
 			selectIt();
 	});	
 }
+callendPlay = function(){
+	if(boomSound(5)){
+		document.getElementById('callend_sound').play();
+	}
+}
+
 var boomDelay = (function(){
   var timer = 0;
   return function(callback, ms){
@@ -443,6 +485,7 @@ boomSound = function(snd){
 noAction = function(){
 	console.log('there is no action on that button');
 }
+//video
 
 $(document).ready(function(){
 	$.ajaxSetup({

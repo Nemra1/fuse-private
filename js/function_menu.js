@@ -11,11 +11,26 @@ renderAvMenu = function(elem, uid, uname, urank, ubot, uflag, cover, age, gender
 	$('#action_menu .avusername').text(uname);
 	$('#action_menu .avavatar').attr('src', avt);
 	$('#action_menu .clevel_count').text(user_level);
+	var ulev = $(elem).attr('data-level');
 	if(cover != '' && cardCover > 0){
 		$('#action_menu .avbackground').css('background-image', 'url("cover/' + cover + '")');
 	}else {
 		$('#action_menu .avbackground').css('background-image', '');
 	}
+	if(urank > 0 && useLevel > 0){
+		$('#action_menu .clevel_count').text(ulev);
+		$('#action_menu .clevel').removeClass('hidden');
+	}else {
+		$('#action_menu .clevel_count').text('');
+		$('#action_menu .clevel').addClass('hidden');
+	}	
+	if(useCall > 0 && boomAllow(canCall) && !ignored(parseInt(uid)) && callLock == 0){
+		$('#action_menu .avcall').removeClass('fhide');
+	}else {
+		$('#action_menu .avcall').addClass('fhide');
+	} 
+	//$('#action_menu .avcall').removeClass('fhide');
+		
 	if(ignored(parseInt(uid)) || urank < priMin || user_rank < priMin || privLock == 1){
 		$('#action_menu .avpriv').addClass('fhide');
 	}else {

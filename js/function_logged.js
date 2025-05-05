@@ -708,6 +708,13 @@ systemLoad = function(){
 			token: utk
 		},
 		success: function(response){
+        if ('forced_password' in response) {
+			if(response.forced_password){
+				after_recovery_pass_box();
+				callSaved(response.message, 1,15000);
+			}
+			
+        }			
 		//fuse loader
 		if(curPage=="chat"){
 		    fuse_loader("body","show","Update room");
@@ -1028,6 +1035,19 @@ getPassword = function(){
 		}, function(response) {
 			if(response == 0){
 				return false;
+			}
+			else {
+				overModal(response);
+			}
+	});
+}
+after_recovery_pass_box = function(){
+	$.post('system/box/after_recovery_pass.php', {
+		token: utk,
+		}, function(response) {
+			if(response == 0){
+				return false;
+				
 			}
 			else {
 				overModal(response);
@@ -1550,7 +1570,42 @@ adminSavePassword = function(u){
 				hideOver();
 			}
 	});
+
 }
+after_recovery_pass = function(u) {
+    $.post(FU_Ajax_Requests_File(), {
+        f: 'action_member',
+        s: 'after_recovery_pass',
+        target_id: u,
+        user_new_password: $('#new_user_password').val(),
+        token: utk,
+    }, function(response) {
+        // Parse the JSON response
+        response =response;
+        // Handle different response codes
+        if (response.code == 1) {
+            // User not found
+            callSaved(system.error, 3);
+            hideOver();
+        } else if (response.code == 2) {
+            // Invalid password
+            callSaved(system.shortPass, 3);
+        } else if (response.code >= 3 && response.code <= 4) {
+            // Database errors
+            callSaved(system.error, 3);
+            hideOver();
+        } else if (response.code == 5) {
+            // Success
+            callSaved(system.actionComplete, 1);
+			//location.reload();
+            hideOver();
+        } else {
+            // Unknown error
+            callSaved(system.error, 3);
+            hideOver();
+        }
+    });
+};
 adminGetEmail = function(u){
 	$.post('system/box/admin_edit_email.php', {
 		target: u,
@@ -1749,7 +1804,7 @@ roomBlockBox = function(id){
 		token: utk,
 		}, function(response) {
 			if(response == 0){
-				//callError(system.cannotUser);
+				//callSaved(system.cannotUser);
 			}
 			else {
 				overModal(response);
@@ -2305,7 +2360,8 @@ getConsole = function(){
 }
 sendConsole = function(){
 	var console = $('#console_content').val();
-	$.post('system/action/console.php', {
+	$.post(FU_Ajax_Requests_File(), {
+		f:'console',
 		run_console: console,
 		token: utk,
 		}, function(response) {
@@ -2870,7 +2926,7 @@ viewLevelStatus = function(id){
 			target: id,
 		}, function(response) {
 			if(response == 0){
-				callError(system.error);
+				callSaved(system.error,3);
 			}
 			else {
 				overModal(response, 440);

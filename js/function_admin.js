@@ -651,6 +651,8 @@ saveSettings = function(source){
 			set_speed: $('#set_speed').val(),
 			set_allow_logs: $('#set_allow_logs').val(),
 			set_chat_display: $('#set_chat_display').val(),
+			set_max_public_history: $('#set_max_public_history').val(),
+			set_max_private_history: $('#set_max_private_history').val(),
 			token: utk,
 			}, function(response) {
 				if(response == 1){
@@ -742,6 +744,29 @@ saveSettings = function(source){
 					callSaved(system.error, 3);
 				}
 		});	
+	}else if(source == 'call_system'){
+		$.post('system/action/system_save.php', { 
+			save_admin_section: 'call_system',
+    		save_admin_websocket: 1,
+			// Add all <select> elements here
+			set_use_call: $('#set_use_call').val(), // Call system status
+			set_can_vcall: $('#set_can_vcall').val(), // Can initiate video call
+			set_can_acall: $('#set_can_acall').val(), // Can initiate audio call
+			set_call_max: $('#set_call_max').val(), // Maximum call duration
+			set_call_method: $('#set_call_method').val(), // Payment method
+			set_call_cost: $('#set_call_cost').val(), // Cost per minute of call
+			set_call_secret: $('#set_call_secret').val(), // Cost per minute of call
+			set_call_appid: $('#set_call_appid').val(), // Cost per minute of call
+			set_call_server_type: $('#set_call_server_type').val(), // Cost per minute of call
+			token: utk,
+			}, function(response) {
+				if(response == 1){
+					callSaved(system.saved, 1);
+				}
+				else {
+					callSaved(system.error, 3);
+				}
+		});	
 	}else if(source == 'websocket'){
 		$.post('system/action/system_save.php', { 
 			save_admin_section: 'websocket',
@@ -751,6 +776,10 @@ saveSettings = function(source){
             set_websocket_mode: $('#set_websocket_mode').val(),
             set_websocket_protocol: $('#set_websocket_protocol').val(),
             set_istyping_mode: $('#set_istyping_mode').val(),
+            set_del_prive_line: $('#set_del_prive_line').val(),
+            set_public_announcement: $('#set_public_announcement').val(),
+            set_enable_monitor: $('#set_enable_monitor').val(),
+            set_privateTyping: $('#set_privateTyping').val(),
 			token: utk,
 			}, function(response) {
 				if(response == 1){

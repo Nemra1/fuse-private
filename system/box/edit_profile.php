@@ -185,6 +185,13 @@ require('../config_session.php');
 			<div onclick="getPassword();" class="listing_half_element">
 				<i class="ri-lock-password-fill listing_icon"></i><?php echo $lang['change_password']; ?>
 			</div>
+				<?php if(useCall()){ ?>
+			<div onclick="getCallSettings();" class="listing_half_element">
+				<i class="ri-phone-line listing_icon"></i><?php echo $lang['call_psettings']; ?>
+			</div>
+				
+				<?php } ?>
+			
 			<?php } ?>
 			<?php if(!boomAllow(100) && !userDelete($data) && !isBot($data) && isSecure($data)){ ?>
 			<div id="del_account_btn" onclick="getDeleteAccount();" class="listing_half_element">

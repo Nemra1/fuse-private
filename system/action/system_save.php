@@ -493,6 +493,8 @@ if ($section == "chat" && boomAllow(90)) {
         $speed = escape($_POST["set_speed"]);
         $allow_logs = escape($_POST["set_allow_logs"]);
         $chat_display = escape($_POST["set_chat_display"]);
+        $max_public_history = escape($_POST["set_max_public_history"]);
+        $max_private_history = escape($_POST["set_max_private_history"]);
         // Prepare data for update
         $data_query = array(
             "gender_ico" => $gender_ico,
@@ -503,6 +505,8 @@ if ($section == "chat" && boomAllow(90)) {
             "max_offcount" => $max_offcount,
             "allow_logs" => $allow_logs,
             "chat_display" => $chat_display,
+            "max_public_history" => $max_public_history,
+            "max_private_history" => $max_private_history,
         );
         // Perform the update
         $update = fu_update_dashboard($data_query);
@@ -769,6 +773,68 @@ if($section === "websocket" && boomAllow(100)) {
             // Return success or failure code
             return $update === true ? 1 : 99; // Return success or error
 			
+        } else {
+            // Missing required POST parameters
+            return 99;
+        }
+    } else {
+        // CSRF token mismatch
+        return 99; // Token validation failed
+    }
+}
+if ($section === "call_system" && boomAllow(100)) {
+    // CSRF token validation (make sure it's included in the form)
+    if (isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+        // Check for required POST parameters
+        if (
+            isset(
+                $_POST["set_use_call"],
+                $_POST["set_can_vcall"],
+                $_POST["set_can_acall"],
+                $_POST["set_call_max"],
+                $_POST["set_call_method"],
+                $_POST["set_call_cost"]
+            )
+        ) {
+            // Validate inputs
+            $use_call = filter_var($_POST['set_use_call'], FILTER_VALIDATE_INT); // Call system status (integer)
+            $can_vcall = filter_var($_POST['set_can_vcall'], FILTER_VALIDATE_INT); // Can initiate video call (integer)
+            $can_acall = filter_var($_POST['set_can_acall'], FILTER_VALIDATE_INT); // Can initiate audio call (integer)
+            $call_max = filter_var($_POST['set_call_max'], FILTER_VALIDATE_INT); // Maximum call duration (integer)
+            $call_method = filter_var($_POST['set_call_method'], FILTER_VALIDATE_INT); // Payment method (integer)
+            $call_cost = filter_var($_POST['set_call_cost'], FILTER_VALIDATE_FLOAT); // Cost per minute of call (float)
+            $call_secret = escape($_POST['set_call_secret']); // Call agora secret of call (float)
+            $call_appid = escape($_POST['set_call_appid']); // Call agora secret of call (float)
+            $call_server_type = escape($_POST['set_call_server_type']); // Call agora secret of call (float)
+            // Ensure all inputs are valid
+            if (
+                $use_call !== false &&
+                $can_vcall !== false &&
+                $can_acall !== false &&
+                $call_max !== false &&
+                $call_method !== false &&
+                $call_cost !== false
+            ) {
+                // Prepare the data array
+                $data_query = array(
+                    'use_call' => $use_call,
+                    'can_vcall' => $can_vcall,
+                    'can_acall' => $can_acall,
+                    'call_max' => $call_max,
+                    'call_method' => $call_method,
+                    'call_cost' => $call_cost,
+                    'call_secret' => $call_secret,
+                    'call_appid' => $call_appid,
+                    'call_server_type' => $call_server_type,
+                );
+                // Update the settings using a function (assuming `fu_update_dashboard` exists)
+                $update = fu_update_dashboard($data_query);
+                // Return success or failure code
+                return $update === true ? 1 : 99; // Return success or error
+            } else {
+                // Validation failed for one or more inputs
+                return 99;
+            }
         } else {
             // Missing required POST parameters
             return 99;

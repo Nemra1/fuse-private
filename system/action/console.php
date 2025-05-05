@@ -1,17 +1,20 @@
 <?php
 
 
-require __DIR__ . "./../config_session.php";
-if (isset($_POST["run_console"])) {
-    $console = escape($_POST["run_console"]);
-    echo boomRunConsole($console);
-} else {
-    echo 0;
-    exit;
-}
+//require __DIR__ . "./../config_session.php";
+if ($f == 'console') {
+	if (isset($_POST["run_console"])) {
+		$console = escape($_POST["run_console"]);
+		echo boomRunConsole($console);
+	} else {
+		fu_json_results(0);
+		exit;
+	}
+		
+}	
 
 
-function boomRunConsole($console)
+function boomRunConsole($console){
 global $mysqli, $data, $cody, $lang;
     $command = explode(" ", trim($console));
     // /removetheme command

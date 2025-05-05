@@ -371,4 +371,43 @@ if (isset($_POST['update_pushId'])) {
         }
     }
 }
+// UPDATE Call Privacy
+if (isset($_POST['set_user_call'])) {
+    header('Content-Type: application/json');
+		if(!useCall()){
+			die();
+		}	
+    // Check if the user is logged in
+    if (boomLogged()) {
+        // Validate and sanitize the input
+        $user_call = filter_var($_POST['set_user_call'], FILTER_VALIDATE_INT); // Ensure it's an integer
+        // Ensure the value is valid (allowed values: 0, 1, 2, 3)
+        if (!in_array($user_call, [0, 1, 2, 3], true)) {
+            echo boomCode(0, array('status' => 'Invalid privacy setting.'));
+            exit;
+        }
+        // Prepare the update query using a prepared statement
+        $update_stmt = $mysqli->prepare("UPDATE boom_users SET user_call = ? WHERE user_id = ?");
+        if ($update_stmt === false) {
+            // Handle prepare failure
+            echo boomCode(0, array('status' => 'Database error while preparing the query.'));
+            exit;
+        }
+        // Bind parameters
+        $update_stmt->bind_param("ii", $user_call, $data['user_id']);
+        // Execute the statement
+        if ($update_stmt->execute()) {
+            // Success response
+            echo boomCode(1, array('status' => 'Call Privacy updated successfully.'));
+        } else {
+            // Failure response
+            echo boomCode(0, array('status' => 'Error updating Call Privacy.'));
+        }
+        // Close the statement
+        $update_stmt->close();
+    } else {
+        // User not logged in
+        echo boomCode(0, array('status' => 'User not logged in.'));
+    }
+}
 ?>

@@ -32,5 +32,18 @@ $content = textFilter($content);
 if(empty($content) && $content !== '0' || !inRoom()){
 	die();
 }
-echo userPostChat($content, array('snum'=> $snum));
+//this part need to handle but is working for now just keep it off untill we finsh it
+$data['chat_socket_mode'] = false;
+if($data['websocket_mode']==1 && $data['chat_socket_mode']){
+	// Example usage: Notify redies with  a new message
+	$event = 'newMessage';
+	$chat_data = [
+		'user_id' => $data['user_id'],
+		'msg' => userPostChat($content, array('snum'=> $snum)),
+		'room_id' => $data['user_roomid']
+	];
+	echo notifyRedis($event, $chat_data);
+}else{
+	echo userPostChat($content, array('snum'=> $snum));	
+}
 ?>

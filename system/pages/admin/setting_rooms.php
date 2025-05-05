@@ -33,7 +33,7 @@ echo elementTitle($lang["room_management"]);
             </div>
 
             <div id="room_listing">
-                <?= adminRoomList2(); ?>
+                <?= lis_admin_rooms(); ?>
             </div>
         </div>
     </div>
@@ -58,14 +58,11 @@ echo elementTitle($lang["room_management"]);
 </script>
 <?php
 
-function adminRoomList2()
-{
+function lis_admin_rooms(){
     global $mysqli, $lang;
-
     $list_rooms = "";
     $query = "SELECT * FROM boom_rooms ORDER BY room_name ASC";
     $result = $mysqli->query($query);
-
     if ($result && $result->num_rows > 0) {
         while ($room = $result->fetch_assoc()) {
             $list_rooms .= boomTemplate("element/admin_room", $room);

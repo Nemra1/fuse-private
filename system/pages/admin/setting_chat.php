@@ -67,6 +67,18 @@ echo elementTitle($lang["chat_settings"]);
 					<option value="2" <?php if($data["chat_display"]==2){ echo 'selected';};?>>Underline</option>
 					</select>				
             </div>
+            <div class="setting_element">
+                <p class="label"><?php echo htmlspecialchars('Max Chat history', ENT_QUOTES, 'UTF-8'); ?>:<span class="badge">New</span></p>
+                <select id="set_max_public_history">
+                    <?php echo optionCount($data["max_public_history"], 0, 100, 5, ""); ?>
+                </select>
+            </div>	
+            <div class="setting_element">
+                <p class="label"><?php echo htmlspecialchars('Max Private Chat history', ENT_QUOTES, 'UTF-8'); ?>:<span class="badge">New</span></p>
+                <select id="set_max_private_history">
+                    <?php echo optionCount($data["max_private_history"], 0, 100, 5, ""); ?>
+                </select>
+            </div>			
         </div>
 
         <button data="chat" type="button" class="save_admin reg_button theme_btn">
